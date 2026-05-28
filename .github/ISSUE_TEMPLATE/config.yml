@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/local/cassonic/blob/main/.github/SECURITY.md
+    about: Do NOT open a public issue for security vulnerabilities. Report privately via the instructions in SECURITY.md.
+  - name: Documentation
+    url: https://local-cassonic.readthedocs.io
+    about: Check the documentation first — your question may already be answered there.
+  - name: Discussions
+    url: https://github.com/local/cassonic/discussions
+    about: For general questions and support, start a discussion instead of opening an issue.

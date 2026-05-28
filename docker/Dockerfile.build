@@ -1,0 +1,11 @@
+FROM golang:alpine
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    make \
+    && go install golang.org/x/vuln/cmd/govulncheck@latest \
+    && go install golang.org/x/tools/cmd/staticcheck@latest \
+    && go install github.com/cyclonedx/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+
+WORKDIR /build

@@ -1,0 +1,17 @@
+name: cassonic
+
+services:
+  cassonic:
+    image: ghcr.io/local/cassonic:devel
+    container_name: cassonic-dev
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "172.17.0.1:64580:80"
+    volumes:
+      - './volumes/config:/config:z'
+      - './volumes/data:/data:z'
+    environment:
+      TZ: America/New_York
+      MODE: development
+      DEBUG: "true"

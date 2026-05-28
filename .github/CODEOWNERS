@@ -1,0 +1,22 @@
+# CODEOWNERS for cassonic
+# All review requests are routed to CasjaysDev by default.
+
+# Catch-all: every path requires review
+* @CasjaysDev
+
+# CI/CD and release infrastructure
+.github/workflows/ @CasjaysDev
+.gitea/workflows/ @CasjaysDev
+.forgejo/workflows/ @CasjaysDev
+Jenkinsfile @CasjaysDev
+Makefile @CasjaysDev
+docker/ @CasjaysDev
+renovate.json @CasjaysDev
+
+# Auth, crypto, and security-sensitive paths
+src/server/handler/auth.go @CasjaysDev
+src/ssl/ @CasjaysDev
+src/config/ @CasjaysDev
+
+# Self-update binary replacement
+src/service/ @CasjaysDev

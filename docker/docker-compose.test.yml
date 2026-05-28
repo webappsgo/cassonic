@@ -1,0 +1,28 @@
+name: cassonic-test
+
+services:
+  cassonic:
+    image: ghcr.io/local/cassonic:devel
+    container_name: cassonic-test
+    restart: "no"
+    networks:
+      - cassonic
+    ports:
+      - "172.17.0.1:64581:80"
+    volumes:
+      - config:/config:z
+      - data:/data:z
+    tmpfs:
+      - /tmp
+    environment:
+      TZ: America/New_York
+      MODE: development
+      DEBUG: "true"
+
+networks:
+  cassonic:
+    name: cassonic
+
+volumes:
+  config:
+  data:

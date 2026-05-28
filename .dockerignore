@@ -1,0 +1,31 @@
+# dockerignore for cassonic
+.git
+.github
+.gitea
+.forgejo
+.claude
+.cursor
+.windsurf
+.aider*
+.ai/
+
+binaries/
+releases/
+volumes/
+
+*.md
+!README.md
+
+# Development files
+coverage.out
+coverage.html
+*.tmp
+*.temp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+**/.build_failed*

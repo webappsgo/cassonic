@@ -1,0 +1,19 @@
+/* Light Theme */
+/* Applied when scheme: default is active */
+
+:root {
+  --light-bg: #ffffff;
+  --light-bg-alt: #f5f5f5;
+  --light-text: #212121;
+  --light-text-muted: #757575;
+  --light-accent: #6200ea;
+  --light-link: #0277bd;
+  --light-border: #e0e0e0;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: var(--light-bg);
+  --md-default-fg-color: var(--light-text);
+  --md-primary-fg-color: var(--light-accent);
+  --md-accent-fg-color: var(--light-link);
+}

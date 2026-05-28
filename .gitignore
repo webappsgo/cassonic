@@ -1,0 +1,128 @@
+# gitignore created on 05/28/26 at 08:47
+ignoredirmessage
+
+# ignore commit message
+**/.gitcommit
+
+# ignore build failure markers
+**/.build_failed*
+
+# ignore backup files
+**/*.bak
+
+# ignore push/git control files
+**/.no_push
+**/.no_git
+
+# ignore install markers
+**/.installed
+
+# ignore work in progress scripts
+**/*.rewrite.sh
+**/*.refactor.sh
+
+# ignore dotenv files
+.env
+app.env
+default.env
+
+# ignore log and temp files
+*.log
+*.tmp
+*.temp
+
+# OS generated files
+### Linux ###
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+### macOS ###
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*.icloud
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Go build output
+binaries/
+releases/
+
+# Runtime volume data
+volumes/
+docker/volumes/
+
+# Docker compose overrides
+compose.yml
+compose.yaml
+compose.default.yaml
+
+# AI tool — Claude Code (personal/secret only)
+.claude/settings.local.json
+.claude/backups/
+.claude/cache/
+.claude/file-history/
+.claude/history.jsonl
+.claude/.credentials.json
+.claude/projects/
+.claude/statsFile
+.claude/*.lock
+
+# AI tool — Cursor (personal/secret only)
+.cursor/settings.json
+
+# AI tool — Windsurf (personal/secret only)
+.windsurf/settings.json
+
+# AI tool — Aider
+.aider.chat.history.md
+.aider.input.history
+.aider.llm.history
+.aider.tags.cache.v3/
+
+# AI tool — Continue
+.continue/dev_data/
+.continue/session.json
+.continue/index/
+
+# AI tool — Codeium / Windsurf cache
+.codeium/
+
+# AI tool — Cline / Roo
+.cline/cache/
+
+# AI tool — generic
+.ai/
+
+# Go test coverage
+coverage.out
+coverage.html
