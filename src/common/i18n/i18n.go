@@ -3,6 +3,7 @@ package i18n
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +30,7 @@ func New() *Bundle {
 	}
 }
 
-// Load reads all JSON locale files from the given directory.
+// Load reads all JSON locale files from the given directory on the real filesystem.
 // Each file must be named {code}.json and contain a flat key→string map.
 func (b *Bundle) Load(dir string) error {
 	entries, err := os.ReadDir(dir)
@@ -46,6 +47,33 @@ func (b *Bundle) Load(dir string) error {
 		}
 		code := strings.TrimSuffix(name, ".json")
 		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return fmt.Errorf("i18n: read file %q: %w", name, err)
+		}
+		if err := b.LoadBytes(code, data); err != nil {
+			return fmt.Errorf("i18n: parse %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// LoadFS reads all JSON locale files from dir inside the given fs.FS.
+// Each file must be named {code}.json and contain a flat key→string map.
+func (b *Bundle) LoadFS(fsys fs.FS, dir string) error {
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return fmt.Errorf("i18n: read dir %q: %w", dir, err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		code := strings.TrimSuffix(name, ".json")
+		data, err := fs.ReadFile(fsys, dir+"/"+name)
 		if err != nil {
 			return fmt.Errorf("i18n: read file %q: %w", name, err)
 		}

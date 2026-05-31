@@ -1,10 +1,11 @@
 {{define "base"}}<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="{{if .Lang}}{{.Lang}}{{else}}en{{end}}" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="cassonic — self-hosted music streaming">
   <title>{{.Title}}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="/static/css/app.css">
   <script>
@@ -25,50 +26,50 @@
       </div>
       <nav class="sidebar-nav">
         <div class="sidebar-section">Browse</div>
-        <a href="/" aria-label="Dashboard">
+        <a href="/" aria-label="{{call .T "nav.home"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Dashboard
+          {{call .T "nav.home"}}
         </a>
-        <a href="/artists" aria-label="Artists">
+        <a href="/artists" aria-label="{{call .T "nav.artists"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          Artists
+          {{call .T "nav.artists"}}
         </a>
-        <a href="/albums" aria-label="Albums">
+        <a href="/albums" aria-label="{{call .T "nav.albums"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
-          Albums
+          {{call .T "nav.albums"}}
         </a>
-        <a href="/songs" aria-label="Songs">
+        <a href="/songs" aria-label="{{call .T "nav.songs"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          Songs
+          {{call .T "nav.songs"}}
         </a>
-        <a href="/genres" aria-label="Genres">
+        <a href="/genres" aria-label="{{call .T "nav.genres"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-          Genres
+          {{call .T "nav.genres"}}
         </a>
-        <a href="/playlists" aria-label="Playlists">
+        <a href="/playlists" aria-label="{{call .T "nav.playlists"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          Playlists
+          {{call .T "nav.playlists"}}
         </a>
         <div class="sidebar-section">Manage</div>
-        <a href="/library" aria-label="Library">
+        <a href="/library" aria-label="{{call .T "nav.library"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          Library
+          {{call .T "nav.library"}}
         </a>
-        <a href="/upload" aria-label="Upload">
+        <a href="/upload" aria-label="{{call .T "nav.upload"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-          Upload
+          {{call .T "nav.upload"}}
         </a>
-        <a href="/icecast" aria-label="Icecast">
+        <a href="/icecast" aria-label="{{call .T "nav.icecast"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          Icecast
+          {{call .T "nav.icecast"}}
         </a>
-        <a href="/search" aria-label="Search">
+        <a href="/search" aria-label="{{call .T "nav.search"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Search
+          {{call .T "nav.search"}}
         </a>
-        <a href="/settings" aria-label="Settings">
+        <a href="/settings" aria-label="{{call .T "nav.settings"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Settings
+          {{call .T "nav.settings"}}
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -88,25 +89,25 @@
     </main>
 
     <nav class="nav-tab" aria-label="Mobile navigation">
-      <a href="/" aria-label="Dashboard">
+      <a href="/" aria-label="{{call .T "nav.home"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Home
+        {{call .T "nav.home"}}
       </a>
-      <a href="/albums" aria-label="Albums">
+      <a href="/albums" aria-label="{{call .T "nav.albums"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
-        Library
+        {{call .T "nav.library"}}
       </a>
-      <a href="/search" aria-label="Search">
+      <a href="/search" aria-label="{{call .T "nav.search"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Search
+        {{call .T "nav.search"}}
       </a>
       <a href="/player" aria-label="Now playing">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Queue
+        {{call .T "player.queue"}}
       </a>
-      <a href="/settings" aria-label="Settings">
+      <a href="/settings" aria-label="{{call .T "nav.settings"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Settings
+        {{call .T "nav.settings"}}
       </a>
     </nav>
   </div>
@@ -123,26 +124,26 @@
         </div>
       </div>
       <div class="player-info">
-        <div class="player-title" id="player-title">Not playing</div>
+        <div class="player-title" id="player-title">{{call .T "player.play"}}</div>
         <div class="player-artist" id="player-artist"></div>
       </div>
     </div>
 
     <div class="player-controls" role="group" aria-label="Playback controls">
       <div class="player-buttons">
-        <button class="player-btn" id="player-shuffle" aria-label="Shuffle" title="Shuffle">
+        <button class="player-btn" id="player-shuffle" aria-label="{{call .T "player.shuffle"}}" title="{{call .T "player.shuffle"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
         </button>
-        <button class="player-btn" id="player-prev" aria-label="Previous track">
+        <button class="player-btn" id="player-prev" aria-label="{{call .T "player.previous"}}">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg>
         </button>
-        <button class="player-btn player-btn-play" id="player-play" aria-label="Play">
+        <button class="player-btn player-btn-play" id="player-play" aria-label="{{call .T "player.play"}}">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
         </button>
-        <button class="player-btn" id="player-next" aria-label="Next track">
+        <button class="player-btn" id="player-next" aria-label="{{call .T "player.next"}}">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,4 15,12 5,20"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
         </button>
-        <button class="player-btn" id="player-repeat" aria-label="Repeat" title="Repeat: none">
+        <button class="player-btn" id="player-repeat" aria-label="{{call .T "player.repeat"}}" title="{{call .T "player.repeat"}}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         </button>
       </div>
@@ -154,12 +155,12 @@
       </div>
     </div>
 
-    <div class="player-right" role="group" aria-label="Volume controls">
-      <button class="player-btn" id="player-mute" aria-label="Mute">
+    <div class="player-right" role="group" aria-label="{{call .T "player.volume"}}">
+      <button class="player-btn" id="player-mute" aria-label="{{call .T "player.volume"}}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
       </button>
       <div class="player-volume">
-        <input type="range" class="volume-range" id="player-volume" min="0" max="100" value="100" aria-label="Volume">
+        <input type="range" class="volume-range" id="player-volume" min="0" max="100" value="100" aria-label="{{call .T "player.volume"}}">
       </div>
       <a href="/player" class="player-btn" aria-label="Open full player" title="Full player">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>

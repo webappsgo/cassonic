@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /api/
+Disallow: /rest/
+Disallow: /server/admin/
+Disallow: /metrics
+Allow: /server/about
+Allow: /server/help
+Allow: /swagger/

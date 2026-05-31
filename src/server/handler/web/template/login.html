@@ -1,1 +1,64 @@
-{{define "login.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{define "login.html"}}<!DOCTYPE html>
+<html lang="{{if .Lang}}{{.Lang}}{{else}}en{{end}}" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="cassonic — self-hosted music streaming">
+  <title>{{call .T "login.title"}}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script>
+    (function(){var t=localStorage.getItem('cassonic_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" aria-hidden="true">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span>cassonic</span>
+    </div>
+    <h1 class="login-title">{{call .T "login.title"}}</h1>
+    {{if .Error}}
+    <div class="alert alert-error" role="alert">{{.Error}}</div>
+    {{end}}
+    <form class="login-form" method="post" action="/login">
+      <div class="form-group">
+        <label for="username">{{call .T "login.username"}}</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          class="form-input"
+          autocomplete="username"
+          required
+          autofocus
+        >
+      </div>
+      <div class="form-group">
+        <label for="password">{{call .T "login.password"}}</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-input"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+      <div class="form-group form-group-check">
+        <label class="checkbox-label">
+          <input type="checkbox" name="remember" value="on">
+          {{call .T "login.remember"}}
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">{{call .T "login.submit"}}</button>
+    </form>
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>{{end}}

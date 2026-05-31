@@ -390,3 +390,17 @@ func formatDuration(d time.Duration) string {
 	ms := d.Milliseconds()
 	return fmt.Sprintf("%dms", ms)
 }
+
+// AcceptedFormat returns the best response format for the request.
+// For API routes: "json" (default) or "plain" (if Accept: text/plain).
+// For web routes: "html" (default) or "plain" (if Accept: text/plain).
+func AcceptedFormat(r *http.Request) string {
+	accept := r.Header.Get("Accept")
+	if strings.Contains(accept, "text/plain") {
+		return "plain"
+	}
+	if strings.Contains(accept, "text/html") {
+		return "html"
+	}
+	return "json"
+}

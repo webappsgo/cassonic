@@ -134,6 +134,14 @@ func (s *Server) buildRouter() http.Handler {
 	// duplication with our own RequestID middleware.
 	_ = chimw.RequestID
 
+	// Well-known static assets — served before auth and API routes.
+	r.Get("/robots.txt", s.staticFileHandler("static/robots.txt", "text/plain; charset=utf-8"))
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/static/favicon.svg", http.StatusMovedPermanently)
+	})
+	r.Get("/sitemap.xml", s.sitemapHandler())
+	r.Get("/.well-known/security.txt", s.staticFileHandler("static/.well-known/security.txt", "text/plain; charset=utf-8"))
+
 	// Public health and version endpoints — no auth required.
 	r.Get("/server/healthz", s.healthzHTML())
 	r.Get("/health", s.healthzJSON())
@@ -605,6 +613,35 @@ func (s *Server) metricsMiddleware() func(http.Handler) http.Handler {
 				strconv.Itoa(rw.status),
 			).Inc()
 		})
+	}
+}
+
+// staticFileHandler serves an embedded static file from the web handler's assets FS.
+// The path is relative to src/server/handler/web/ (e.g. "static/robots.txt").
+func (s *Server) staticFileHandler(path, contentType string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", contentType)
+		http.ServeFileFS(w, r, web.Assets(), path)
+	}
+}
+
+// sitemapHandler returns a dynamically generated sitemap.xml listing public pages.
+func (s *Server) sitemapHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		host := r.Host
+		base := scheme + "://" + host
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>%s/</loc></url>
+  <url><loc>%s/server/about</loc></url>
+  <url><loc>%s/server/help</loc></url>
+  <url><loc>%s/swagger/</loc></url>
+</urlset>`, base, base, base, base)
 	}
 }
 

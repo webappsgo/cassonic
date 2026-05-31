@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/argon2"
 
+	"github.com/local/cassonic/src/common/i18n"
 	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
@@ -30,6 +31,7 @@ type Handler struct {
 	cfg     *config.Config
 	version string
 	tmpls   *template.Template
+	i18n    *i18n.Bundle
 }
 
 // PageData is the base data passed to every template.
@@ -38,6 +40,8 @@ type PageData struct {
 	User    *mw.AuthUser
 	Version string
 	Flash   string
+	Lang    string
+	T       func(string) string
 }
 
 // NewHandler creates a web Handler backed by the given DB aggregate and config.
@@ -51,6 +55,7 @@ func NewHandlerWithConfig(db *store.DB, cfg *config.Config, version string) *Han
 		db:      db,
 		cfg:     cfg,
 		version: version,
+		i18n:    i18n.Default(),
 	}
 	h.tmpls = h.parseTemplates()
 	return h
@@ -67,6 +72,8 @@ func (h *Handler) parseTemplates() *template.Template {
 		"formatSize":     formatSize,
 		"safeHTML":       func(s string) template.HTML { return template.HTML(s) },
 		"not":            templateNot,
+		// t is a no-op placeholder; real translation is provided via PageData.T per request.
+		"t": func(key string) string { return key },
 	}
 
 	tmpl := template.New("").Funcs(funcMap)
@@ -172,6 +179,49 @@ func (h *Handler) sessionAuth(next http.Handler) http.Handler {
 	})
 }
 
+// resolveLocale selects the best locale for the request using the priority chain:
+// ?lang= query param (writes a cookie) → lang cookie → Accept-Language → "en".
+func (h *Handler) resolveLocale(w http.ResponseWriter, r *http.Request) string {
+	supported := map[string]bool{
+		"en": true, "es": true, "fr": true,
+		"de": true, "zh": true, "ja": true, "ar": true,
+	}
+
+	if q := r.URL.Query().Get("lang"); q != "" {
+		code := strings.ToLower(strings.SplitN(q, "-", 2)[0])
+		if supported[code] {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "lang",
+				Value:    code,
+				Path:     "/",
+				MaxAge:   365 * 24 * 3600,
+				HttpOnly: false,
+				SameSite: http.SameSiteLaxMode,
+			})
+			return code
+		}
+	}
+
+	if c, err := r.Cookie("lang"); err == nil && c.Value != "" {
+		code := strings.ToLower(strings.SplitN(c.Value, "-", 2)[0])
+		if supported[code] {
+			return code
+		}
+	}
+
+	if al := r.Header.Get("Accept-Language"); al != "" {
+		for _, tag := range strings.Split(al, ",") {
+			tag = strings.TrimSpace(strings.SplitN(tag, ";", 2)[0])
+			code := strings.ToLower(strings.SplitN(tag, "-", 2)[0])
+			if supported[code] {
+				return code
+			}
+		}
+	}
+
+	return "en"
+}
+
 // render executes a named template and writes the result to w.
 func (h *Handler) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -180,12 +230,35 @@ func (h *Handler) render(w http.ResponseWriter, name string, data any) {
 	}
 }
 
-// base builds a PageData with the authenticated user and version filled in.
+// base builds a PageData with the authenticated user, version, and i18n translator filled in.
+// Note: base does not have access to http.ResponseWriter, so lang-cookie writes from ?lang=
+// happen in the render path. Callers that need to set the lang cookie must call resolveLocale
+// directly. For most pages base is called after resolveLocale has already run via baseWithLang.
 func (h *Handler) base(r *http.Request, title string) PageData {
+	lang := "en"
+	if c, err := r.Cookie("lang"); err == nil && c.Value != "" {
+		lang = strings.ToLower(strings.SplitN(c.Value, "-", 2)[0])
+	} else if al := r.Header.Get("Accept-Language"); al != "" {
+		for _, tag := range strings.Split(al, ",") {
+			tag = strings.TrimSpace(strings.SplitN(tag, ";", 2)[0])
+			code := strings.ToLower(strings.SplitN(tag, "-", 2)[0])
+			supported := map[string]bool{
+				"en": true, "es": true, "fr": true,
+				"de": true, "zh": true, "ja": true, "ar": true,
+			}
+			if supported[code] {
+				lang = code
+				break
+			}
+		}
+	}
+	bundle := h.i18n
 	return PageData{
 		Title:   title,
 		User:    mw.UserFromContext(r.Context()),
 		Version: h.version,
+		Lang:    lang,
+		T:       func(key string) string { return bundle.T(lang, key) },
 	}
 }
 
@@ -229,9 +302,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		PageData
 		Error string
 	}
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
 	data := loginData{
-		PageData: PageData{Title: "Login — cassonic", Version: h.version},
-		Error:    r.URL.Query().Get("error"),
+		PageData: PageData{
+			Title:   "Login — cassonic",
+			Version: h.version,
+			Lang:    lang,
+			T:       func(key string) string { return bundle.T(lang, key) },
+		},
+		Error: r.URL.Query().Get("error"),
 	}
 	h.render(w, "login.html", data)
 }
@@ -738,9 +818,16 @@ func (h *Handler) Share(w http.ResponseWriter, r *http.Request) {
 		Album   *model.Album
 	}
 
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
 	data := shareData{
-		PageData: PageData{Title: "Shared — cassonic", Version: h.version},
-		Share:    share,
+		PageData: PageData{
+			Title:   "Shared — cassonic",
+			Version: h.version,
+			Lang:    lang,
+			T:       func(key string) string { return bundle.T(lang, key) },
+		},
+		Share: share,
 	}
 
 	switch share.ItemType {
@@ -767,8 +854,15 @@ func (h *Handler) About(w http.ResponseWriter, r *http.Request) {
 		Description string
 		Features    []string
 	}
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
 	h.render(w, "about.html", aboutData{
-		PageData:    PageData{Title: "About cassonic", Version: h.version},
+		PageData: PageData{
+			Title:   "About cassonic",
+			Version: h.version,
+			Lang:    lang,
+			T:       func(key string) string { return bundle.T(lang, key) },
+		},
 		Description: "cassonic is a self-hosted music streaming server — a full-featured, drop-in replacement for Airsonic, Subsonic, Libresonic, Ampache, and kPlaylist. Every existing Subsonic and Ampache client works without reconfiguration.",
 		Features: []string{
 			"Full Subsonic REST API compatibility (v1.1.0–1.16.1)",
@@ -797,9 +891,16 @@ func (h *Handler) Help(w http.ResponseWriter, r *http.Request) {
 	if h.cfg != nil && h.cfg.Server.Port != 0 {
 		port = h.cfg.Server.Port
 	}
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
 	h.render(w, "help.html", helpData{
-		PageData: PageData{Title: "Help — cassonic", Version: h.version},
-		Port:     port,
+		PageData: PageData{
+			Title:   "Help — cassonic",
+			Version: h.version,
+			Lang:    lang,
+			T:       func(key string) string { return bundle.T(lang, key) },
+		},
+		Port: port,
 	})
 }
 
