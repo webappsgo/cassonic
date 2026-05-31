@@ -1,0 +1,87 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">Dashboard</h1>
+  <a href="/search" class="btn btn-ghost btn-icon" aria-label="Search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </a>
+</div>
+
+<div class="stats-row" role="list" aria-label="Library statistics">
+  <div class="stat-card" role="listitem">
+    <div class="stat-value">{{.SongCount}}</div>
+    <div class="stat-label">Songs</div>
+  </div>
+  <div class="stat-card" role="listitem">
+    <div class="stat-value">{{.AlbumCount}}</div>
+    <div class="stat-label">Albums</div>
+  </div>
+  <div class="stat-card" role="listitem">
+    <div class="stat-value">{{.ArtistCount}}</div>
+    <div class="stat-label">Artists</div>
+  </div>
+</div>
+
+{{if .RecentAlbums}}
+<section aria-labelledby="recent-heading">
+  <div class="section-header">
+    <h2 class="section-title" id="recent-heading">Recently Added</h2>
+    <a href="/albums" class="section-link">View all</a>
+  </div>
+
+  <div class="grid-covers" data-grid>
+    {{range .RecentAlbums}}
+    <div class="cover-item" data-grid-item>
+      <a href="/album/{{.ID}}" class="cover-art" aria-label="Play {{.Title}}">
+        {{if .CoverArtID}}
+        <img src="/api/v1/cover/{{.CoverArtID}}?size=300" alt="{{.Title}} cover art" loading="lazy">
+        {{else}}
+        <div class="cover-art-placeholder" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        {{end}}
+        <div class="cover-overlay" aria-hidden="true">
+          <button data-play-album="{{.ID}}" aria-label="Play album">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+          </button>
+        </div>
+      </a>
+      <div class="cover-name">
+        <a href="/album/{{.ID}}">{{.Title}}</a>
+      </div>
+      <div class="cover-sub">
+        <a href="/artist/{{.ArtistID}}">{{.ArtistName}}</a>
+        {{if .Year}} · {{.Year}}{{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+{{if .RecentlyPlayed}}
+<section aria-labelledby="history-heading" style="margin-top:32px;">
+  <div class="section-header">
+    <h2 class="section-title" id="history-heading">Recently Played</h2>
+  </div>
+  <div class="card">
+    <ul>
+      {{range .RecentlyPlayed}}
+      <li style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.875rem;display:flex;justify-content:space-between;align-items:center;">
+        <span>Song #{{.SongID}}</span>
+        <span style="color:var(--text-muted);font-size:0.775rem;">{{formatDate .PlayedAt}}</span>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+</section>
+{{end}}
+
+{{else}}
+<div class="empty-state">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+  <h3>No music yet</h3>
+  <p>Add a library path in <a href="/library">Library settings</a> and trigger a scan to get started.</p>
+</div>
+{{end}}
+{{end}}
