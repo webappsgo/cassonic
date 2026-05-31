@@ -17,12 +17,14 @@ import (
 	"github.com/local/cassonic/src/paths"
 	"github.com/local/cassonic/src/server"
 	"github.com/local/cassonic/src/server/service"
+	svcbackup "github.com/local/cassonic/src/server/service/backup"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
 	"github.com/local/cassonic/src/server/service/install"
 	"github.com/local/cassonic/src/server/service/musicbrainz"
 	"github.com/local/cassonic/src/server/service/podcast"
 	"github.com/local/cassonic/src/server/service/scheduler"
 	"github.com/local/cassonic/src/server/service/scrobble"
+	svctor "github.com/local/cassonic/src/server/service/tor"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/store"
 )
@@ -52,6 +54,8 @@ func main() {
 		flagPID       = flag.String("pid", "", "Write PID to file")
 		flagInstall   = flag.Bool("install", false, "Install cassonic as a system service and exit")
 		flagUninstall = flag.Bool("uninstall", false, "Remove the cassonic system service and exit")
+		flagBackupDir = flag.String("backup-dir", "", "Directory for automatic backups (optional)")
+		flagTorKey    = flag.String("tor-key", "", "Path to persist the Tor hidden service ed25519 key (optional; enables Tor)")
 	)
 
 	flag.CommandLine.Usage = printHelp
@@ -225,6 +229,33 @@ func main() {
 	sched.Start(ctx)
 
 	srv := server.New(cfg, db, scanner, coverArt, ff, tagReader)
+
+	if *flagBackupDir != "" {
+		backupLogger := log.New(os.Stdout, "[backup] ", log.LstdFlags)
+		backupCfg := svcbackup.Config{
+			Dir:       *flagBackupDir,
+			Retention: 30,
+		}
+		backupSvc := svcbackup.New(backupCfg, detectedPaths.Data, backupLogger)
+		srv.WithBackupService(backupSvc)
+	}
+
+	if *flagTorKey != "" {
+		torLogger := log.New(os.Stdout, "[tor] ", log.LstdFlags)
+		torSvc := svctor.New(*flagTorKey, torLogger)
+		onionAddr, torErr := torSvc.Start(ctx, cfg.Server.Port)
+		if torErr != nil {
+			log.Printf("cassonic: warning: Tor hidden service failed to start: %v", torErr)
+		} else {
+			fmt.Printf("cassonic: Tor hidden service: http://%s\n", onionAddr)
+		}
+		defer func() {
+			if stopErr := torSvc.Stop(); stopErr != nil {
+				log.Printf("cassonic: tor stop: %v", stopErr)
+			}
+		}()
+	}
+
 	if err := srv.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "cassonic: server error: %v\n", err)
 		os.Exit(1)
@@ -283,5 +314,7 @@ Flags:
   --pid {file}                    Write PID to file
   --install                       Install cassonic as a system service and exit
   --uninstall                     Remove the cassonic system service and exit
+  --backup-dir {dir}              Directory for backup archives (optional)
+  --tor-key {file}                Path to persist Tor ed25519 key; enables Tor hidden service (optional)
 `)
 }

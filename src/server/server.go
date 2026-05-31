@@ -27,6 +27,7 @@ import (
 	"github.com/local/cassonic/src/server/service/ffmpeg"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/store"
+	svcbackup "github.com/local/cassonic/src/server/service/backup"
 )
 
 // Version, CommitID, and BuildDate are set via -ldflags at build time.
@@ -46,6 +47,7 @@ type Server struct {
 	tagReader   *tags.Reader
 	ampSessions *mw.AmpacheSessionStore
 	http        *http.Server
+	backupSvc   *svcbackup.Service
 
 	// rate limiters per API layer
 	nativeRL   *mw.RateLimiter
@@ -115,6 +117,16 @@ func (s *Server) buildRouter() http.Handler {
 	r.Get("/server/healthz", s.healthzHTML())
 	r.Get("/api/v1/health", s.healthzJSON())
 	r.Get("/api/v1/version", s.versionJSON())
+
+	// Swagger UI — redirect bare path and serve the UI at /api/docs/*.
+	r.Get("/api/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/api/docs/", http.StatusMovedPermanently)
+	})
+	r.Get("/api/docs/", s.swaggerUI())
+	r.Get("/api/docs/*", s.swaggerUI())
+
+	// OpenAPI spec served from an embedded JSON constant.
+	r.Get("/api/v1/openapi.json", s.openAPISpec())
 
 	// Prometheus metrics — internal only (guarded by IP filter at infra level).
 	r.Handle("/metrics", promhttp.Handler())
@@ -197,9 +209,19 @@ func (s *Server) getSubsonicPassword(_ context.Context, _ string) (string, bool)
 	return "", false
 }
 
+// WithBackupService attaches an optional backup service to the server.
+func (s *Server) WithBackupService(svc *svcbackup.Service) *Server {
+	s.backupSvc = svc
+	return s
+}
+
 // nativeHandler constructs the native API handler.
 func (s *Server) nativeHandler() *handlerapi.Handler {
-	return handlerapi.NewHandler(s.db, s.scanner, s.coverArt, s.ffmpeg, s.tagReader)
+	h := handlerapi.NewHandler(s.db, s.scanner, s.coverArt, s.ffmpeg, s.tagReader)
+	if s.backupSvc != nil {
+		h.WithBackupService(s.backupSvc)
+	}
+	return h
 }
 
 // subsonicHandler constructs the Subsonic API handler.
@@ -234,6 +256,185 @@ func (s *Server) healthzJSON() http.HandlerFunc {
 			"status":  "ok",
 			"version": Version,
 		})
+	}
+}
+
+// swaggerUI returns an HTTP handler that serves the self-contained Swagger UI page.
+func (s *Server) swaggerUI() http.HandlerFunc {
+	const page = `<!DOCTYPE html>
+<html>
+<head>
+  <title>cassonic API docs</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+SwaggerUIBundle({
+  url: "/api/v1/openapi.json",
+  dom_id: '#swagger-ui',
+  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+  layout: "BaseLayout",
+  deepLinking: true
+});
+</script>
+</body>
+</html>`
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, page)
+	}
+}
+
+// openAPISpec returns an HTTP handler that serves the cassonic OpenAPI 3.0 specification.
+func (s *Server) openAPISpec() http.HandlerFunc {
+	const spec = `{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "cassonic API",
+    "description": "cassonic self-hosted music streaming server — native REST API.",
+    "version": "1"
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [{"BearerAuth": []}],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health check",
+        "security": [],
+        "responses": {"200": {"description": "Server is healthy"}}
+      }
+    },
+    "/api/v1/version": {
+      "get": {
+        "summary": "Server version",
+        "security": [],
+        "responses": {"200": {"description": "Version info"}}
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Authenticate and obtain a session token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "properties": {"username": {"type": "string"}, "password": {"type": "string"}}}}}
+        },
+        "responses": {"200": {"description": "Login successful, returns token"}}
+      }
+    },
+    "/api/v1/artists": {
+      "get": {
+        "summary": "List artists",
+        "responses": {"200": {"description": "Paginated list of artists"}}
+      }
+    },
+    "/api/v1/artists/{id}": {
+      "get": {
+        "summary": "Get artist by ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Artist object"}}
+      }
+    },
+    "/api/v1/albums": {
+      "get": {
+        "summary": "List albums",
+        "responses": {"200": {"description": "Paginated list of albums"}}
+      }
+    },
+    "/api/v1/albums/{id}": {
+      "get": {
+        "summary": "Get album by ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Album object"}}
+      }
+    },
+    "/api/v1/songs": {
+      "get": {
+        "summary": "List songs",
+        "responses": {"200": {"description": "Paginated list of songs"}}
+      }
+    },
+    "/api/v1/songs/{id}/stream": {
+      "get": {
+        "summary": "Stream a song",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Audio stream"}}
+      }
+    },
+    "/api/v1/playlists": {
+      "get": {
+        "summary": "List playlists",
+        "responses": {"200": {"description": "Paginated list of playlists"}}
+      },
+      "post": {
+        "summary": "Create a playlist",
+        "responses": {"201": {"description": "Created playlist"}}
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Search artists, albums, and songs",
+        "parameters": [{"name": "q", "in": "query", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Search results"}}
+      }
+    },
+    "/api/v1/libraries/{id}/scan": {
+      "post": {
+        "summary": "Trigger a library scan",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"202": {"description": "Scan started"}}
+      }
+    },
+    "/api/v1/songs/{id}/tags": {
+      "get": {
+        "summary": "Read tags for a song",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Tag map"}}
+      },
+      "patch": {
+        "summary": "Update tags for a song",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Updated tag map"}}
+      }
+    },
+    "/api/v1/admin/backup": {
+      "post": {
+        "summary": "Trigger a backup (admin only)",
+        "responses": {"201": {"description": "Backup path and size"}}
+      }
+    },
+    "/api/v1/admin/backups": {
+      "get": {
+        "summary": "List available backups (admin only)",
+        "responses": {"200": {"description": "List of backup info objects"}}
+      }
+    },
+    "/api/v1/admin/restore": {
+      "post": {
+        "summary": "Restore from a backup (admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "properties": {"path": {"type": "string"}}}}}
+        },
+        "responses": {"200": {"description": "Restore status"}}
+      }
+    }
+  }
+}`
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, spec)
 	}
 }
 

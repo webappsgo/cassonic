@@ -26,6 +26,7 @@ type Handler struct {
 	ffmpeg     *ffmpeg.Manager
 	tagReader  *tags.Reader
 	nowPlaying *NowPlayingTracker
+	backupSvc  BackupService
 }
 
 // NowPlayingInfo holds metadata for one active native API stream.
@@ -104,6 +105,12 @@ func NewHandler(
 		tagReader:  tagReader,
 		nowPlaying: NewNowPlayingTracker(),
 	}
+}
+
+// WithBackupService attaches a backup service to the handler.
+func (h *Handler) WithBackupService(svc BackupService) *Handler {
+	h.backupSvc = svc
+	return h
 }
 
 // Routes builds and returns the chi router for all /api/v1 endpoints.
@@ -207,6 +214,11 @@ func (h *Handler) Routes() http.Handler {
 	r.With(mw.RequireAdmin()).Get("/api/v1/metrics", h.Metrics)
 	r.Get("/api/v1/health", h.Health)
 	r.Get("/api/v1/version", h.Version)
+
+	r.With(mw.RequireAdmin()).Post("/api/v1/admin/backup", h.TriggerBackup)
+	r.With(mw.RequireAdmin()).Get("/api/v1/admin/backups", h.ListBackups)
+	r.With(mw.RequireAdmin()).Get("/api/v1/admin/backups/{filename}", h.DownloadBackup)
+	r.With(mw.RequireAdmin()).Post("/api/v1/admin/restore", h.RestoreBackup)
 
 	return r
 }
