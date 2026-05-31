@@ -31,7 +31,7 @@ type IcecastConn struct {
 
 // Connect establishes an Icecast source connection using the HTTP PUT source protocol.
 func Connect(server *model.IcecastServer, mount *model.IcecastMount) (*IcecastConn, error) {
-	address := fmt.Sprintf("%s:%d", server.Host, server.Port)
+	address := net.JoinHostPort(server.Host, fmt.Sprintf("%d", server.Port))
 	conn, err := net.DialTimeout("tcp", address, 10*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("icecast connect: dial %s: %w", address, err)

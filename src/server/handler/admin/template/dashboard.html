@@ -1,0 +1,32 @@
+{{define "dashboard.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+<div class="stats-grid">
+  <div class="stat-box">
+    <div class="label">Uptime</div>
+    <div class="value" style="font-size:16px">{{.Data.Uptime}}</div>
+  </div>
+  <div class="stat-box">
+    <div class="label">Version</div>
+    <div class="value" style="font-size:16px;word-break:break-all">{{.Data.Version}}</div>
+  </div>
+  <div class="stat-box">
+    <div class="label">Active Streams</div>
+    <div class="value">{{.Data.ActiveStreams}}</div>
+  </div>
+  <div class="stat-box">
+    <div class="label">Tor</div>
+    <div class="value" style="font-size:14px">
+      {{if .Data.TorEnabled}}<span class="badge badge-ok">Enabled</span>{{else}}<span class="badge">Disabled</span>{{end}}
+    </div>
+  </div>
+</div>
+<div class="card" style="margin-top:24px">
+  <h3>Quick Links</h3>
+  <p style="color:var(--text-muted);font-size:14px;line-height:1.8">
+    <a href="/server/admin/library">Manage Libraries</a> &mdash;
+    <a href="/server/admin/scheduler">Scheduler Status</a> &mdash;
+    <a href="/server/admin/logs">View Logs</a> &mdash;
+    <a href="/server/admin/backup">Backup</a>
+  </p>
+</div>
+{{end}}

@@ -1,0 +1,42 @@
+{{define "scheduler.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+<div class="card">
+  <h3>Registered Jobs</h3>
+  {{if .Data}}
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Last Run</th>
+        <th>Next Run</th>
+        <th>Status</th>
+        <th>Last Error</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Data}}
+      <tr>
+        <td style="font-family:monospace;font-size:13px">{{.Name}}</td>
+        <td style="font-size:13px">{{formatTime .LastRun}}</td>
+        <td style="font-size:13px">{{until .NextRun}}</td>
+        <td>
+          {{if .Running}}<span class="badge badge-run">Running</span>
+          {{else if .LastError}}<span class="badge badge-err">Error</span>
+          {{else}}<span class="badge badge-ok">Idle</span>{{end}}
+        </td>
+        <td style="font-size:12px;color:var(--danger);word-break:break-all;max-width:200px">{{.LastError}}</td>
+        <td>
+          <form method="post" action="/server/admin/scheduler/{{.Name}}/run" style="display:inline">
+            <button type="submit" class="btn btn-primary btn-sm" aria-label="Run job {{.Name}} now">Run Now</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p style="color:var(--text-muted)">No jobs registered.</p>
+  {{end}}
+</div>
+{{end}}

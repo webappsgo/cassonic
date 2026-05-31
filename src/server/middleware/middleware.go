@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/local/cassonic/src/server/service/geoip"
 )
 
 // statusResponseWriter wraps http.ResponseWriter to capture the status code.
@@ -265,6 +267,97 @@ func extractIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+// rfc1918 holds the private IPv4 ranges that should never be GeoIP-blocked.
+var rfc1918 = []*net.IPNet{
+	mustParseCIDR("127.0.0.0/8"),
+	mustParseCIDR("10.0.0.0/8"),
+	mustParseCIDR("172.16.0.0/12"),
+	mustParseCIDR("192.168.0.0/16"),
+	mustParseCIDR("::1/128"),
+	mustParseCIDR("fc00::/7"),
+}
+
+// mustParseCIDR panics on invalid CIDR — only called with compile-time constants.
+func mustParseCIDR(s string) *net.IPNet {
+	_, n, err := net.ParseCIDR(s)
+	if err != nil {
+		panic("middleware: mustParseCIDR: " + s + ": " + err.Error())
+	}
+	return n
+}
+
+// isPrivateIP reports whether ip is an RFC 1918 / loopback address.
+func isPrivateIP(ip net.IP) bool {
+	for _, n := range rfc1918 {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// GeoIPFilter returns middleware that blocks or allows requests based on country code.
+// db may be nil — middleware becomes a pass-through.
+// denyCountries and allowCountries are ISO 3166-1 alpha-2 codes (upper-case).
+// When both are set, allowCountries takes precedence per spec.
+func GeoIPFilter(db *geoip.DB, denyCountries, allowCountries []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if db == nil || (len(denyCountries) == 0 && len(allowCountries) == 0) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			rawIP := extractIP(r)
+			ip := net.ParseIP(rawIP)
+
+			if ip == nil || isPrivateIP(ip) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			loc, err := db.Lookup(rawIP)
+			if err != nil || loc == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			code := strings.ToUpper(loc.CountryCode)
+
+			if len(allowCountries) > 0 {
+				for _, c := range allowCountries {
+					if strings.ToUpper(c) == code {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+				geoipDeny(w)
+				return
+			}
+
+			for _, c := range denyCountries {
+				if strings.ToUpper(c) == code {
+					geoipDeny(w)
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// geoipDeny writes a 403 JSON response for GeoIP-blocked requests.
+func geoipDeny(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"ok":      false,
+		"error":   "FORBIDDEN",
+		"message": "Access denied from your region",
+	})
 }
 
 // Logger returns a middleware that writes a structured log line for each request.

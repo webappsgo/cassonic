@@ -1,0 +1,13 @@
+{{define "system.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+<div class="card">
+  <h3>Runtime</h3>
+  <table>
+    <tbody>
+      <tr><td style="color:var(--text-muted);width:180px">OS / Arch</td><td>{{.Data.OS}}</td></tr>
+      <tr><td style="color:var(--text-muted)">Go Version</td><td>{{.Data.GoVersion}}</td></tr>
+      <tr><td style="color:var(--text-muted)">Goroutines</td><td>{{.Data.Goroutines}}</td></tr>
+    </tbody>
+  </table>
+</div>
+{{end}}

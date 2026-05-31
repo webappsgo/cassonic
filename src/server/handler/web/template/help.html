@@ -1,0 +1,76 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">Help</h1>
+</div>
+
+<div class="card" style="max-width:800px;margin:0 auto;">
+  <div class="card-body">
+
+    <h2>Getting Started</h2>
+    <p>cassonic listens on port <strong>{{.Port}}</strong> by default. Replace <code>yourserver</code> with your hostname or IP.</p>
+
+    <h2 style="margin-top:1.5rem;">Connect a Subsonic Client</h2>
+    <p>Use these settings in any Subsonic-compatible app (DSub, Ultrasonic, Symfonium, Clementine, Rhythmbox, Amarok, etc.):</p>
+    <ul>
+      <li><strong>Server URL:</strong> <code class="long-string">http://yourserver:{{.Port}}/rest</code></li>
+      <li><strong>Username / Password:</strong> your cassonic credentials</li>
+      <li><strong>API version:</strong> any (1.1.0 through 1.16.1 supported)</li>
+    </ul>
+
+    <h2 style="margin-top:1.5rem;">Connect an Ampache Client</h2>
+    <p>Configure your Ampache-compatible client with:</p>
+    <ul>
+      <li><strong>Server URL:</strong> <code class="long-string">http://yourserver:{{.Port}}/server/json.server.php</code></li>
+      <li><strong>API version:</strong> 5 or 6 (XML and JSON both supported)</li>
+    </ul>
+
+    <h2 style="margin-top:1.5rem;">Native REST API</h2>
+    <p>The native API is versioned at <code>/api/v1/</code> and returns JSON.</p>
+    <pre style="overflow-x:auto;"><code>GET http://yourserver:{{.Port}}/api/v1/health
+→ {"ok":true,"data":{"status":"ok"}}</code></pre>
+
+    <h2 style="margin-top:1.5rem;">CLI Usage</h2>
+    <pre style="overflow-x:auto;"><code>cassonic-cli --server http://yourserver:{{.Port}} login
+cassonic-cli --server http://yourserver:{{.Port}} scan
+cassonic-cli --server http://yourserver:{{.Port}} status</code></pre>
+
+    <h2 style="margin-top:1.5rem;">Icecast Streaming</h2>
+    <p>After adding an Icecast server in <a href="/icecast">Icecast settings</a>, streams are available at:</p>
+    <pre style="overflow-x:auto;"><code>http://icecast-host:8000/&lt;mount&gt;</code></pre>
+    <p>Mounts relay by all tracks, artist, or genre — configurable per mount.</p>
+
+    <h2 style="margin-top:1.5rem;">Key Endpoints</h2>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:0.5rem;border-bottom:1px solid var(--color-border);">Method</th>
+            <th style="text-align:left;padding:0.5rem;border-bottom:1px solid var(--color-border);">URL</th>
+            <th style="text-align:left;padding:0.5rem;border-bottom:1px solid var(--color-border);">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/health</code></td><td style="padding:0.5rem;">Health check (public)</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/version</code></td><td style="padding:0.5rem;">Server version (public)</td></tr>
+          <tr><td style="padding:0.5rem;">POST</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/auth/login</code></td><td style="padding:0.5rem;">Obtain session token</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/artists</code></td><td style="padding:0.5rem;">List artists</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/albums</code></td><td style="padding:0.5rem;">List albums</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/songs</code></td><td style="padding:0.5rem;">List songs</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/songs/{id}/stream</code></td><td style="padding:0.5rem;">Stream audio</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/playlists</code></td><td style="padding:0.5rem;">List playlists</td></tr>
+          <tr><td style="padding:0.5rem;">POST</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/playlists</code></td><td style="padding:0.5rem;">Create playlist</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/search?q=term</code></td><td style="padding:0.5rem;">Search artists, albums, songs</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/songs/{id}/tags</code></td><td style="padding:0.5rem;">Read audio tags</td></tr>
+          <tr><td style="padding:0.5rem;">PATCH</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/songs/{id}/tags</code></td><td style="padding:0.5rem;">Update audio tags</td></tr>
+          <tr><td style="padding:0.5rem;">POST</td><td style="padding:0.5rem;"><code class="long-string">/api/v1/libraries/{id}/scan</code></td><td style="padding:0.5rem;">Trigger library scan</td></tr>
+          <tr><td style="padding:0.5rem;">GET</td><td style="padding:0.5rem;"><code class="long-string">/api/docs/</code></td><td style="padding:0.5rem;">Interactive API docs (Swagger)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:1.5rem;">For the full API reference, see <a href="/api/docs/">API docs</a>.</p>
+  </div>
+</div>
+{{end}}

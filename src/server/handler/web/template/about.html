@@ -1,0 +1,29 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">About cassonic</h1>
+</div>
+
+<div class="card" style="max-width:720px;margin:0 auto;">
+  <div class="card-body">
+    <p>{{.Description}}</p>
+
+    <h2 style="margin-top:1.5rem;">Features</h2>
+    <ul style="line-height:2;">
+      {{range .Features}}
+      <li>{{.}}</li>
+      {{end}}
+    </ul>
+
+    <h2 style="margin-top:1.5rem;">Version</h2>
+    <p><code class="long-string">{{.Version}}</code></p>
+
+    <h2 style="margin-top:1.5rem;">License</h2>
+    <p>MIT — free to use, modify, and distribute.</p>
+
+    <h2 style="margin-top:1.5rem;">Official Site</h2>
+    <p><a href="https://cassonic.local.us" rel="noopener">cassonic.local.us</a></p>
+  </div>
+</div>
+{{end}}

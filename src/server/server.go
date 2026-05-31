@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,11 +25,16 @@ import (
 	"github.com/local/cassonic/src/server/handler/subsonic"
 	"github.com/local/cassonic/src/server/handler/web"
 	mw "github.com/local/cassonic/src/server/middleware"
+	"github.com/local/cassonic/src/server/metrics"
 	"github.com/local/cassonic/src/server/service"
-	"github.com/local/cassonic/src/server/service/ffmpeg"
-	"github.com/local/cassonic/src/server/service/tags"
-	"github.com/local/cassonic/src/server/store"
 	svcbackup "github.com/local/cassonic/src/server/service/backup"
+	"github.com/local/cassonic/src/server/service/ffmpeg"
+	"github.com/local/cassonic/src/server/service/geoip"
+	"github.com/local/cassonic/src/server/service/scheduler"
+	"github.com/local/cassonic/src/server/service/tags"
+	"github.com/local/cassonic/src/server/ssl"
+	"github.com/local/cassonic/src/server/store"
+	handleradmin "github.com/local/cassonic/src/server/handler/admin"
 )
 
 // Version, CommitID, and BuildDate are set via -ldflags at build time.
@@ -48,6 +55,7 @@ type Server struct {
 	ampSessions *mw.AmpacheSessionStore
 	http        *http.Server
 	backupSvc   *svcbackup.Service
+	sslMgr      *ssl.Manager
 
 	// rate limiters per API layer
 	nativeRL   *mw.RateLimiter
@@ -57,6 +65,17 @@ type Server struct {
 
 	// IP filter
 	ipFilter *mw.IPFilter
+
+	// GeoIP filtering
+	geoipDB        *geoip.DB
+	denyCountries  []string
+	allowCountries []string
+
+	// MetricsToken, when non-empty, requires a matching Bearer token to access /metrics.
+	MetricsToken string
+
+	// sched is the built-in scheduler; exposed to the admin panel for status display.
+	sched *scheduler.Scheduler
 }
 
 // New creates and fully configures the HTTP server. It does not begin listening.
@@ -105,9 +124,11 @@ func (s *Server) buildRouter() http.Handler {
 	// Global middleware stack — order is enforced by spec (PART 13).
 	r.Use(mw.RequestID())
 	r.Use(s.ipFilter.Middleware())
+	r.Use(mw.GeoIPFilter(s.geoipDB, s.denyCountries, s.allowCountries))
 	r.Use(mw.Logger(os.Stdout))
 	r.Use(mw.Cors())
 	r.Use(mw.SecurityHeaders(s.cfg.Server.Mode == "production"))
+	r.Use(s.metricsMiddleware())
 
 	// Suppress the chi default middleware's own request-id header to avoid
 	// duplication with our own RequestID middleware.
@@ -115,21 +136,28 @@ func (s *Server) buildRouter() http.Handler {
 
 	// Public health and version endpoints — no auth required.
 	r.Get("/server/healthz", s.healthzHTML())
+	r.Get("/health", s.healthzJSON())
 	r.Get("/api/v1/health", s.healthzJSON())
+	r.Get("/version", s.versionJSON())
+	r.Get("/api/version", s.versionJSON())
 	r.Get("/api/v1/version", s.versionJSON())
+	r.Get("/api/v1/autodiscover", s.autodiscoverJSON())
 
-	// Swagger UI — redirect bare path and serve the UI at /api/docs/*.
+	// Swagger UI — served at /api/docs/* and mirrored at /swagger/*.
 	r.Get("/api/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/api/docs/", http.StatusMovedPermanently)
 	})
 	r.Get("/api/docs/", s.swaggerUI())
 	r.Get("/api/docs/*", s.swaggerUI())
+	r.Get("/swagger/", s.swaggerUI())
+	r.Get("/swagger/*", s.swaggerUI())
 
 	// OpenAPI spec served from an embedded JSON constant.
 	r.Get("/api/v1/openapi.json", s.openAPISpec())
 
 	// Prometheus metrics — internal only (guarded by IP filter at infra level).
-	r.Handle("/metrics", promhttp.Handler())
+	// Optional Bearer token auth when MetricsToken is configured.
+	r.Handle("/metrics", s.metricsHandler())
 
 	// Native REST API — auth is optional at the middleware level; individual
 	// routes enforce RequireAuth / RequireAdmin via their own With() calls.
@@ -154,6 +182,9 @@ func (s *Server) buildRouter() http.Handler {
 		r.Mount("/", s.ampacheHandler().Routes())
 	})
 
+	// Admin panel — mounted before WebUI catch-all.
+	r.Mount("/server/admin", s.adminHandler().Routes())
+
 	// WebUI — catch-all last; includes its own embedded /static/* handler.
 	r.Mount("/", s.webHandler().Routes())
 
@@ -162,26 +193,54 @@ func (s *Server) buildRouter() http.Handler {
 
 // Start begins listening on the configured address and port. It blocks until the
 // server shuts down (SIGINT or SIGTERM received) then drains with a 30-second
-// timeout.
+// timeout. When an SSL manager is attached, it serves HTTPS and runs an
+// HTTP→HTTPS redirect server on port 80 in a background goroutine.
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Address, s.cfg.Server.Port)
-
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("server: listen %s: %w", addr, err)
-	}
-
-	fmt.Printf("cassonic listening on http://%s\n", ln.Addr())
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := make(chan error, 1)
-	go func() {
-		if serveErr := s.http.Serve(ln); serveErr != nil && serveErr != http.ErrServerClosed {
-			errCh <- serveErr
+
+	if s.sslMgr != nil {
+		tlsCfg := s.sslMgr.TLSConfig()
+		s.http.TLSConfig = tlsCfg
+
+		// Start a plain-HTTP listener on port 80 to redirect to HTTPS.
+		redirectAddr := fmt.Sprintf("%s:80", s.cfg.Server.Address)
+		redirectSrv := &http.Server{
+			Addr:         redirectAddr,
+			Handler:      s.sslMgr.HTTPHandler(nil),
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
 		}
-	}()
+		go func() {
+			if err := redirectSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Fprintf(os.Stderr, "cassonic: http redirect server: %v\n", err)
+			}
+		}()
+
+		fmt.Printf("cassonic listening on https://%s\n", addr)
+
+		certFile, keyFile := s.sslMgr.CertFiles()
+		go func() {
+			if serveErr := s.http.ListenAndServeTLS(certFile, keyFile); serveErr != nil && serveErr != http.ErrServerClosed {
+				errCh <- serveErr
+			}
+		}()
+	} else {
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("server: listen %s: %w", addr, err)
+		}
+		fmt.Printf("cassonic listening on http://%s\n", ln.Addr())
+		go func() {
+			if serveErr := s.http.Serve(ln); serveErr != nil && serveErr != http.ErrServerClosed {
+				errCh <- serveErr
+			}
+		}()
+	}
 
 	select {
 	case sig := <-sigCh:
@@ -209,9 +268,32 @@ func (s *Server) getSubsonicPassword(_ context.Context, _ string) (string, bool)
 	return "", false
 }
 
+// WithGeoIP attaches a GeoIP database and country filter lists to the server.
+// deny and allow are ISO 3166-1 alpha-2 codes. When allow is non-empty it takes precedence.
+func (s *Server) WithGeoIP(db *geoip.DB, deny, allow []string) *Server {
+	s.geoipDB = db
+	s.denyCountries = deny
+	s.allowCountries = allow
+	s.http.Handler = s.buildRouter()
+	return s
+}
+
 // WithBackupService attaches an optional backup service to the server.
 func (s *Server) WithBackupService(svc *svcbackup.Service) *Server {
 	s.backupSvc = svc
+	return s
+}
+
+// WithSSL attaches an SSL/TLS manager to the server. When set, Start()
+// serves HTTPS and redirects plain-HTTP connections to HTTPS on port 80.
+func (s *Server) WithSSL(m *ssl.Manager) *Server {
+	s.sslMgr = m
+	return s
+}
+
+// WithScheduler attaches the built-in scheduler so the admin panel can display job status.
+func (s *Server) WithScheduler(sc *scheduler.Scheduler) *Server {
+	s.sched = sc
 	return s
 }
 
@@ -237,6 +319,11 @@ func (s *Server) ampacheHandler() *ampache.Handler {
 // webHandler constructs the WebUI handler.
 func (s *Server) webHandler() *web.Handler {
 	return web.NewHandlerWithConfig(s.db, s.cfg, Version)
+}
+
+// adminHandler constructs the admin panel handler.
+func (s *Server) adminHandler() *handleradmin.Handler {
+	return handleradmin.New(s.db, s.cfg, Version, s.sched)
 }
 
 // healthzHTML returns an HTTP handler that writes a plain-text health page.
@@ -438,6 +525,27 @@ func (s *Server) openAPISpec() http.HandlerFunc {
 	}
 }
 
+// autodiscoverJSON returns an HTTP handler that advertises the server's
+// capability endpoints for client auto-configuration.
+func (s *Server) autodiscoverJSON() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		baseURL := s.cfg.Server.BaseURL
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"server":       "cassonic",
+			"version":      Version,
+			"api_version":  "v1",
+			"base_url":     baseURL,
+			"features":     []string{"subsonic", "ampache", "icecast", "podcasts", "scrobbling", "tor"},
+			"subsonic_url": "/rest",
+			"ampache_url":  "/server",
+			"api_url":      "/api/v1",
+			"docs_url":     "/swagger/",
+			"metrics_url":  "/metrics",
+		})
+	}
+}
+
 // versionJSON returns an HTTP handler that writes version information as JSON.
 func (s *Server) versionJSON() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -448,4 +556,51 @@ func (s *Server) versionJSON() http.HandlerFunc {
 			"buildDate": BuildDate,
 		})
 	}
+}
+
+// statusRecorder wraps http.ResponseWriter to capture the response status code.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+// WriteHeader captures the status code and delegates to the underlying writer.
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+// metricsMiddleware returns middleware that records cassonic_http_requests_total
+// for every request, labelled by method, path, and response status code.
+func (s *Server) metricsMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(rw, r)
+			metrics.HTTPRequests.WithLabelValues(
+				r.Method,
+				r.URL.Path,
+				strconv.Itoa(rw.status),
+			).Inc()
+		})
+	}
+}
+
+// metricsHandler returns an HTTP handler for /metrics with optional Bearer token auth.
+// When MetricsToken is empty the metrics are accessible without authentication.
+func (s *Server) metricsHandler() http.Handler {
+	base := promhttp.Handler()
+	if s.MetricsToken == "" {
+		return base
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		token := strings.TrimPrefix(auth, "Bearer ")
+		if token == "" || token != s.MetricsToken {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="cassonic-metrics"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		base.ServeHTTP(w, r)
+	})
 }

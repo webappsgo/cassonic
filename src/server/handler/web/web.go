@@ -90,6 +90,8 @@ var staticFS, _ = fs.Sub(assets, "static")
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
 
+	r.Get("/server/about", h.About)
+	r.Get("/server/help", h.Help)
 	r.Get("/login", h.Login)
 	r.Post("/login", h.LoginPost)
 	r.Get("/share/{token}", h.Share)
@@ -756,6 +758,49 @@ func (h *Handler) Share(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.render(w, "share.html", data)
+}
+
+// About renders the /server/about page with project description and feature list.
+func (h *Handler) About(w http.ResponseWriter, r *http.Request) {
+	type aboutData struct {
+		PageData
+		Description string
+		Features    []string
+	}
+	h.render(w, "about.html", aboutData{
+		PageData:    PageData{Title: "About cassonic", Version: h.version},
+		Description: "cassonic is a self-hosted music streaming server — a full-featured, drop-in replacement for Airsonic, Subsonic, Libresonic, Ampache, and kPlaylist. Every existing Subsonic and Ampache client works without reconfiguration.",
+		Features: []string{
+			"Full Subsonic REST API compatibility (v1.1.0–1.16.1)",
+			"Ampache API v5 and v6 compatibility (XML and JSON)",
+			"Built-in tag editor (ID3v2, MP4, Vorbis, FLAC, APE, WMA, WAV — 7 formats)",
+			"MusicBrainz ID auto-lookup (opt-in, never overwrites user-edited fields)",
+			"Multi-server multi-mount Icecast relay streaming (by track, artist, or genre)",
+			"Multi-service audio scrobbling (Last.fm, ListenBrainz, Libre.fm, GNU FM, Maloja, and custom servers)",
+			"Podcast support (RSS fetch, episode download, playback)",
+			"Public share links with optional expiry and password",
+			"Audio file upload (per-user permission, admin-configurable)",
+			"Mobile-first WebUI with built-in music player",
+			"Tor hidden service support (auto-enabled when tor binary is present)",
+			"Built-in scheduler, GeoIP filtering, Prometheus metrics, backup, and auto-update",
+		},
+	})
+}
+
+// Help renders the /server/help page with getting-started guide and real API examples.
+func (h *Handler) Help(w http.ResponseWriter, r *http.Request) {
+	type helpData struct {
+		PageData
+		Port int
+	}
+	port := 4533
+	if h.cfg != nil && h.cfg.Server.Port != 0 {
+		port = h.cfg.Server.Port
+	}
+	h.render(w, "help.html", helpData{
+		PageData: PageData{Title: "Help — cassonic", Version: h.version},
+		Port:     port,
+	})
 }
 
 // Upload renders the file upload page.

@@ -6,6 +6,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/local/cassonic/src/server/metrics"
 )
 
 // JobFunc is a function that a scheduled job executes.
@@ -67,11 +69,17 @@ func (s *Scheduler) Register(j Job) {
 	s.mu.Unlock()
 }
 
+// catchUpWindow is the maximum gap for which a missed job will be caught up on start.
+const catchUpWindow = 24 * time.Hour
+
 // Start launches the scheduler loop in a goroutine.
 // It ticks every minute and fires any job whose nextRun has passed.
 // The loop exits when ctx is cancelled.
+// On startup, jobs whose nextRun is in the past within catchUpWindow are run immediately.
 func (s *Scheduler) Start(ctx context.Context) {
 	go func() {
+		s.catchUp(ctx)
+
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 
@@ -87,6 +95,56 @@ func (s *Scheduler) Start(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// catchUp runs any job that missed its scheduled time within catchUpWindow.
+func (s *Scheduler) catchUp(ctx context.Context) {
+	now := time.Now()
+
+	s.mu.Lock()
+	var toRun []*jobEntry
+	for _, entry := range s.jobs {
+		if entry.nextRun.IsZero() {
+			continue
+		}
+		if !now.After(entry.nextRun) {
+			continue
+		}
+		gap := now.Sub(entry.nextRun)
+		if gap >= catchUpWindow {
+			continue
+		}
+		s.logger.Printf("[scheduler] catch-up: running %q (missed by %s)", entry.Name, gap.Round(time.Second))
+		entry.running = true
+		toRun = append(toRun, entry)
+	}
+	s.mu.Unlock()
+
+	for _, entry := range toRun {
+		captured := entry
+		go func() {
+			err := captured.Fn(ctx)
+
+			outcome := "success"
+			if err != nil {
+				outcome = "error"
+			}
+			metrics.SchedulerRuns.WithLabelValues(captured.Name, outcome).Inc()
+
+			s.mu.Lock()
+			captured.lastRun = time.Now()
+			captured.nextRun = captured.lastRun.Add(captured.Interval)
+			captured.running = false
+			captured.lastError = err
+			s.mu.Unlock()
+
+			if err != nil {
+				s.logger.Printf("[scheduler] catch-up: job %q failed: %v", captured.Name, err)
+			} else {
+				s.logger.Printf("[scheduler] catch-up: job %q completed", captured.Name)
+			}
+		}()
+	}
 }
 
 // tick inspects all registered jobs and spawns goroutines for any that are due.
@@ -108,8 +166,14 @@ func (s *Scheduler) tick(ctx context.Context) {
 		captured := entry
 
 		go func() {
-			s.logger.Printf("scheduler: starting job %q", captured.Name)
+			s.logger.Printf("[scheduler] starting job %q", captured.Name)
 			err := captured.Fn(ctx)
+
+			outcome := "success"
+			if err != nil {
+				outcome = "error"
+			}
+			metrics.SchedulerRuns.WithLabelValues(captured.Name, outcome).Inc()
 
 			s.mu.Lock()
 			captured.lastRun = time.Now()
@@ -119,9 +183,9 @@ func (s *Scheduler) tick(ctx context.Context) {
 			s.mu.Unlock()
 
 			if err != nil {
-				s.logger.Printf("scheduler: job %q failed: %v", captured.Name, err)
+				s.logger.Printf("[scheduler] job %q failed: %v", captured.Name, err)
 			} else {
-				s.logger.Printf("scheduler: job %q completed", captured.Name)
+				s.logger.Printf("[scheduler] job %q completed", captured.Name)
 			}
 		}()
 	}

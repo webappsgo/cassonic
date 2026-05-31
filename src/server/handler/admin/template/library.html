@@ -1,0 +1,52 @@
+{{define "library.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+<div class="card">
+  <h3>Libraries</h3>
+  {{if .Data}}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Path</th>
+        <th>Enabled</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Data}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td style="font-family:monospace;font-size:12px;word-break:break-all">{{.Path}}</td>
+        <td>{{if .Enabled}}<span class="badge badge-ok">Yes</span>{{else}}<span class="badge badge-err">No</span>{{end}}</td>
+        <td>
+          <form method="post" action="/server/admin/library/scan" style="display:inline">
+            <button type="submit" class="btn btn-primary btn-sm" aria-label="Scan library {{.Name}}">Scan Now</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p style="color:var(--text-muted)">No libraries configured yet.</p>
+  {{end}}
+</div>
+<div class="card">
+  <h3>Add Library</h3>
+  <form method="post" action="/server/admin/library/scan">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="lib-path">Path</label>
+        <input id="lib-path" name="path" type="text" placeholder="/mnt/music" required>
+      </div>
+      <div class="form-field">
+        <label for="lib-name">Name</label>
+        <input id="lib-name" name="name" type="text" placeholder="My Music">
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button type="submit" class="btn btn-primary">Add Library</button>
+    </div>
+  </form>
+</div>
+{{end}}

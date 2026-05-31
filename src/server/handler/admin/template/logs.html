@@ -1,0 +1,9 @@
+{{define "logs.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+<div class="card">
+  <h3>Server Log (last 100 lines)</h3>
+  <div class="log-output" aria-label="Log output" role="log" aria-live="off">
+    {{range .Data}}<p>{{.}}</p>{{end}}
+  </div>
+</div>
+{{end}}

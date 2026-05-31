@@ -1,0 +1,107 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --sidebar-bg: #1a1d27;
+      --surface: #1e2130;
+      --border: #2e3250;
+      --accent: #5b8af8;
+      --accent-hover: #7aa3ff;
+      --text: #e0e4f0;
+      --text-muted: #8891b0;
+      --danger: #e05252;
+      --success: #4caf7d;
+      --warn: #d4a94a;
+      --sidebar-width: 220px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 15px; display: flex; min-height: 100vh; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+    .skip-link { position: absolute; left: -9999px; top: 4px; padding: 8px 12px; background: var(--accent); color: #fff; border-radius: 4px; z-index: 9999; }
+    .skip-link:focus { left: 4px; }
+    aside { width: var(--sidebar-width); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 100vh; flex-shrink: 0; }
+    .sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+    .sidebar-header h1 { font-size: 16px; font-weight: 700; color: var(--text); }
+    .sidebar-header small { color: var(--text-muted); font-size: 11px; display: block; margin-top: 2px; word-break: break-all; }
+    nav ul { list-style: none; padding: 8px 0; }
+    nav li a { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: var(--text-muted); font-size: 14px; transition: background 0.15s, color 0.15s; }
+    nav li a:hover, nav li a.active { background: var(--surface); color: var(--text); }
+    nav li a.active { border-left: 3px solid var(--accent); }
+    .main-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    header.topbar { background: var(--sidebar-bg); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header.topbar h2 { font-size: 17px; font-weight: 600; }
+    header.topbar .topbar-right { color: var(--text-muted); font-size: 13px; }
+    main { padding: 24px; flex: 1; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .card h3 { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .stat-box .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-box .value { font-size: 22px; font-weight: 700; color: var(--text); word-break: break-all; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge-ok { background: rgba(76,175,125,0.15); color: var(--success); }
+    .badge-err { background: rgba(224,82,82,0.15); color: var(--danger); }
+    .badge-run { background: rgba(91,138,248,0.15); color: var(--accent); }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    form { display: contents; }
+    .flash { padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; background: rgba(76,175,125,0.12); border: 1px solid var(--success); color: var(--success); font-size: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .form-field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    .form-field input, .form-field select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+    .form-field input:focus, .form-field select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+    .log-output { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: monospace; font-size: 12px; overflow-x: auto; max-height: 600px; overflow-y: auto; }
+    .log-output p { margin: 0; padding: 1px 0; word-break: break-all; }
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      aside { width: 100%; min-height: auto; }
+      nav ul { display: flex; flex-wrap: wrap; }
+      nav li a { padding: 8px 12px; border-left: none; border-bottom: 3px solid transparent; }
+      nav li a.active { border-left: none; border-bottom-color: var(--accent); }
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<aside role="navigation" aria-label="Admin sidebar">
+  <div class="sidebar-header">
+    <h1>Admin Panel</h1>
+    <small>cassonic {{.Version}}</small>
+  </div>
+  <nav aria-label="Admin navigation">
+    <ul>
+      <li><a href="/server/admin/" class="{{if eq .Active "dashboard"}}active{{end}}" aria-current="{{if eq .Active "dashboard"}}page{{end}}">Dashboard</a></li>
+      <li><a href="/server/admin/library" class="{{if eq .Active "library"}}active{{end}}" aria-current="{{if eq .Active "library"}}page{{end}}">Library</a></li>
+      <li><a href="/server/admin/scheduler" class="{{if eq .Active "scheduler"}}active{{end}}" aria-current="{{if eq .Active "scheduler"}}page{{end}}">Scheduler</a></li>
+      <li><a href="/server/admin/config" class="{{if eq .Active "config"}}active{{end}}" aria-current="{{if eq .Active "config"}}page{{end}}">Config</a></li>
+      <li><a href="/server/admin/system" class="{{if eq .Active "system"}}active{{end}}" aria-current="{{if eq .Active "system"}}page{{end}}">System</a></li>
+      <li><a href="/server/admin/logs" class="{{if eq .Active "logs"}}active{{end}}" aria-current="{{if eq .Active "logs"}}page{{end}}">Logs</a></li>
+      <li><a href="/server/admin/backup" class="{{if eq .Active "backup"}}active{{end}}" aria-current="{{if eq .Active "backup"}}page{{end}}">Backup</a></li>
+    </ul>
+  </nav>
+</aside>
+<div class="main-wrap">
+  <header class="topbar" role="banner">
+    <h2>{{.Title}}</h2>
+    <span class="topbar-right">cassonic {{.Version}}</span>
+  </header>
+  <main id="main-content" role="main">
+    {{template "content" .}}
+  </main>
+</div>
+</body>
+</html>{{end}}

@@ -1,0 +1,32 @@
+{{define "config.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+{{if .Data.Flash}}<div class="flash" role="status">{{.Data.Flash}}</div>{{end}}
+<div class="card">
+  <h3>Server Settings</h3>
+  <form method="post" action="/server/admin/config">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="cfg-port">Port</label>
+        <input id="cfg-port" name="port" type="number" min="1" max="65535" value="{{.Data.Port}}">
+      </div>
+      <div class="form-field">
+        <label for="cfg-mode">Mode</label>
+        <select id="cfg-mode" name="mode">
+          <option value="production" {{if eq .Data.Mode "production"}}selected{{end}}>production</option>
+          <option value="development" {{if eq .Data.Mode "development"}}selected{{end}}>development</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="cfg-debug">Debug</label>
+        <select id="cfg-debug" name="debug">
+          <option value="false" {{if not .Data.Debug}}selected{{end}}>disabled</option>
+          <option value="true" {{if .Data.Debug}}selected{{end}}>enabled</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <button type="submit" class="btn btn-primary">Save Settings</button>
+    </div>
+  </form>
+</div>
+{{end}}

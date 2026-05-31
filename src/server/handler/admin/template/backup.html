@@ -1,0 +1,40 @@
+{{define "backup.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+{{if .Data.Flash}}<div class="flash" role="status">{{.Data.Flash}}</div>{{end}}
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <h3 style="margin:0">Backup Archives</h3>
+    <form method="post" action="/server/admin/backup/now">
+      <button type="submit" class="btn btn-primary">Backup Now</button>
+    </form>
+  </div>
+  {{if .Data.Files}}
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Size</th>
+        <th>Created</th>
+        <th>Encrypted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Data.Files}}
+      <tr>
+        <td style="font-family:monospace;font-size:12px;word-break:break-all">{{.Name}}</td>
+        <td>{{.SizeMB}}</td>
+        <td>{{.CreatedAt}}</td>
+        <td>{{if .Encrypted}}<span class="badge badge-ok">Yes</span>{{else}}<span class="badge">No</span>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p style="color:var(--text-muted)">No backup archives found.</p>
+  {{end}}
+</div>
+<div class="card">
+  <h3>Retention</h3>
+  <p style="color:var(--text-muted);font-size:14px">Keeping the last <strong style="color:var(--text)">{{.Data.Retention}}</strong> backup archives. Older archives are pruned automatically after each backup run.</p>
+</div>
+{{end}}
