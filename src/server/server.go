@@ -155,6 +155,12 @@ func (s *Server) buildRouter() http.Handler {
 	// OpenAPI spec served from an embedded JSON constant.
 	r.Get("/api/v1/openapi.json", s.openAPISpec())
 
+	// GraphQL endpoint — returns a minimal introspection-ready JSON response.
+	// Full GraphQL query execution is a future enhancement; the endpoint exists
+	// per spec (api-rules.md) so clients can discover it via autodiscover.
+	r.Get("/graphql/", s.graphqlHandler())
+	r.Post("/graphql/", s.graphqlHandler())
+
 	// Prometheus metrics — internal only (guarded by IP filter at infra level).
 	// Optional Bearer token auth when MetricsToken is configured.
 	r.Handle("/metrics", s.metricsHandler())
@@ -324,6 +330,22 @@ func (s *Server) webHandler() *web.Handler {
 // adminHandler constructs the admin panel handler.
 func (s *Server) adminHandler() *handleradmin.Handler {
 	return handleradmin.New(s.db, s.cfg, Version, s.sched)
+}
+
+// graphqlHandler returns a minimal GraphQL endpoint. Full query execution is a
+// future enhancement; the endpoint exists for client discovery via autodiscover.
+func (s *Server) graphqlHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"__typename": "Query",
+			},
+			"errors": []map[string]string{{
+				"message": "GraphQL query execution not yet implemented. Use /api/v1 REST API.",
+			}},
+		})
+	}
 }
 
 // healthzHTML returns an HTTP handler that writes a plain-text health page.
