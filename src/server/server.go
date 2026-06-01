@@ -21,6 +21,7 @@ import (
 
 	"github.com/local/cassonic/src/config"
 	handlerapi "github.com/local/cassonic/src/server/handler/api"
+	"github.com/local/cassonic/src/server/handler/api/swagger"
 	"github.com/local/cassonic/src/server/handler/ampache"
 	"github.com/local/cassonic/src/server/handler/subsonic"
 	"github.com/local/cassonic/src/server/handler/web"
@@ -136,6 +137,7 @@ func (s *Server) buildRouter() http.Handler {
 
 	// Well-known static assets — served before auth and API routes.
 	r.Get("/robots.txt", s.staticFileHandler("static/robots.txt", "text/plain; charset=utf-8"))
+	r.Get("/manifest.json", s.staticFileHandler("static/manifest.json", "application/manifest+json; charset=utf-8"))
 	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/static/favicon.svg", http.StatusMovedPermanently)
 	})
@@ -152,13 +154,15 @@ func (s *Server) buildRouter() http.Handler {
 	r.Get("/api/v1/autodiscover", s.autodiscoverJSON())
 
 	// Swagger UI — served at /api/docs/* and mirrored at /swagger/*.
+	// All assets are embedded; no external CDN is required.
+	swaggerHandler := swagger.Handler("/api/v1/openapi.json")
 	r.Get("/api/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/api/docs/", http.StatusMovedPermanently)
 	})
-	r.Get("/api/docs/", s.swaggerUI())
-	r.Get("/api/docs/*", s.swaggerUI())
-	r.Get("/swagger/", s.swaggerUI())
-	r.Get("/swagger/*", s.swaggerUI())
+	r.Get("/api/docs/", swaggerHandler)
+	r.Get("/api/docs/*", swaggerHandler)
+	r.Get("/swagger/", swaggerHandler)
+	r.Get("/swagger/*", swaggerHandler)
 
 	// OpenAPI spec served from an embedded JSON constant.
 	r.Get("/api/v1/openapi.json", s.openAPISpec())
@@ -376,35 +380,6 @@ func (s *Server) healthzJSON() http.HandlerFunc {
 	}
 }
 
-// swaggerUI returns an HTTP handler that serves the self-contained Swagger UI page.
-func (s *Server) swaggerUI() http.HandlerFunc {
-	const page = `<!DOCTYPE html>
-<html>
-<head>
-  <title>cassonic API docs</title>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-</head>
-<body>
-<div id="swagger-ui"></div>
-<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-<script>
-SwaggerUIBundle({
-  url: "/api/v1/openapi.json",
-  dom_id: '#swagger-ui',
-  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-  layout: "BaseLayout",
-  deepLinking: true
-});
-</script>
-</body>
-</html>`
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, page)
-	}
-}
 
 // openAPISpec returns an HTTP handler that serves the cassonic OpenAPI 3.0 specification.
 func (s *Server) openAPISpec() http.HandlerFunc {
