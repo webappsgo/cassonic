@@ -451,6 +451,33 @@ func (s *sqliteUserStore) PurgeExpiredSessions(ctx context.Context) error {
 	return nil
 }
 
+// GetSubsonicPassword returns the encrypted subsonic password for the named user.
+// Returns ("", false, nil) when no subsonic password has been set.
+func (s *sqliteUserStore) GetSubsonicPassword(ctx context.Context, username string) (string, bool, error) {
+	var enc string
+	err := s.db.QueryRowContext(ctx,
+		"SELECT subsonic_password FROM users WHERE username = ? AND is_enabled = 1",
+		username).Scan(&enc)
+	if errors.Is(err, sql.ErrNoRows) || enc == "" {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("get subsonic password: %w", err)
+	}
+	return enc, true, nil
+}
+
+// SetSubsonicPassword stores an encrypted subsonic password for the named user.
+func (s *sqliteUserStore) SetSubsonicPassword(ctx context.Context, username string, encrypted string) error {
+	_, err := s.db.ExecContext(ctx,
+		"UPDATE users SET subsonic_password = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?",
+		encrypted, username)
+	if err != nil {
+		return fmt.Errorf("set subsonic password: %w", err)
+	}
+	return nil
+}
+
 // scanRadioStation reads a full internet_radio_stations row.
 func scanRadioStation(row interface {
 	Scan(...any) error

@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
     can_podcast INTEGER NOT NULL DEFAULT 1,
     totp_secret TEXT NOT NULL DEFAULT '',
     totp_enabled INTEGER NOT NULL DEFAULT 0,
+    subsonic_password TEXT NOT NULL DEFAULT '',
     last_login_at DATETIME,
     login_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until DATETIME,
@@ -357,6 +358,9 @@ func Open(dataDir string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Idempotent migration: add subsonic_password column to existing databases.
+	_, _ = usersDB.ExecContext(context.Background(), "ALTER TABLE users ADD COLUMN subsonic_password TEXT NOT NULL DEFAULT ''")
 
 	serverDB, err := openDB(filepath.Join(dataDir, "server.db"), serverSchema)
 	if err != nil {

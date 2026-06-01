@@ -847,8 +847,37 @@ func (h *Handler) Share(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "share.html", data)
 }
 
+// aboutDescription is the project description shown on the About page.
+const aboutDescription = "cassonic is a self-hosted music streaming server — a full-featured, drop-in replacement for Airsonic, Subsonic, Libresonic, Ampache, and kPlaylist. Every existing Subsonic and Ampache client works without reconfiguration."
+
+// aboutFeatures lists the key features shown on the About page.
+var aboutFeatures = []string{
+	"Full Subsonic REST API compatibility (v1.1.0–1.16.1)",
+	"Ampache API v5 and v6 compatibility (XML and JSON)",
+	"Built-in tag editor (ID3v2, MP4, Vorbis, FLAC, APE, WMA, WAV — 7 formats)",
+	"MusicBrainz ID auto-lookup (opt-in, never overwrites user-edited fields)",
+	"Multi-server multi-mount Icecast relay streaming (by track, artist, or genre)",
+	"Multi-service audio scrobbling (Last.fm, ListenBrainz, Libre.fm, GNU FM, Maloja, and custom servers)",
+	"Podcast support (RSS fetch, episode download, playback)",
+	"Public share links with optional expiry and password",
+	"Audio file upload (per-user permission, admin-configurable)",
+	"Mobile-first WebUI with built-in music player",
+	"Tor hidden service support (auto-enabled when tor binary is present)",
+	"Built-in scheduler, GeoIP filtering, Prometheus metrics, backup, and auto-update",
+}
+
 // About renders the /server/about page with project description and feature list.
+// When Accept: text/plain is sent, a plain-text summary is returned instead.
 func (h *Handler) About(w http.ResponseWriter, r *http.Request) {
+	if mw.AcceptedFormat(r) == "plain" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintf(w, "cassonic — About\n\n%s\n\nFeatures:\n", aboutDescription)
+		for _, f := range aboutFeatures {
+			fmt.Fprintf(w, "  - %s\n", f)
+		}
+		return
+	}
+
 	type aboutData struct {
 		PageData
 		Description string
@@ -863,33 +892,33 @@ func (h *Handler) About(w http.ResponseWriter, r *http.Request) {
 			Lang:    lang,
 			T:       func(key string) string { return bundle.T(lang, key) },
 		},
-		Description: "cassonic is a self-hosted music streaming server — a full-featured, drop-in replacement for Airsonic, Subsonic, Libresonic, Ampache, and kPlaylist. Every existing Subsonic and Ampache client works without reconfiguration.",
-		Features: []string{
-			"Full Subsonic REST API compatibility (v1.1.0–1.16.1)",
-			"Ampache API v5 and v6 compatibility (XML and JSON)",
-			"Built-in tag editor (ID3v2, MP4, Vorbis, FLAC, APE, WMA, WAV — 7 formats)",
-			"MusicBrainz ID auto-lookup (opt-in, never overwrites user-edited fields)",
-			"Multi-server multi-mount Icecast relay streaming (by track, artist, or genre)",
-			"Multi-service audio scrobbling (Last.fm, ListenBrainz, Libre.fm, GNU FM, Maloja, and custom servers)",
-			"Podcast support (RSS fetch, episode download, playback)",
-			"Public share links with optional expiry and password",
-			"Audio file upload (per-user permission, admin-configurable)",
-			"Mobile-first WebUI with built-in music player",
-			"Tor hidden service support (auto-enabled when tor binary is present)",
-			"Built-in scheduler, GeoIP filtering, Prometheus metrics, backup, and auto-update",
-		},
+		Description: aboutDescription,
+		Features:    aboutFeatures,
 	})
 }
 
 // Help renders the /server/help page with getting-started guide and real API examples.
+// When Accept: text/plain is sent, a plain-text summary is returned instead.
 func (h *Handler) Help(w http.ResponseWriter, r *http.Request) {
-	type helpData struct {
-		PageData
-		Port int
-	}
 	port := 4533
 	if h.cfg != nil && h.cfg.Server.Port != 0 {
 		port = h.cfg.Server.Port
+	}
+
+	if mw.AcceptedFormat(r) == "plain" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintf(w, "cassonic — Help\n\nGetting Started:\n")
+		fmt.Fprintf(w, "  Server runs on port %d by default.\n", port)
+		fmt.Fprintf(w, "  Subsonic API base: http://localhost:%d/rest/\n", port)
+		fmt.Fprintf(w, "  Ampache API base:  http://localhost:%d/ampache/server/xml.server.php\n", port)
+		fmt.Fprintf(w, "  Admin panel:       http://localhost:%d/admin\n", port)
+		fmt.Fprintf(w, "  Health check:      http://localhost:%d/health\n", port)
+		return
+	}
+
+	type helpData struct {
+		PageData
+		Port int
 	}
 	lang := h.resolveLocale(w, r)
 	bundle := h.i18n

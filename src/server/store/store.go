@@ -57,6 +57,12 @@ type UserStore interface {
 	// PurgeExpiredSessions deletes all rows whose expires_at is in the past.
 	PurgeExpiredSessions(ctx context.Context) error
 
+	// GetSubsonicPassword returns the AES-256-GCM encrypted subsonic password for
+	// the named user. Returns ("", false, nil) when no subsonic password has been set.
+	GetSubsonicPassword(ctx context.Context, username string) (encrypted string, ok bool, err error)
+	// SetSubsonicPassword stores an AES-256-GCM encrypted subsonic password for the named user.
+	SetSubsonicPassword(ctx context.Context, username string, encrypted string) error
+
 	// CreateRadioStation inserts a new internet radio station.
 	CreateRadioStation(ctx context.Context, s *model.InternetRadioStation) (int64, error)
 	// GetRadioStation fetches a radio station by primary key.

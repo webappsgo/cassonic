@@ -20,6 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/local/cassonic/src/config"
+	"github.com/local/cassonic/src/server/service/crypto"
 	handlerapi "github.com/local/cassonic/src/server/handler/api"
 	"github.com/local/cassonic/src/server/handler/api/swagger"
 	"github.com/local/cassonic/src/server/handler/ampache"
@@ -75,6 +76,9 @@ type Server struct {
 	// MetricsToken, when non-empty, requires a matching Bearer token to access /metrics.
 	MetricsToken string
 
+	// subsonicKey is the AES-256 key used to encrypt/decrypt subsonic passwords.
+	subsonicKey []byte
+
 	// sched is the built-in scheduler; exposed to the admin panel for status display.
 	sched *scheduler.Scheduler
 }
@@ -89,12 +93,13 @@ func New(
 	tagReader *tags.Reader,
 ) *Server {
 	s := &Server{
-		cfg:       cfg,
-		db:        db,
-		scanner:   scanner,
-		coverArt:  coverArt,
-		ffmpeg:    ff,
-		tagReader: tagReader,
+		cfg:         cfg,
+		db:          db,
+		scanner:     scanner,
+		coverArt:    coverArt,
+		ffmpeg:      ff,
+		tagReader:   tagReader,
+		subsonicKey: crypto.DeriveKey([]byte(cfg.Auth.JWTSecret)),
 	}
 
 	s.nativeRL = mw.NewRateLimiter(100, 200)
@@ -278,12 +283,18 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// getSubsonicPassword retrieves a deterministic Subsonic token for a user.
-// Token auth requires a separate subsonic_token field on the user model; until
-// that is added, this returns false so that Subsonic clients fall back to
-// plaintext password verification via Argon2id.
-func (s *Server) getSubsonicPassword(_ context.Context, _ string) (string, bool) {
-	return "", false
+// getSubsonicPassword decrypts and returns the subsonic password for the named user.
+// Returns ("", false) when no subsonic password has been set or decryption fails.
+func (s *Server) getSubsonicPassword(ctx context.Context, username string) (string, bool) {
+	enc, ok, err := s.db.Users.GetSubsonicPassword(ctx, username)
+	if err != nil || !ok {
+		return "", false
+	}
+	plain, err := crypto.Decrypt(s.subsonicKey, enc)
+	if err != nil {
+		return "", false
+	}
+	return plain, true
 }
 
 // WithGeoIP attaches a GeoIP database and country filter lists to the server.
