@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -391,16 +392,59 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dms", ms)
 }
 
-// AcceptedFormat returns the best response format for the request.
-// For API routes: "json" (default) or "plain" (if Accept: text/plain).
-// For web routes: "html" (default) or "plain" (if Accept: text/plain).
+// AcceptedFormat returns the best response format for the request by parsing
+// the Accept header and respecting quality (q=) values per RFC 7231 §5.3.2.
+// Returns "plain", "html", or "json" (default when no match or empty header).
 func AcceptedFormat(r *http.Request) string {
 	accept := r.Header.Get("Accept")
-	if strings.Contains(accept, "text/plain") {
-		return "plain"
+	if accept == "" || accept == "*/*" {
+		return "json"
 	}
-	if strings.Contains(accept, "text/html") {
-		return "html"
+
+	best := ""
+	bestQ := -1.0
+
+	for _, part := range strings.Split(accept, ",") {
+		part = strings.TrimSpace(part)
+		mime := part
+		q := 1.0
+
+		if idx := strings.Index(part, ";"); idx >= 0 {
+			mime = strings.TrimSpace(part[:idx])
+			for _, param := range strings.Split(part[idx+1:], ";") {
+				param = strings.TrimSpace(param)
+				if strings.HasPrefix(param, "q=") {
+					if v, err := strconv.ParseFloat(strings.TrimPrefix(param, "q="), 64); err == nil {
+						q = v
+					}
+				}
+			}
+		}
+
+		if q <= bestQ {
+			continue
+		}
+
+		switch mime {
+		case "text/plain":
+			best = "plain"
+			bestQ = q
+		case "text/html", "application/xhtml+xml":
+			best = "html"
+			bestQ = q
+		case "application/json":
+			best = "json"
+			bestQ = q
+		case "*/*":
+			if bestQ < 0 {
+				best = "json"
+				bestQ = q
+			}
+		}
 	}
-	return "json"
+
+	if best == "" {
+		return "json"
+	}
+	return best
 }
