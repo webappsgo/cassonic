@@ -88,12 +88,13 @@ func scanUser(row interface {
 }
 
 // userSelectCols lists every column fetched by scanUser in the same order.
+// The trailing space is required: callers concatenate this directly with "FROM".
 const userSelectCols = `
     id, username, email, password_hash, display_name,
     is_admin, is_enabled, avatar_url, language, theme,
     max_bit_rate, can_download, can_upload, can_share, can_manage_users,
     can_comment, can_podcast, totp_secret, totp_enabled,
-    last_login_at, login_attempts, locked_until, created_at, updated_at`
+    last_login_at, login_attempts, locked_until, created_at, updated_at `
 
 // CreateUser inserts a new user and returns the assigned ID.
 func (s *sqliteUserStore) CreateUser(ctx context.Context, u *model.User) (int64, error) {

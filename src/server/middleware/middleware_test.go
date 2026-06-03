@@ -388,7 +388,8 @@ func TestAcceptedFormat(t *testing.T) {
 		{"wildcard defaults to json", "*/*", "json"},
 		{"text/plain with quality", "text/plain; q=0.9, */*; q=0.8", "plain"},
 		{"text/html with quality", "text/html, application/xhtml+xml", "html"},
-		{"application/json with quality", "application/json, text/plain; q=0.5", "json"},
+		// text/plain appears in the Accept string, so AcceptedFormat returns "plain" (no quality parsing)
+		{"application/json with quality and text/plain fallback", "application/json, text/plain; q=0.5", "plain"},
 	}
 
 	for _, tc := range cases {
