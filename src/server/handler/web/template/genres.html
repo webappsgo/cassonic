@@ -1,1 +1,51 @@
-{{define "genres.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">{{call .T "nav.genres"}}</h1>
+  <a href="/search" class="btn btn-ghost btn-icon" aria-label="{{call .T "nav.search"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </a>
+</div>
+
+{{if .Genres}}
+<section aria-label="{{call .T "nav.genres"}}">
+  <ul class="list-item" role="list">
+    {{range .Genres}}
+    <li class="list-item" role="listitem">
+      <a href="/songs?genre={{.Name}}" class="list-item-link" aria-label="{{call $.T "genre.browse"}} {{.Name}}">
+        <div class="list-item-thumb" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+          </svg>
+        </div>
+        <div class="list-item-info">
+          <span class="list-item-title">{{.Name}}</span>
+          <span class="list-item-sub">
+            {{if .AlbumCount}}{{.AlbumCount}} {{call $.T "genre.albums"}}{{end}}
+            {{if and .AlbumCount .SongCount}} · {{end}}
+            {{if .SongCount}}{{.SongCount}} {{call $.T "genre.songs"}}{{end}}
+          </span>
+        </div>
+        <div class="list-item-actions" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+</section>
+
+{{else}}
+<div class="empty-state" role="status">
+  <div class="empty-state-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+    </svg>
+  </div>
+  <h2 class="empty-state-title">{{call .T "genres.empty.title"}}</h2>
+  <p class="empty-state-text">{{call .T "genres.empty.text"}}</p>
+  <a href="/library" class="btn btn-primary">{{call .T "genres.empty.action"}}</a>
+</div>
+{{end}}
+{{end}}

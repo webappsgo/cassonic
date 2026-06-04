@@ -1,1 +1,126 @@
-{{define "album.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <div class="page-header-left">
+    <a href="/albums" class="btn btn-ghost btn-icon btn-sm" aria-label="{{call .T "album.back"}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <h1 class="page-title">{{call .T "nav.albums"}}</h1>
+  </div>
+</div>
+
+<article class="album-detail" aria-label="{{.Album.Title}}">
+  <div class="album-detail-header">
+    {{if .Album.CoverArtPath}}
+    <img
+      class="album-detail-art"
+      src="/api/v1/albums/{{.Album.ID}}/cover-art"
+      alt="{{.Album.Title}} cover art"
+      width="240"
+      height="240"
+    >
+    {{else}}
+    <div class="album-detail-art album-art-placeholder" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="12" cy="12" r="1" fill="currentColor"/>
+      </svg>
+    </div>
+    {{end}}
+
+    <div class="album-detail-info">
+      <span class="album-detail-label">{{call .T "album.label"}}</span>
+      <h2 class="album-detail-title">{{.Album.Title}}</h2>
+      <div class="album-detail-meta">
+        <a href="/artist/{{.Album.ArtistID}}" class="album-detail-artist">{{.Album.ArtistName}}</a>
+        {{if .Album.Year}}
+        <span aria-hidden="true"> · </span>
+        <span class="album-detail-year">{{.Album.Year}}</span>
+        {{end}}
+        {{if .Album.Genre}}
+        <span aria-hidden="true"> · </span>
+        <span class="badge badge-sm">{{.Album.Genre}}</span>
+        {{end}}
+      </div>
+      <div class="album-detail-stats">
+        {{if .Album.SongCount}}
+        <span>{{.Album.SongCount}} {{call .T "album.tracks"}}</span>
+        {{end}}
+        {{if and .Album.SongCount .Album.Duration}}
+        <span aria-hidden="true"> · </span>
+        {{end}}
+        {{if .Album.Duration}}
+        <span>{{formatDuration .Album.Duration}}</span>
+        {{end}}
+      </div>
+      <div class="album-detail-actions">
+        <button
+          class="btn btn-primary"
+          data-play-album="{{.Album.ID}}"
+          aria-label="{{call .T "album.play_all"}} {{.Album.Title}}"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+          {{call .T "album.play_all"}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {{if .Songs}}
+  <section aria-label="{{call .T "album.tracklist"}}">
+    <div class="table-responsive">
+      <table class="table song-list" aria-label="{{call .T "album.tracklist"}}">
+        <thead>
+          <tr>
+            <th scope="col" class="song-row-num" aria-label="{{call .T "songs.col.number"}}">#</th>
+            <th scope="col" class="song-row-title">{{call .T "songs.col.title"}}</th>
+            <th scope="col" class="song-row-artist">{{call .T "songs.col.artist"}}</th>
+            <th scope="col" class="song-row-duration" aria-label="{{call .T "songs.col.duration"}}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </th>
+            <th scope="col" class="song-row-actions sr-only">{{call .T "songs.col.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Songs}}
+          <tr class="song-row" data-song-id="{{.ID}}">
+            <td class="song-row-num" aria-hidden="true">
+              {{if .TrackNumber}}{{.TrackNumber}}{{end}}
+            </td>
+            <td class="song-row-title">{{.Title}}</td>
+            <td class="song-row-artist">
+              <a href="/artist/{{.ArtistID}}">{{.ArtistName}}</a>
+            </td>
+            <td class="song-row-duration">{{formatDuration .Duration}}</td>
+            <td class="song-row-actions">
+              <button
+                class="btn btn-ghost btn-icon btn-sm"
+                data-play-song="{{.ID}}"
+                aria-label="{{call $.T "songs.play"}} {{.Title}}"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+              </button>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {{else}}
+  <div class="empty-state" role="status">
+    <div class="empty-state-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+    </div>
+    <h2 class="empty-state-title">{{call .T "album.empty.title"}}</h2>
+    <p class="empty-state-text">{{call .T "album.empty.text"}}</p>
+  </div>
+  {{end}}
+</article>
+{{end}}

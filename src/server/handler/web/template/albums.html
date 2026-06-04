@@ -1,1 +1,108 @@
-{{define "albums.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">{{call .T "nav.albums"}}</h1>
+  <a href="/search" class="btn btn-ghost btn-icon" aria-label="{{call .T "nav.search"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </a>
+</div>
+
+{{if .Albums}}
+<section aria-label="{{call .T "nav.albums"}}">
+  <div class="album-grid">
+    {{range .Albums}}
+    <article class="album-card">
+      <a href="/album/{{.ID}}" class="album-art-link" aria-label="{{call $.T "album.open"}} {{.Title}}">
+        {{if .CoverArtPath}}
+        <img
+          class="album-art"
+          src="/api/v1/albums/{{.ID}}/cover-art"
+          alt="{{.Title}} cover art"
+          loading="lazy"
+          width="200"
+          height="200"
+        >
+        {{else}}
+        <div class="album-art album-art-placeholder" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="12" cy="12" r="3"/>
+            <circle cx="12" cy="12" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+        {{end}}
+        <div class="cover-overlay" aria-hidden="true">
+          <button
+            class="btn-icon"
+            data-play-album="{{.ID}}"
+            tabindex="-1"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+          </button>
+        </div>
+      </a>
+      <div class="album-info">
+        <a href="/album/{{.ID}}" class="album-title">{{.Title}}</a>
+        <div class="album-artist">
+          <a href="/artist/{{.ID}}">{{.ArtistName}}</a>
+        </div>
+        <div class="album-meta">
+          {{if .Year}}<span class="album-year">{{.Year}}</span>{{end}}
+          {{if and .Year .SongCount}}<span aria-hidden="true"> · </span>{{end}}
+          {{if .SongCount}}
+          <span class="badge badge-sm">{{.SongCount}} {{call $.T "album.tracks"}}</span>
+          {{end}}
+        </div>
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+{{if or (gt .Page 1) .HasMore}}
+<nav class="pagination" aria-label="{{call .T "pagination.label"}}">
+  {{if gt .Page 1}}
+  <a href="/albums?page={{dec .Page}}" class="btn btn-ghost" rel="prev" aria-label="{{call .T "pagination.previous"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </span>
+  {{end}}
+
+  <span class="pagination-info" aria-current="page">{{call .T "pagination.page"}} {{.Page}}</span>
+
+  {{if .HasMore}}
+  <a href="/albums?page={{inc .Page}}" class="btn btn-ghost" rel="next" aria-label="{{call .T "pagination.next"}}">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </span>
+  {{end}}
+</nav>
+{{end}}
+
+{{else}}
+<div class="empty-state" role="status">
+  <div class="empty-state-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <circle cx="12" cy="12" r="3"/>
+      <circle cx="12" cy="12" r="1" fill="currentColor"/>
+    </svg>
+  </div>
+  <h2 class="empty-state-title">{{call .T "albums.empty.title"}}</h2>
+  <p class="empty-state-text">{{call .T "albums.empty.text"}}</p>
+  <a href="/library" class="btn btn-primary">{{call .T "albums.empty.action"}}</a>
+</div>
+{{end}}
+{{end}}

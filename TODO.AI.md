@@ -2,6 +2,29 @@
 
 Bootstrap completed: 2026-05-28
 IDEA.md updated: 2026-05-28 (full music server spec)
+Last audit: 2026-06-04 (see AUDIT.AI.md)
+
+---
+
+## AUDIT FINDINGS (2026-06-04) — from AUDIT.AI.md
+
+HIGH:
+- [ ] Register `-h` and `-v` short flags in `src/main.go` (advertised in help but not defined)
+- [ ] Remove empty `src/admin/` directory (admin handlers actually live in `src/server/handler/admin/`)
+
+MEDIUM:
+- [ ] Move 5 inline comments to their own lines above the code in `src/server/service/tags/writer_ogg.go:260-264`
+- [ ] Convert `TODO.AI.md` feature lists into real checkbox tasks, OR rename this file to `FEATURES.AI.md` and create a fresh TODO.AI.md
+- [ ] Resolve `cassonic-agent` reference in `CLAUDE.md` — either scaffold `src/agent/` or remove the line
+- [ ] Fix `--update branch=` in `src/main.go:511-516` so the parsed branch is persisted to config and used by `checker.CheckLatest()` (currently discarded via `_ = branch`)
+
+LOW:
+- [ ] Confirm exception or rename plural Go package dirs (`src/paths`, `src/server/metrics`, `src/common/errors`, `src/server/service/tags`) — document exception in `IDEA.md` under `### Security decisions & exceptions`
+- [ ] Update `CLAUDE.md` "Current Project State" — currently says "Initial project scaffolding" but ~130 source files and all major subsystems are scaffolded
+- [ ] Add GraphQL, Swagger, and Prometheus metrics endpoints to `IDEA.md` API surface list
+- [ ] Confirm `math/rand` use in `src/server/service/icecast/mount.go:272` is non-security jitter (it is — note in comment)
+- [ ] Confirm `--service start` printing guidance (vs actually starting via systemctl) is intentional and document in `--service --help`
+- [ ] Generate `man/cassonic.1` and `completions/_cassonic_completions.bash` for triple sync
 
 ---
 

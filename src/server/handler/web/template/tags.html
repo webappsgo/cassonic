@@ -1,1 +1,164 @@
-{{define "tags.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <div class="page-header-left">
+    <a href="/album/{{.Song.AlbumID}}" class="btn btn-ghost btn-icon btn-sm" aria-label="{{call .T "tags.back"}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <h1 class="page-title">{{call .T "tags.title"}}</h1>
+  </div>
+</div>
+
+<article class="tags-editor" aria-label="{{call .T "tags.title"}} {{.Song.Title}}">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">{{call .T "tags.editable_fields"}}</h2>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/api/v1/songs/{{.Song.ID}}/tags">
+        <input type="hidden" name="_method" value="PATCH">
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label" for="tag_title">{{call .T "tags.field.title"}}</label>
+            <input
+              type="text"
+              id="tag_title"
+              name="title"
+              class="form-input"
+              value="{{.Song.Title}}"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_artist">{{call .T "tags.field.artist"}}</label>
+            <input
+              type="text"
+              id="tag_artist"
+              name="artist_name"
+              class="form-input"
+              value="{{.Song.ArtistName}}"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_album">{{call .T "tags.field.album"}}</label>
+            <input
+              type="text"
+              id="tag_album"
+              name="album_title"
+              class="form-input"
+              value="{{.Song.AlbumTitle}}"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_genre">{{call .T "tags.field.genre"}}</label>
+            <input
+              type="text"
+              id="tag_genre"
+              name="genre"
+              class="form-input"
+              value="{{.Song.Genre}}"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_year">{{call .T "tags.field.year"}}</label>
+            <input
+              type="number"
+              id="tag_year"
+              name="year"
+              class="form-input"
+              value="{{.Song.Year}}"
+              min="1"
+              max="9999"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_track">{{call .T "tags.field.track_number"}}</label>
+            <input
+              type="number"
+              id="tag_track"
+              name="track_number"
+              class="form-input"
+              value="{{.Song.TrackNumber}}"
+              min="0"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_disc">{{call .T "tags.field.disc_number"}}</label>
+            <input
+              type="number"
+              id="tag_disc"
+              name="disc_number"
+              class="form-input"
+              value="{{.Song.DiscNumber}}"
+              min="0"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tag_composer">{{call .T "tags.field.composer"}}</label>
+            <input
+              type="text"
+              id="tag_composer"
+              name="composer"
+              class="form-input"
+              value="{{.Song.Composer}}"
+            >
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tag_comment">{{call .T "tags.field.comment"}}</label>
+          <textarea
+            id="tag_comment"
+            name="comment"
+            class="form-input"
+            rows="3"
+          >{{.Song.Comment}}</textarea>
+        </div>
+        <div class="tags-editor-actions">
+          <button type="submit" class="btn btn-primary">{{call .T "tags.save"}}</button>
+          <a href="/album/{{.Song.AlbumID}}" class="btn btn-ghost">{{call .T "tags.cancel"}}</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">{{call .T "tags.file_info"}}</h2>
+    </div>
+    <div class="card-body">
+      <dl class="tags-file-info">
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.path"}}</dt>
+          <dd>
+            <span class="long-string">{{.Song.FilePath}}</span>
+          </dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.size"}}</dt>
+          <dd>{{formatSize .Song.FileSize}}</dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.duration"}}</dt>
+          <dd>{{formatDuration .Song.Duration}}</dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.codec"}}</dt>
+          <dd>{{.Song.Codec}}</dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.bitrate"}}</dt>
+          <dd>{{.Song.BitRate}} {{call .T "tags.info.bitrate.unit"}}</dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.sample_rate"}}</dt>
+          <dd>{{.Song.SampleRate}} {{call .T "tags.info.sample_rate.unit"}}</dd>
+        </div>
+        <div class="tags-info-row">
+          <dt>{{call .T "tags.info.channels"}}</dt>
+          <dd>{{.Song.ChannelCount}}</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</article>
+{{end}}

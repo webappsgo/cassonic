@@ -1,1 +1,101 @@
-{{define "songs.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">{{call .T "nav.songs"}}</h1>
+  <a href="/search" class="btn btn-ghost btn-icon" aria-label="{{call .T "nav.search"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </a>
+</div>
+
+{{if .Songs}}
+<section aria-label="{{call .T "nav.songs"}}">
+  <div class="table-responsive">
+    <table class="table song-list" aria-label="{{call .T "nav.songs"}}">
+      <thead>
+        <tr>
+          <th scope="col" class="song-row-num" aria-label="{{call .T "songs.col.number"}}">#</th>
+          <th scope="col" class="song-row-title">{{call .T "songs.col.title"}}</th>
+          <th scope="col" class="song-row-artist">{{call .T "songs.col.artist"}}</th>
+          <th scope="col">{{call .T "songs.col.album"}}</th>
+          <th scope="col" class="song-row-duration" aria-label="{{call .T "songs.col.duration"}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </th>
+          <th scope="col" class="song-row-actions sr-only">{{call .T "songs.col.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $song := .Songs}}
+        <tr class="song-row" data-song-id="{{$song.ID}}">
+          <td class="song-row-num" aria-hidden="true">
+            {{if $song.TrackNumber}}{{$song.TrackNumber}}{{else}}{{inc $i}}{{end}}
+          </td>
+          <td class="song-row-title">{{$song.Title}}</td>
+          <td class="song-row-artist">
+            <a href="/artist/{{$song.ArtistID}}">{{$song.ArtistName}}</a>
+          </td>
+          <td>
+            <a href="/album/{{$song.AlbumID}}">{{$song.AlbumTitle}}</a>
+          </td>
+          <td class="song-row-duration">{{formatDuration $song.Duration}}</td>
+          <td class="song-row-actions">
+            <button
+              class="btn btn-ghost btn-icon btn-sm"
+              data-play-song="{{$song.ID}}"
+              aria-label="{{call $.T "songs.play"}} {{$song.Title}}"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+            </button>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{{if or (gt .Page 1) .HasMore}}
+<nav class="pagination" aria-label="{{call .T "pagination.label"}}">
+  {{if gt .Page 1}}
+  <a href="/songs?page={{dec .Page}}" class="btn btn-ghost" rel="prev" aria-label="{{call .T "pagination.previous"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </span>
+  {{end}}
+
+  <span class="pagination-info" aria-current="page">{{call .T "pagination.page"}} {{.Page}}</span>
+
+  {{if .HasMore}}
+  <a href="/songs?page={{inc .Page}}" class="btn btn-ghost" rel="next" aria-label="{{call .T "pagination.next"}}">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </span>
+  {{end}}
+</nav>
+{{end}}
+
+{{else}}
+<div class="empty-state" role="status">
+  <div class="empty-state-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M9 18V5l12-2v13"/>
+      <circle cx="6" cy="18" r="3"/>
+      <circle cx="18" cy="16" r="3"/>
+    </svg>
+  </div>
+  <h2 class="empty-state-title">{{call .T "songs.empty.title"}}</h2>
+  <p class="empty-state-text">{{call .T "songs.empty.text"}}</p>
+  <a href="/library" class="btn btn-primary">{{call .T "songs.empty.action"}}</a>
+</div>
+{{end}}
+{{end}}

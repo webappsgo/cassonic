@@ -20,13 +20,14 @@ import (
 
 // Handler holds all native API dependencies.
 type Handler struct {
-	db         *store.DB
-	scanner    *service.Scanner
-	coverArt   *service.CoverArtService
-	ffmpeg     *ffmpeg.Manager
-	tagReader  *tags.Reader
-	nowPlaying *NowPlayingTracker
-	backupSvc  BackupService
+	db           *store.DB
+	scanner      *service.Scanner
+	coverArt     *service.CoverArtService
+	ffmpeg       *ffmpeg.Manager
+	tagReader    *tags.Reader
+	nowPlaying   *NowPlayingTracker
+	backupSvc    BackupService
+	subsonicKey  []byte
 }
 
 // NowPlayingInfo holds metadata for one active native API stream.
@@ -113,6 +114,12 @@ func (h *Handler) WithBackupService(svc BackupService) *Handler {
 	return h
 }
 
+// WithSubsonicKey stores the AES-256 key used to encrypt/decrypt subsonic passwords.
+func (h *Handler) WithSubsonicKey(key []byte) *Handler {
+	h.subsonicKey = key
+	return h
+}
+
 // Routes builds and returns the chi router for all /api/v1 endpoints.
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
@@ -132,6 +139,7 @@ func (h *Handler) Routes() http.Handler {
 	r.With(mw.RequireAdmin()).Put("/api/v1/users/{id}", h.UpdateUser)
 	r.With(mw.RequireAdmin()).Delete("/api/v1/users/{id}", h.DeleteUser)
 	r.With(mw.RequireAuth()).Post("/api/v1/users/{id}/password", h.ChangePassword)
+	r.With(mw.RequireAuth()).Put("/api/v1/users/me/subsonic-password", h.SetSubsonicPassword)
 
 	r.With(mw.RequireAuth()).Get("/api/v1/libraries", h.ListLibraries)
 	r.With(mw.RequireAdmin()).Post("/api/v1/libraries", h.CreateLibrary)

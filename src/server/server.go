@@ -127,9 +127,11 @@ func New(
 func (s *Server) buildRouter() http.Handler {
 	r := chi.NewRouter()
 
-	// Global middleware stack — order is enforced by spec (PART 13).
+	// Global middleware stack — order is enforced by spec (PART 13):
+	// RequestID → Allowlist/Blocklist(IPFilter) → RateLimit → GeoIP → Logger → CORS → SecurityHeaders → Metrics
 	r.Use(mw.RequestID())
 	r.Use(s.ipFilter.Middleware())
+	r.Use(s.nativeRL.Middleware("global"))
 	r.Use(mw.GeoIPFilter(s.geoipDB, s.denyCountries, s.allowCountries))
 	r.Use(mw.Logger(os.Stdout))
 	r.Use(mw.Cors())
@@ -332,6 +334,7 @@ func (s *Server) nativeHandler() *handlerapi.Handler {
 	if s.backupSvc != nil {
 		h.WithBackupService(s.backupSvc)
 	}
+	h.WithSubsonicKey(s.subsonicKey)
 	return h
 }
 

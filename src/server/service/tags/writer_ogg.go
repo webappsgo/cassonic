@@ -257,11 +257,16 @@ func rebuildOGGPage(original []byte, newPacket []byte) ([]byte, error) {
 
 	// Write fixed OGG page header fields.
 	out.WriteString("OggS")
-	out.WriteByte(0)            // stream structure version
-	out.WriteByte(headerType)   // header type flag
-	out.Write(original[6:14])  // granule position (8 bytes)
-	out.Write(original[14:18]) // bitstream serial number (4 bytes)
-	out.Write(original[18:22]) // page sequence number (4 bytes)
+	// stream structure version
+	out.WriteByte(0)
+	// header type flag
+	out.WriteByte(headerType)
+	// granule position (8 bytes)
+	out.Write(original[6:14])
+	// bitstream serial number (4 bytes)
+	out.Write(original[14:18])
+	// page sequence number (4 bytes)
+	out.Write(original[18:22])
 
 	// CRC field: write zero; callers that need a valid CRC must recalculate.
 	out.Write([]byte{0, 0, 0, 0})

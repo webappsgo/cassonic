@@ -100,6 +100,17 @@ to files outside library paths
 - Tor integration enabled when Tor binary is found (see PART 32)
 - ffmpeg is a subprocess (not a library); all arguments are constructed server-side, never from raw user input
 
+### Go package directory naming exceptions
+
+The project-rules.md convention requires singular directory names to match Go package names.
+The following directories use stdlib-idiomatic names that are already singular concepts in Go and
+are approved exceptions to the explicit-plural rule:
+
+- `src/paths/` — matches Go convention for path-utility packages (cf. stdlib `path/`)
+- `src/server/metrics/` — matches Prometheus convention; `metric` would be non-standard
+- `src/common/errors/` — matches Go convention (cf. stdlib `errors`)
+- `src/server/service/tags/` — domain package for audio tag reading/writing; `tag` is ambiguous
+
 ---
 
 ## Routes & API Endpoints

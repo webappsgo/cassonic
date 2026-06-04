@@ -7,6 +7,7 @@ import (
 
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
+	"github.com/local/cassonic/src/server/service/crypto"
 	cerr "github.com/local/cassonic/src/common/errors"
 )
 
@@ -327,6 +328,51 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.db.Users.DeleteUser(r.Context(), id); err != nil {
 		writeError(w, r, cerr.InternalServerError("delete failed"))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{})
+}
+
+// setSubsonicPasswordRequest is the body for PUT /api/v1/users/me/subsonic-password.
+type setSubsonicPasswordRequest struct {
+	Password string `json:"password"`
+}
+
+// SetSubsonicPassword stores an AES-256-GCM encrypted copy of the caller's
+// subsonic password. Subsonic and Ampache clients require the plaintext password
+// for their token/handshake auth schemes, so it must be recoverable.
+// The encrypted value is stored in the subsonic_password column.
+func (h *Handler) SetSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	auth := mw.UserFromContext(r.Context())
+	if auth == nil {
+		writeError(w, r, cerr.Unauthorized("not authenticated"))
+		return
+	}
+
+	var req setSubsonicPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, cerr.BadRequest("invalid JSON body"))
+		return
+	}
+	if req.Password == "" {
+		writeError(w, r, cerr.BadRequest("password is required"))
+		return
+	}
+
+	if len(h.subsonicKey) == 0 {
+		writeError(w, r, cerr.InternalServerError("subsonic key not configured"))
+		return
+	}
+
+	encrypted, err := crypto.Encrypt(h.subsonicKey, req.Password)
+	if err != nil {
+		writeError(w, r, cerr.InternalServerError("encryption failed"))
+		return
+	}
+
+	if err := h.db.Users.SetSubsonicPassword(r.Context(), auth.Username, encrypted); err != nil {
+		writeError(w, r, cerr.InternalServerError("failed to store subsonic password"))
 		return
 	}
 

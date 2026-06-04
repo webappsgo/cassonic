@@ -1,1 +1,106 @@
-{{define "artist.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <div class="page-header-left">
+    <a href="/artists" class="btn btn-ghost btn-icon btn-sm" aria-label="{{call .T "artist.back"}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <h1 class="page-title">{{.Artist.Name}}</h1>
+  </div>
+</div>
+
+<article class="artist-detail" aria-label="{{.Artist.Name}}">
+  <div class="artist-detail-header">
+    <div class="artist-detail-avatar" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+    </div>
+    <div class="artist-detail-info">
+      <span class="artist-detail-label">{{call .T "artist.label"}}</span>
+      <h2 class="artist-detail-name">{{.Artist.Name}}</h2>
+      <div class="artist-detail-stats">
+        {{if .Artist.AlbumCount}}
+        <span class="badge badge-sm">{{.Artist.AlbumCount}} {{call .T "artist.albums"}}</span>
+        {{end}}
+        {{if .Artist.SongCount}}
+        <span class="badge badge-sm">{{.Artist.SongCount}} {{call .T "artist.songs"}}</span>
+        {{end}}
+      </div>
+    </div>
+  </div>
+
+  {{if .Artist.Bio}}
+  <section class="artist-bio" aria-label="{{call .T "artist.bio"}}">
+    <h3 class="section-title">{{call .T "artist.bio"}}</h3>
+    <p class="artist-bio-text">{{.Artist.Bio}}</p>
+  </section>
+  {{end}}
+
+  {{if .Albums}}
+  <section aria-label="{{call .T "artist.discography"}}">
+    <h3 class="section-title">{{call .T "artist.discography"}}</h3>
+    <div class="album-grid">
+      {{range .Albums}}
+      <article class="album-card">
+        <a href="/album/{{.ID}}" class="album-art-link" aria-label="{{call $.T "album.open"}} {{.Title}}">
+          {{if .CoverArtPath}}
+          <img
+            class="album-art"
+            src="/api/v1/albums/{{.ID}}/cover-art"
+            alt="{{.Title}} cover art"
+            loading="lazy"
+            width="200"
+            height="200"
+          >
+          {{else}}
+          <div class="album-art album-art-placeholder" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="12" cy="12" r="3"/>
+              <circle cx="12" cy="12" r="1" fill="currentColor"/>
+            </svg>
+          </div>
+          {{end}}
+          <div class="cover-overlay" aria-hidden="true">
+            <button
+              class="btn-icon"
+              data-play-album="{{.ID}}"
+              tabindex="-1"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+            </button>
+          </div>
+        </a>
+        <div class="album-info">
+          <a href="/album/{{.ID}}" class="album-title">{{.Title}}</a>
+          <div class="album-meta">
+            {{if .Year}}<span class="album-year">{{.Year}}</span>{{end}}
+            {{if and .Year .SongCount}}<span aria-hidden="true"> · </span>{{end}}
+            {{if .SongCount}}
+            <span class="badge badge-sm">{{.SongCount}} {{call $.T "album.tracks"}}</span>
+            {{end}}
+          </div>
+        </div>
+      </article>
+      {{end}}
+    </div>
+  </section>
+  {{else}}
+  <div class="empty-state" role="status">
+    <div class="empty-state-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="12" cy="12" r="1" fill="currentColor"/>
+      </svg>
+    </div>
+    <h2 class="empty-state-title">{{call .T "artist.empty.title"}}</h2>
+    <p class="empty-state-text">{{call .T "artist.empty.text"}}</p>
+  </div>
+  {{end}}
+</article>
+{{end}}

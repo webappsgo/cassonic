@@ -85,6 +85,10 @@ func main() {
 		flagTLSKey      = flag.String("tls-key", "", "Path to local TLS private key file (PEM)")
 	)
 
+	// Register short aliases: only -h and -v are permitted per spec.
+	flag.BoolVar(flagHelp, "h", false, "Show help")
+	flag.BoolVar(flagVersion, "v", false, "Show version")
+
 	flag.CommandLine.Usage = printHelp
 	flag.Parse()
 
@@ -505,15 +509,14 @@ func handleUpdateCmd(val string) {
 	checker := svcupdate.New(Version, logger)
 	ctx := context.Background()
 
-	// Parse optional branch= prefix.
-	branch := "stable"
+	// Parse optional branch= prefix and apply it to the checker.
 	action := val
 	if strings.HasPrefix(val, "branch=") {
-		branch = strings.TrimPrefix(val, "branch=")
-		fmt.Printf("cassonic: update branch set to %q\n", branch)
+		branch := strings.TrimPrefix(val, "branch=")
+		checker = checker.WithBranch(branch)
+		fmt.Printf("cassonic: update branch set to %q (use --update check or --update yes to act)\n", checker.Branch())
 		return
 	}
-	_ = branch
 
 	switch action {
 	case "check":

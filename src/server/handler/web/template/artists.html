@@ -1,1 +1,83 @@
-{{define "artists.html"}}<!DOCTYPE html><html><body>{{.Title}}</body></html>{{end}}
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header">
+  <h1 class="page-title">{{call .T "nav.artists"}}</h1>
+  <a href="/search" class="btn btn-ghost btn-icon" aria-label="{{call .T "nav.search"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </a>
+</div>
+
+{{if .Artists}}
+<section aria-label="{{call .T "nav.artists"}}">
+  <div class="artist-grid">
+    {{range .Artists}}
+    <article class="artist-card">
+      <a href="/artist/{{.ID}}" class="artist-avatar-link" aria-label="{{call $.T "artist.open"}} {{.Name}}">
+        <div class="artist-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+        </div>
+      </a>
+      <div class="artist-info">
+        <a href="/artist/{{.ID}}" class="artist-name">{{.Name}}</a>
+        <div class="artist-meta">
+          {{if .AlbumCount}}
+          <span class="badge badge-sm">{{.AlbumCount}} {{call $.T "artist.albums"}}</span>
+          {{end}}
+          {{if .SongCount}}
+          <span class="badge badge-sm">{{.SongCount}} {{call $.T "artist.songs"}}</span>
+          {{end}}
+        </div>
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+
+{{if or (gt .Page 1) .HasMore}}
+<nav class="pagination" aria-label="{{call .T "pagination.label"}}">
+  {{if gt .Page 1}}
+  <a href="/artists?page={{dec .Page}}" class="btn btn-ghost" rel="prev" aria-label="{{call .T "pagination.previous"}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    {{call .T "pagination.previous"}}
+  </span>
+  {{end}}
+
+  <span class="pagination-info" aria-current="page">{{call .T "pagination.page"}} {{.Page}}</span>
+
+  {{if .HasMore}}
+  <a href="/artists?page={{inc .Page}}" class="btn btn-ghost" rel="next" aria-label="{{call .T "pagination.next"}}">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  {{else}}
+  <span class="btn btn-ghost" aria-disabled="true">
+    {{call .T "pagination.next"}}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+  </span>
+  {{end}}
+</nav>
+{{end}}
+
+{{else}}
+<div class="empty-state" role="status">
+  <div class="empty-state-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    </svg>
+  </div>
+  <h2 class="empty-state-title">{{call .T "artists.empty.title"}}</h2>
+  <p class="empty-state-text">{{call .T "artists.empty.text"}}</p>
+  <a href="/library" class="btn btn-primary">{{call .T "artists.empty.action"}}</a>
+</div>
+{{end}}
+{{end}}
