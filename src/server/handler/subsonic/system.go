@@ -341,6 +341,20 @@ func modelUserToResp(u *model.User) *UserResp {
 	}
 }
 
+// getOpenSubsonicExtensions returns the list of OpenSubsonic extensions supported by this server.
+// See https://opensubsonic.netlify.app/ for the extension registry.
+func (h *Handler) getOpenSubsonicExtensions(w http.ResponseWriter, r *http.Request) {
+	respond(w, r, ok(func(resp *SubsonicResponse) {
+		resp.OpenSubsonicExtensions = &OpenSubsonicExtensions{
+			Extension: []OpenSubsonicExtension{
+				{Name: "formPost", Versions: []int{1}},
+				{Name: "transcodeOffset", Versions: []int{1}},
+				{Name: "songLyrics", Versions: []int{1}},
+			},
+		}
+	}))
+}
+
 // parseBoolParam converts common truthy string values to bool.
 func parseBoolParam(s string) bool {
 	switch strings.ToLower(strings.TrimSpace(s)) {

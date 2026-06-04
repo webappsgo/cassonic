@@ -54,7 +54,8 @@ type SubsonicResponse struct {
 	SimilarSongs2  *SimilarSongs2         `xml:"similarSongs2,omitempty" json:"similarSongs2,omitempty"`
 	TopSongs       *TopSongs              `xml:"topSongs,omitempty" json:"topSongs,omitempty"`
 	Lyrics         *Lyrics                `xml:"lyrics,omitempty" json:"lyrics,omitempty"`
-	Videos         *Videos                `xml:"videos,omitempty" json:"videos,omitempty"`
+	Videos              *Videos                   `xml:"videos,omitempty" json:"videos,omitempty"`
+	OpenSubsonicExtensions *OpenSubsonicExtensions `xml:"openSubsonicExtensions,omitempty" json:"openSubsonicExtensions,omitempty"`
 }
 
 // SubsonicError carries the numeric error code and human-readable message.
@@ -487,6 +488,17 @@ type Lyrics struct {
 // Videos is the container for video entries; always empty for audio-only servers.
 type Videos struct {
 	Video []Child `xml:"video,omitempty" json:"video,omitempty"`
+}
+
+// OpenSubsonicExtensions lists the OpenSubsonic extensions this server supports.
+type OpenSubsonicExtensions struct {
+	Extension []OpenSubsonicExtension `xml:"extension,omitempty" json:"extension,omitempty"`
+}
+
+// OpenSubsonicExtension is a single named extension with its supported version.
+type OpenSubsonicExtension struct {
+	Name     string `xml:"name,attr" json:"name"`
+	Versions []int  `xml:"versions,omitempty" json:"versions"`
 }
 
 // jsonWrapper is the outer key used in all JSON Subsonic responses.

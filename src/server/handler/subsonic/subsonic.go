@@ -86,6 +86,8 @@ func (h *Handler) route(w http.ResponseWriter, r *http.Request, action string) {
 		h.ping(w, r)
 	case "getLicense":
 		h.getLicense(w, r)
+	case "getOpenSubsonicExtensions":
+		h.getOpenSubsonicExtensions(w, r)
 	case "getScanStatus":
 		h.getScanStatus(w, r)
 	case "startScan":

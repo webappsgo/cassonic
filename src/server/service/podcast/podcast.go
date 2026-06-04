@@ -24,6 +24,9 @@ type rssChannel struct {
 	Title       string       `xml:"title"`
 	Desc        string       `xml:"description"`
 	Link        string       `xml:"link"`
+	// rssImage captures the standard RSS <image> element (no namespace).
+	// ITunesImage captures <itunes:image href="…"/> — must use the full
+	// namespace URI so encoding/xml does not shadow it with the unqualified tag.
 	Image       *rssImage    `xml:"image"`
 	ITunesImage *itunesImage `xml:"http://www.itunes.com/dtds/podcast-1.0.dtd image"`
 	Author      string       `xml:"http://www.itunes.com/dtds/podcast-1.0.dtd author"`

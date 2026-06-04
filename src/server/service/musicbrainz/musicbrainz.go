@@ -48,6 +48,8 @@ type Client struct {
 	httpClient *http.Client
 	ticker     *time.Ticker
 	userAgent  string
+	// baseURL is the MusicBrainz API root; defaults to mbBaseURL and overridden in tests.
+	baseURL string
 }
 
 // NewClient creates a MusicBrainz client identified by the given application version.
@@ -56,6 +58,7 @@ func NewClient(version string) *Client {
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		ticker:     time.NewTicker(mbRateInterval),
 		userAgent:  fmt.Sprintf("cassonic/%s (https://cassonic.app)", version),
+		baseURL:    mbBaseURL,
 	}
 }
 
@@ -76,7 +79,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values) ([]byt
 	}
 
 	params.Set("fmt", "json")
-	endpoint := mbBaseURL + path + "?" + params.Encode()
+	endpoint := c.baseURL + path + "?" + params.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
