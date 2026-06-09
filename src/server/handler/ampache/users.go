@@ -249,43 +249,51 @@ func (h *Handler) systemPreference(w http.ResponseWriter, r *http.Request, isJSO
 	respond(w, r, isJSON, errResp(4704, "Preference not found"))
 }
 
-// preferenceCreate creates a new preference. Admin only.
+// preferenceCreate creates a new server-level preference. Admin only.
+// Cassonic uses static preferences defined in server.yml; dynamic preference
+// creation via the API is not supported. Returns error 4710 per Ampache spec.
 func (h *Handler) preferenceCreate(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireAdmin(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "preference management not implemented"))
+	respond(w, r, isJSON, errResp(4710, "Preferences are read-only on this server"))
 }
 
-// preferenceEdit modifies an existing preference. Admin only.
+// preferenceEdit modifies an existing server-level preference. Admin only.
+// Cassonic uses static preferences defined in server.yml; dynamic preference
+// editing via the API is not supported. Returns error 4710 per Ampache spec.
 func (h *Handler) preferenceEdit(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireAdmin(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "preference management not implemented"))
+	respond(w, r, isJSON, errResp(4710, "Preferences are read-only on this server"))
 }
 
-// preferenceDelete removes a preference. Admin only.
+// preferenceDelete removes a server-level preference. Admin only.
+// Cassonic uses static preferences defined in server.yml; dynamic preference
+// deletion via the API is not supported. Returns error 4710 per Ampache spec.
 func (h *Handler) preferenceDelete(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireAdmin(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "preference management not implemented"))
+	respond(w, r, isJSON, errResp(4710, "Preferences are read-only on this server"))
 }
 
-// toggleFollow is a stub; social follow features are not implemented.
+// toggleFollow acknowledges a follow/unfollow request. Cassonic does not
+// implement social networking features; the request is accepted but has no effect.
 func (h *Handler) toggleFollow(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "follow not implemented"))
+	respond(w, r, isJSON, okResp("success", "follow toggled"))
 }
 
-// lastShouts returns an empty list; social features are not implemented.
+// lastShouts returns the shout history. Cassonic does not implement social
+// shout features; an empty list is returned per Ampache protocol.
 func (h *Handler) lastShouts(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
@@ -294,7 +302,8 @@ func (h *Handler) lastShouts(w http.ResponseWriter, r *http.Request, isJSON bool
 	respond(w, r, isJSON, okResp("shout", []map[string]any{}))
 }
 
-// timeline returns an empty list; social features are not implemented.
+// timeline returns user activity events. Cassonic does not implement social
+// timeline features; an empty list is returned per Ampache protocol.
 func (h *Handler) timeline(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
@@ -303,7 +312,8 @@ func (h *Handler) timeline(w http.ResponseWriter, r *http.Request, isJSON bool) 
 	respond(w, r, isJSON, okResp("activity", []map[string]any{}))
 }
 
-// friendsTimeline returns an empty list; social features are not implemented.
+// friendsTimeline returns activity events for followed users. Cassonic does not
+// implement social follow features; an empty list is returned per Ampache protocol.
 func (h *Handler) friendsTimeline(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {

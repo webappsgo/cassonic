@@ -1,6 +1,8 @@
 package ampache
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
 	"strconv"
 	"strings"
@@ -586,49 +588,241 @@ func (h *Handler) getSimilar(w http.ResponseWriter, r *http.Request, isJSON bool
 	respond(w, r, isJSON, okResp("song", result))
 }
 
-// shares returns all shares visible to the authenticated user.
+// ampShareToken generates a URL-safe random token for share links.
+func ampShareToken() (string, error) {
+	b := make([]byte, 18)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// shareToAmp converts a model.Share to the Ampache wire type.
+func shareToAmp(s *model.Share, owner, base string) AmpShare {
+	expire := ""
+	if !s.ExpiresAt.IsZero() {
+		expire = s.ExpiresAt.Format(time.RFC3339)
+	}
+	return AmpShare{
+		ID:            strconv.FormatInt(s.ID, 10),
+		Name:          s.Description,
+		Owner:         owner,
+		AllowStream:   1,
+		AllowDownload: 1,
+		Expire:        expire,
+		PublicURL:     base + "/share/" + s.Token,
+		Creation:      s.CreatedAt.Format(time.RFC3339),
+		LastVisit:     "",
+		ObjectType:    s.ItemType,
+		ObjectID:      strconv.FormatInt(s.ItemID, 10),
+	}
+}
+
+// shares returns all share links owned by the authenticated user.
 func (h *Handler) shares(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("share", []AmpShare{}))
+
+	u, err := h.db.Users.GetUser(r.Context(), session.UserID)
+	if err != nil || u == nil {
+		respond(w, r, isJSON, errResp(4700, "Access denied"))
+		return
+	}
+
+	list, err := h.db.Shares.ListSharesByUser(r.Context(), session.UserID)
+	if err != nil {
+		respond(w, r, isJSON, errResp(4710, "Failed to list shares"))
+		return
+	}
+
+	base := baseURL(r)
+	result := make([]AmpShare, 0, len(list))
+	for _, s := range list {
+		result = append(result, shareToAmp(s, u.Username, base))
+	}
+	respond(w, r, isJSON, okResp("share", result))
 }
 
-// share returns a single share by ID.
+// share returns a single share by ID (filter parameter).
 func (h *Handler) share(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, errResp(4704, "Not found"))
+
+	id := parseIDParam(r, "filter")
+	if id == 0 {
+		respond(w, r, isJSON, errResp(4705, "Missing parameter: filter (share ID)"))
+		return
+	}
+
+	s, err := h.db.Shares.GetShare(r.Context(), id)
+	if err != nil || s == nil {
+		respond(w, r, isJSON, errResp(4704, "Not found"))
+		return
+	}
+
+	u, err := h.db.Users.GetUser(r.Context(), session.UserID)
+	if err != nil || u == nil {
+		respond(w, r, isJSON, errResp(4700, "Access denied"))
+		return
+	}
+
+	if !u.IsAdmin && s.UserID != session.UserID {
+		respond(w, r, isJSON, errResp(4742, "Access denied"))
+		return
+	}
+
+	owner := u.Username
+	if s.UserID != session.UserID {
+		ownerUser, ownerErr := h.db.Users.GetUser(r.Context(), s.UserID)
+		if ownerErr == nil && ownerUser != nil {
+			owner = ownerUser.Username
+		} else {
+			owner = ""
+		}
+	}
+	respond(w, r, isJSON, shareToAmp(s, owner, baseURL(r)))
 }
 
-// shareCreate creates a new share link.
+// shareCreate creates a new share link for a song, album, or playlist.
 func (h *Handler) shareCreate(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "shares not implemented"))
+
+	objType := param(r, "type")
+	objID := parseIDParam(r, "id")
+	if objType == "" || objID == 0 {
+		respond(w, r, isJSON, errResp(4705, "Missing parameters: type and id are required"))
+		return
+	}
+
+	token, err := ampShareToken()
+	if err != nil {
+		respond(w, r, isJSON, errResp(4710, "Failed to generate share token"))
+		return
+	}
+
+	s := &model.Share{
+		UserID:      session.UserID,
+		Token:       token,
+		ItemType:    objType,
+		ItemID:      objID,
+		Description: param(r, "description"),
+	}
+
+	if expiresStr := param(r, "expires"); expiresStr != "" {
+		if days, convErr := strconv.Atoi(expiresStr); convErr == nil && days > 0 {
+			s.ExpiresAt = time.Now().AddDate(0, 0, days)
+		}
+	}
+
+	newID, err := h.db.Shares.CreateShare(r.Context(), s)
+	if err != nil {
+		respond(w, r, isJSON, errResp(4710, "Failed to create share"))
+		return
+	}
+	s.ID = newID
+	s.CreatedAt = time.Now()
+
+	u, err := h.db.Users.GetUser(r.Context(), session.UserID)
+	owner := ""
+	if err == nil && u != nil {
+		owner = u.Username
+	}
+	respond(w, r, isJSON, shareToAmp(s, owner, baseURL(r)))
 }
 
-// shareEdit modifies an existing share.
+// shareEdit updates the description or expiry of an existing share.
 func (h *Handler) shareEdit(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "shares not implemented"))
+
+	id := parseIDParam(r, "filter")
+	if id == 0 {
+		respond(w, r, isJSON, errResp(4705, "Missing parameter: filter (share ID)"))
+		return
+	}
+
+	s, err := h.db.Shares.GetShare(r.Context(), id)
+	if err != nil || s == nil {
+		respond(w, r, isJSON, errResp(4704, "Not found"))
+		return
+	}
+
+	u, err := h.db.Users.GetUser(r.Context(), session.UserID)
+	if err != nil || u == nil {
+		respond(w, r, isJSON, errResp(4700, "Access denied"))
+		return
+	}
+
+	if !u.IsAdmin && s.UserID != session.UserID {
+		respond(w, r, isJSON, errResp(4742, "Access denied"))
+		return
+	}
+
+	if desc := param(r, "description"); desc != "" {
+		s.Description = desc
+	}
+	if expiresStr := param(r, "expires"); expiresStr != "" {
+		if days, convErr := strconv.Atoi(expiresStr); convErr == nil {
+			if days == 0 {
+				s.ExpiresAt = time.Time{}
+			} else {
+				s.ExpiresAt = time.Now().AddDate(0, 0, days)
+			}
+		}
+	}
+	s.UpdatedAt = time.Now()
+
+	if err = h.db.Shares.UpdateShare(r.Context(), s); err != nil {
+		respond(w, r, isJSON, errResp(4710, "Failed to update share"))
+		return
+	}
+	respond(w, r, isJSON, okResp("success", "share updated"))
 }
 
-// shareDelete removes a share.
+// shareDelete permanently removes a share.
 func (h *Handler) shareDelete(w http.ResponseWriter, r *http.Request, isJSON bool) {
 	session := h.requireSession(w, r, isJSON)
 	if session == nil {
 		return
 	}
-	respond(w, r, isJSON, okResp("success", "shares not implemented"))
+
+	id := parseIDParam(r, "filter")
+	if id == 0 {
+		respond(w, r, isJSON, errResp(4705, "Missing parameter: filter (share ID)"))
+		return
+	}
+
+	s, err := h.db.Shares.GetShare(r.Context(), id)
+	if err != nil || s == nil {
+		respond(w, r, isJSON, errResp(4704, "Not found"))
+		return
+	}
+
+	u, err := h.db.Users.GetUser(r.Context(), session.UserID)
+	if err != nil || u == nil {
+		respond(w, r, isJSON, errResp(4700, "Access denied"))
+		return
+	}
+
+	if !u.IsAdmin && s.UserID != session.UserID {
+		respond(w, r, isJSON, errResp(4742, "Access denied"))
+		return
+	}
+
+	if err = h.db.Shares.DeleteShare(r.Context(), id); err != nil {
+		respond(w, r, isJSON, errResp(4710, "Failed to delete share"))
+		return
+	}
+	respond(w, r, isJSON, okResp("success", "share deleted"))
 }
 
 // bookmarks returns all bookmarks for the authenticated user.

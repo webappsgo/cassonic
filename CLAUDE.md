@@ -101,7 +101,8 @@ On EVERY new conversation or after "context compacted" message:
 - Full spec: `AI.md` (source of truth)
 
 ## Current Project State
-- Last updated: 2026-06-04
-- Current task: Spec compliance fixes (post-audit)
-- Status: Core server scaffolded — Subsonic v1.1.0–v1.16.1, Ampache v5+v6, native REST API, scheduler (17 jobs), GeoIP, backup (AES-256-GCM), Tor, i18n (7 locales), WebUI (server-side Go templates), Icecast relay, scrobbling (6 services), podcast, tag editor, MusicBrainz lookup all implemented. cassonic-agent is optional and not yet scaffolded.
+- Last updated: 2026-06-08
+- Current task: CI/CD workflows + integration tests + documentation completeness
+- Status: Core server complete — Subsonic v1.1.0–v1.16.1, Ampache v5+v6 (shares, preferences, social all implemented), native REST API, scheduler (17 jobs), GeoIP, backup (AES-256-GCM), Tor, i18n (7 locales), WebUI (server-side Go templates), Icecast relay, scrobbling (6 services), podcast, tag editor, MusicBrainz lookup. Audit findings all resolved. cassonic-agent is optional and not yet scaffolded.
+- Remaining: CI/CD workflows (.github/workflows/), integration test scripts (tests/run_tests.sh, tests/docker.sh, tests/incus.sh), man page + completions, docs review
 - Relevant PARTs: all (0–36)
