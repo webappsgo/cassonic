@@ -18,7 +18,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
+  build-standard:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,7 +54,7 @@ jobs:
           fi
           echo "BUILD_DATE=$(date +"%a %b %d, %Y at %H:%M:%S %Z")" >> $GITHUB_ENV
 
-      - name: Determine tags
+      - name: Determine tags (standard)
         id: tags
         run: |
           TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_ID }}"
@@ -72,7 +72,7 @@ jobs:
 
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Build and push
+      - name: Build and push (standard)
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: .
@@ -90,7 +90,7 @@ jobs:
             org.opencontainers.image.authors=local
             org.opencontainers.image.title=${{ env.PROJECTNAME }}
             org.opencontainers.image.base.name=${{ env.PROJECTNAME }}
-            org.opencontainers.image.description=${{ env.PROJECTNAME }} - self-hosted music streaming server
+            org.opencontainers.image.description=${{ env.PROJECTNAME }} - standard image (alpine)
             org.opencontainers.image.version=${{ env.VERSION }}
             org.opencontainers.image.created=${{ env.BUILD_DATE }}
             org.opencontainers.image.revision=${{ env.COMMIT_ID }}
@@ -103,7 +103,7 @@ jobs:
             manifest:org.opencontainers.image.authors=local
             manifest:org.opencontainers.image.title=${{ env.PROJECTNAME }}
             manifest:org.opencontainers.image.base.name=${{ env.PROJECTNAME }}
-            manifest:org.opencontainers.image.description=${{ env.PROJECTNAME }} - self-hosted music streaming server
+            manifest:org.opencontainers.image.description=${{ env.PROJECTNAME }} - standard image (alpine)
             manifest:org.opencontainers.image.version=${{ env.VERSION }}
             manifest:org.opencontainers.image.created=${{ env.BUILD_DATE }}
             manifest:org.opencontainers.image.revision=${{ env.COMMIT_ID }}

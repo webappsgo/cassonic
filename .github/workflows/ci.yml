@@ -36,7 +36,7 @@ jobs:
           if ! docker pull "$IMAGE"; then
             echo "::error::Build image $IMAGE not found."
             echo "::error::Trigger the 'Build Toolchain Image' workflow (workflow_dispatch) to create it."
-            echo "::error::Never commit ci.yml before the build image exists in the registry."
+            echo "::error::Never commit ci.yml or release.yml before the build image exists in the registry."
             exit 1
           fi
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
@@ -68,7 +68,7 @@ jobs:
           THRESHOLD=60
           PCT=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub("%","",$3); print int($3)}')
           if [ "$PCT" -lt "$THRESHOLD" ]; then
-            echo "::error::coverage $PCT% is below threshold of $THRESHOLD%"
+            echo "::error::coverage $PCT% < threshold $THRESHOLD%"
             exit 1
           fi
 
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - run: go build ./...
 
-  vuln-scan:
+  vuln-check:
     needs: ensure-build-image
     runs-on: ubuntu-latest
     container:
@@ -106,3 +106,39 @@ jobs:
           base: ${{ github.event.before }}
           head: ${{ github.event.after }}
           extra_args: --only-verified
+
+  workflow-policy:
+    needs: ensure-build-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Check all actions are SHA-pinned and no pull_request_target
+        run: |
+          fail=0
+          for f in .github/workflows/*.yml; do
+            if grep -qE 'pull_request_target' "$f"; then
+              echo "::error file=$f::pull_request_target is forbidden"
+              fail=1
+            fi
+            while IFS= read -r line; do
+              lineno=$(grep -n "$line" "$f" | head -1 | cut -d: -f1)
+              echo "::error file=$f,line=${lineno}::action not pinned to full SHA: $line"
+              fail=1
+            done < <(grep -E '^\s+uses:' "$f" | grep -v '@[0-9a-f]\{40\}')
+          done
+          exit $fail
+
+  image-scan:
+    if: github.event_name != 'schedule'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Build image for scanning
+        run: docker build -f docker/Dockerfile -t cassonic:scan .
+      - name: Scan image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasecurity/trivy:0.70.0 image \
+            --exit-code 1 --severity CRITICAL,HIGH cassonic:scan
