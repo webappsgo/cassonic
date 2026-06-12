@@ -32,7 +32,7 @@ GO_DOCKER := docker run --rm -it \
 	-v $(GOMODCACHE):/go/pkg/mod \
 	-w /build \
 	-e CGO_ENABLED=0 \
-	golang:alpine
+	$(REGISTRY):build
 
 .PHONY: build local release docker test dev clean
 

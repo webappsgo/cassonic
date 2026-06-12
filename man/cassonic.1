@@ -1,0 +1,197 @@
+.TH CASSONIC 1 "2026-06-10" "cassonic" "User Commands"
+.SH NAME
+cassonic \- self-hosted music streaming server
+.SH SYNOPSIS
+.B cassonic
+[\fIflags\fR]
+.SH DESCRIPTION
+.B cassonic
+is a self-hosted music streaming server with Subsonic, Ampache, and native REST API compatibility.
+It serves music libraries over HTTP/HTTPS, supports Tor hidden services, and runs as a single
+static binary with no external runtime dependencies.
+.SH FLAGS
+.TP
+.BR \-\-help ", " \-h
+Show help and exit.
+.TP
+.BR \-\-version ", " \-v
+Show version information and exit.
+.TP
+.BI \-\-mode " production|development"
+Server operating mode.
+.I production
+minimises log verbosity and enables security headers.
+.I development
+enables verbose logging and hot reload.
+Default: \fIproduction\fR.
+.TP
+.BI \-\-config " dir"
+Override the configuration directory.
+Default: \fI/etc/local/cassonic/\fR (root) or \fI~/.config/local/cassonic/\fR (user).
+.TP
+.BI \-\-data " dir"
+Override the data directory.
+Default: \fI/var/lib/local/cassonic/\fR (root) or \fI~/.local/share/local/cassonic/\fR (user).
+.TP
+.BI \-\-cache " dir"
+Override the cache directory.
+Default: \fI/var/cache/local/cassonic/\fR (root) or \fI~/.cache/local/cassonic/\fR (user).
+.TP
+.BI \-\-log " dir"
+Override the log directory.
+Default: \fI/var/log/local/cassonic/\fR (root) or \fI~/.local/log/local/cassonic/\fR (user).
+.TP
+.BI \-\-address " addr"
+Listen address.
+Default: all interfaces.
+.TP
+.BI \-\-port " port"
+Listen port.
+Default: \fI4533\fR.
+.TP
+.BI \-\-baseurl " path"
+Base URL path prefix (e.g. \fI/music\fR).
+.TP
+.B \-\-debug
+Enable debug output. Can also be set via the \fIDEBUG\fR environment variable.
+.TP
+.B \-\-scan
+Run a full library scan and exit.
+.TP
+.B \-\-status
+Print server status (running, version, uptime) and exit.
+.TP
+.BI \-\-pid " file"
+Write the server process ID to \fIfile\fR.
+.TP
+.B \-\-install
+Install cassonic as a system service and exit.
+Equivalent to \fB\-\-service \-\-install\fR.
+.TP
+.B \-\-uninstall
+Remove the cassonic system service and exit.
+Equivalent to \fB\-\-service \-\-uninstall\fR.
+.TP
+.BI \-\-backup " dir"
+Directory for backup archives.
+Required when using \fB\-\-maintenance backup\fR or \fB\-\-maintenance restore\fR.
+.TP
+.BI \-\-tor\-key " file"
+Path to persist the Tor hidden service ed25519 private key.
+Providing this flag enables the Tor hidden service.
+.TP
+.BI \-\-service " cmd"
+Manage the cassonic system service.
+.I cmd
+is one of: \fBstart\fR, \fBrestart\fR, \fBstop\fR, \fBreload\fR, \fB\-\-install\fR, \fB\-\-uninstall\fR, \fB\-\-disable\fR, \fB\-\-help\fR.
+Note: \fBstart\fR prints guidance on starting via the host init system rather than starting the process directly.
+.TP
+.B \-\-daemon
+Fork cassonic to run in the background.
+.TP
+.BI \-\-maintenance " cmd"
+Run a maintenance operation.
+.I cmd
+is one of: \fBbackup\fR, \fBrestore\fR, \fBupdate\fR, \fBmode\fR, \fBsetup\fR, \fB\-\-help\fR.
+.TP
+.BI \-\-update " cmd"
+Check for or apply binary updates.
+.I cmd
+is one of: \fBcheck\fR, \fByes\fR, \fBbranch=stable\fR, \fBbranch=beta\fR, \fBbranch=daily\fR.
+.TP
+.BI \-\-lang " code"
+Set the UI language.
+Supported codes: \fBen\fR, \fBes\fR, \fBfr\fR, \fBde\fR, \fBzh\fR, \fBja\fR, \fBar\fR.
+Default: \fIen\fR.
+.TP
+.BI \-\-color " auto|yes|no"
+Control ANSI colour output.
+Default: \fIauto\fR (enabled when stdout is a terminal).
+Respects the \fBNO_COLOR\fR environment variable.
+.TP
+.BI \-\-shell " completions|init" " [SHELL]"
+Print shell integration output.
+\fBcompletions\fR prints a completion script; \fBinit\fR prints a one-line snippet suitable for \fBeval\fR.
+Optional \fISHELL\fR is one of \fBbash\fR, \fBzsh\fR, \fBfish\fR; auto-detected from \fB$SHELL\fR if omitted.
+Use \fB\-\-shell \-\-help\fR for usage examples.
+.TP
+.B \-\-tls
+Enable TLS (HTTPS).
+.TP
+.BI \-\-tls\-domain " domain"
+Domain name for automatic Let's Encrypt certificate provisioning.
+.TP
+.BI \-\-tls\-email " email"
+Email address for Let's Encrypt ACME account registration.
+.TP
+.BI \-\-tls\-cert " file"
+Path to a local TLS certificate file (PEM format).
+.TP
+.BI \-\-tls\-key " file"
+Path to a local TLS private key file (PEM format).
+.SH ENVIRONMENT
+.TP
+.B MODE
+Equivalent to \fB\-\-mode\fR. Overridden by the flag if both are set.
+.TP
+.B DEBUG
+Set to \fB1\fR, \fBtrue\fR, or \fByes\fR to enable debug output. Overridden by \fB\-\-debug\fR.
+.TP
+.B NO_COLOR
+When set to a non-empty value, disables ANSI colour output regardless of \fB\-\-color\fR.
+.SH FILES
+.TP
+.I /etc/local/cassonic/server.yml
+System-wide configuration file (privileged installation).
+.TP
+.I ~/.config/local/cassonic/server.yml
+Per-user configuration file (user installation).
+.TP
+.I /var/lib/local/cassonic/
+Data directory for privileged installations (databases, music index).
+.TP
+.I /var/log/local/cassonic/
+Log directory for privileged installations.
+.SH EXAMPLES
+Start the server in the foreground:
+.PP
+.RS
+.B cassonic
+.RE
+.PP
+Run a library scan and exit:
+.PP
+.RS
+.B cassonic \-\-scan
+.RE
+.PP
+Install as a system service:
+.PP
+.RS
+.B cassonic \-\-service \-\-install
+.RE
+.PP
+Create a backup archive:
+.PP
+.RS
+.B cassonic \-\-backup /mnt/backups \-\-maintenance backup
+.RE
+.PP
+Enable shell completions (bash):
+.PP
+.RS
+.B eval "$(cassonic \-\-shell init bash)"
+.RE
+.PP
+Enable shell completions (zsh):
+.PP
+.RS
+.B eval "$(cassonic \-\-shell init zsh)"
+.RE
+.SH SEE ALSO
+Full documentation at the project site.
+Subsonic API documentation: \fIhttp://www.subsonic.org/pages/api.jsp\fR.
+.SH BUGS
+Report issues at the project repository.
+.SH LICENSE
+MIT License.

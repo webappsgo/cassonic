@@ -59,6 +59,7 @@ func main() {
 		flagVersion     = flag.Bool("version", false, "Show version")
 		flagConfig      = flag.String("config", "", "Config directory")
 		flagData        = flag.String("data", "", "Data directory")
+		flagCache       = flag.String("cache", "", "Cache directory")
 		flagLog         = flag.String("log", "", "Log directory")
 		flagAddress     = flag.String("address", "", "Listen address")
 		flagPort        = flag.Int("port", 0, "Listen port")
@@ -70,7 +71,7 @@ func main() {
 		flagPID         = flag.String("pid", "", "Write PID to file")
 		flagInstall     = flag.Bool("install", false, "Install cassonic as a system service and exit")
 		flagUninstall   = flag.Bool("uninstall", false, "Remove the cassonic system service and exit")
-		flagBackupDir   = flag.String("backup-dir", "", "Directory for automatic backups (optional)")
+		flagBackup      = flag.String("backup", "", "Directory for backup archives (optional)")
 		flagTorKey      = flag.String("tor-key", "", "Path to persist the Tor hidden service ed25519 key (optional; enables Tor)")
 		flagService     = flag.String("service", "", "Service management: start|restart|stop|reload|--install|--uninstall|--disable|--help")
 		flagDaemon      = flag.Bool("daemon", false, "Fork cassonic to run in the background")
@@ -78,12 +79,16 @@ func main() {
 		flagUpdate      = flag.String("update", "", "Check or apply updates: check|yes|branch=stable|branch=beta|branch=daily")
 		flagLang        = flag.String("lang", "en", "UI language: en|es|fr|de|zh|ja|ar")
 		flagColor       = flag.String("color", "auto", "ANSI colour output: auto|yes|no")
+		flagShell       = flag.String("shell", "", "Shell integration: completions [SHELL]|init [SHELL]|--help")
 		flagTLS         = flag.Bool("tls", false, "Enable TLS (HTTPS)")
 		flagTLSDomain   = flag.String("tls-domain", "", "Domain name for Let's Encrypt certificate")
 		flagTLSEmail    = flag.String("tls-email", "", "Email address for Let's Encrypt ACME registration")
 		flagTLSCert     = flag.String("tls-cert", "", "Path to local TLS certificate file (PEM)")
 		flagTLSKey      = flag.String("tls-key", "", "Path to local TLS private key file (PEM)")
 	)
+
+	// --backup-dir is a deprecated alias for --backup (kept for backward compatibility).
+	flag.StringVar(flagBackup, "backup-dir", "", "Directory for backup archives (deprecated; use --backup)")
 
 	// Register short aliases: only -h and -v are permitted per spec.
 	flag.BoolVar(flagHelp, "h", false, "Show help")
@@ -136,12 +141,21 @@ func main() {
 		return
 	}
 
+	// --shell subcommand (completions/init output; does not need config or paths).
+	if *flagShell != "" {
+		handleShellCmd(*flagShell, flag.Args())
+		return
+	}
+
 	overrides := map[string]string{}
 	if *flagConfig != "" {
 		overrides["config"] = *flagConfig
 	}
 	if *flagData != "" {
 		overrides["data"] = *flagData
+	}
+	if *flagCache != "" {
+		overrides["cache"] = *flagCache
 	}
 	if *flagLog != "" {
 		overrides["log"] = *flagLog
@@ -206,7 +220,7 @@ func main() {
 
 	// --maintenance subcommand (needs cfg + detectedPaths resolved).
 	if *flagMaintenance != "" {
-		handleMaintenanceCmd(*flagMaintenance, cfg, cfgPath, *flagBackupDir, detectedPaths.Data)
+		handleMaintenanceCmd(*flagMaintenance, cfg, cfgPath, *flagBackup, detectedPaths.Data)
 		return
 	}
 
@@ -295,10 +309,10 @@ func main() {
 		srv.WithGeoIP(geoipDB, nil, nil)
 	}
 
-	if *flagBackupDir != "" {
+	if *flagBackup != "" {
 		backupLogger := log.New(os.Stdout, "[backup] ", log.LstdFlags)
 		backupCfg := svcbackup.Config{
-			Dir:       *flagBackupDir,
+			Dir:       *flagBackup,
 			Retention: 30,
 		}
 		backupSvc := svcbackup.New(backupCfg, detectedPaths.Data, backupLogger)
@@ -609,7 +623,7 @@ func handleMaintenanceCmd(cmd string, cfg *config.Config, cfgPath, backupDir, da
 	switch cmd {
 	case "backup":
 		if backupDir == "" {
-			fmt.Fprintln(os.Stderr, "cassonic: --backup-dir is required for --maintenance backup")
+			fmt.Fprintln(os.Stderr, "cassonic: --backup is required for --maintenance backup")
 			os.Exit(1)
 		}
 		logger := log.New(os.Stdout, "[backup] ", log.LstdFlags)
@@ -631,7 +645,7 @@ func handleMaintenanceCmd(cmd string, cfg *config.Config, cfgPath, backupDir, da
 	case "--help":
 		fmt.Print(`cassonic --maintenance usage:
 
-  --maintenance backup    Create a backup archive (requires --backup-dir)
+  --maintenance backup    Create a backup archive (requires --backup)
   --maintenance restore   Restore from a backup file
   --maintenance update    Print guidance on using --update
   --maintenance mode      Change server.mode in server.yml
@@ -647,7 +661,7 @@ func handleMaintenanceCmd(cmd string, cfg *config.Config, cfgPath, backupDir, da
 				os.Exit(1)
 			}
 			if backupDir == "" {
-				fmt.Fprintln(os.Stderr, "cassonic: --backup-dir is required for --maintenance restore")
+				fmt.Fprintln(os.Stderr, "cassonic: --backup is required for --maintenance restore")
 				os.Exit(1)
 			}
 			logger := log.New(os.Stdout, "[backup] ", log.LstdFlags)
@@ -757,11 +771,12 @@ Usage:
   cassonic [flags]
 
 Flags:
-  --help                             Show help
+  --help / -h                        Show help
   --version / -v                     Show version
   --mode {production|development}    Server mode (default: production)
   --config {dir}                     Config directory
   --data {dir}                       Data directory
+  --cache {dir}                      Cache directory
   --log {dir}                        Log directory
   --address {addr}                   Listen address (default: all interfaces)
   --port {port}                      Listen port (default: 4533)
@@ -772,7 +787,7 @@ Flags:
   --pid {file}                       Write PID to file
   --install                          Install cassonic as a system service and exit
   --uninstall                        Remove the cassonic system service and exit
-  --backup-dir {dir}                 Directory for backup archives (optional)
+  --backup {dir}                     Directory for backup archives (optional)
   --tor-key {file}                   Path to persist Tor ed25519 key; enables Tor hidden service (optional)
   --service {cmd}                    Manage system service: start|restart|stop|reload|--install|--uninstall|--disable|--help
   --daemon                           Fork cassonic to run in the background
@@ -780,6 +795,7 @@ Flags:
   --update {check|yes}               Check for or apply updates; prefix with branch= to select a release channel
   --lang {code}                      UI language: en|es|fr|de|zh|ja|ar (default: en)
   --color {auto|yes|no}              ANSI colour output (default: auto)
+  --shell {completions|init} [SHELL] Print shell completion script or init snippet; SHELL: bash|zsh|fish
   --tls                              Enable TLS (HTTPS)
   --tls-domain {domain}              Domain name for Let's Encrypt certificate
   --tls-email {email}                Email address for Let's Encrypt ACME registration
@@ -787,3 +803,210 @@ Flags:
   --tls-key {file}                   Path to local TLS private key (PEM)
 `)
 }
+
+// detectShell returns the current shell name from $SHELL, defaulting to "bash".
+func detectShell() string {
+	sh := filepath.Base(os.Getenv("SHELL"))
+	switch sh {
+	case "bash", "zsh", "fish":
+		return sh
+	default:
+		return "bash"
+	}
+}
+
+// handleShellCmd processes --shell {completions|init} [SHELL].
+// args contains any non-flag positional arguments that follow (e.g. the shell name).
+func handleShellCmd(cmd string, args []string) {
+	shell := detectShell()
+	if len(args) > 0 {
+		shell = args[0]
+	}
+	switch cmd {
+	case "completions":
+		printCompletions(shell)
+	case "init":
+		printShellInit(shell)
+	case "--help":
+		fmt.Print(`cassonic --shell usage:
+
+  --shell completions [SHELL]  Print shell completion script (auto-detect if SHELL omitted)
+  --shell init [SHELL]         Print shell init snippet for eval (auto-detect if SHELL omitted)
+  --shell --help               Show this help
+
+Supported shells: bash, zsh, fish
+
+Examples:
+  # bash — add to ~/.bashrc
+  eval "$(cassonic --shell init bash)"
+
+  # zsh — add to ~/.zshrc
+  eval "$(cassonic --shell init zsh)"
+
+  # fish — add to ~/.config/fish/config.fish
+  cassonic --shell completions fish | source
+`)
+	default:
+		fmt.Fprintf(os.Stderr, "cassonic: unknown --shell value %q; use --shell completions|init|--help\n", cmd)
+		os.Exit(1)
+	}
+}
+
+// printShellInit prints a one-line shell snippet that sources the completion script at eval time.
+func printShellInit(shell string) {
+	self := filepath.Base(os.Args[0])
+	switch shell {
+	case "bash":
+		fmt.Printf("source <(%s --shell completions bash)\n", self)
+	case "zsh":
+		fmt.Printf("source <(%s --shell completions zsh)\n", self)
+	case "fish":
+		fmt.Printf("%s --shell completions fish | source\n", self)
+	default:
+		fmt.Fprintf(os.Stderr, "cassonic: unsupported shell %q for --shell init; supported: bash, zsh, fish\n", shell)
+		os.Exit(1)
+	}
+}
+
+// printCompletions prints the completion script for the requested shell.
+func printCompletions(shell string) {
+	switch shell {
+	case "bash":
+		fmt.Print(bashCompletion)
+	case "zsh":
+		fmt.Print(zshCompletion)
+	case "fish":
+		fmt.Print(fishCompletion)
+	default:
+		fmt.Fprintf(os.Stderr, "cassonic: unsupported shell %q for --shell completions; supported: bash, zsh, fish\n", shell)
+		os.Exit(1)
+	}
+}
+
+// bashCompletion is the bash completion script for cassonic.
+const bashCompletion = `# bash completion for cassonic
+# Source this file or add to ~/.bashrc: eval "$(cassonic --shell init bash)"
+_cassonic() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    case "$prev" in
+        --mode)
+            COMPREPLY=($(compgen -W "production development" -- "$cur"))
+            return
+            ;;
+        --config|--data|--cache|--log|--backup|--backup-dir|--pid|--tor-key|--tls-cert|--tls-key)
+            COMPREPLY=($(compgen -d -- "$cur"))
+            return
+            ;;
+        --service)
+            COMPREPLY=($(compgen -W "start restart stop reload --install --uninstall --disable --help" -- "$cur"))
+            return
+            ;;
+        --maintenance)
+            COMPREPLY=($(compgen -W "backup restore update mode setup --help" -- "$cur"))
+            return
+            ;;
+        --update)
+            COMPREPLY=($(compgen -W "check yes branch=stable branch=beta branch=daily" -- "$cur"))
+            return
+            ;;
+        --lang)
+            COMPREPLY=($(compgen -W "en es fr de zh ja ar" -- "$cur"))
+            return
+            ;;
+        --color)
+            COMPREPLY=($(compgen -W "auto yes no" -- "$cur"))
+            return
+            ;;
+        --shell)
+            COMPREPLY=($(compgen -W "completions init --help" -- "$cur"))
+            return
+            ;;
+        --address|--port|--baseurl|--tls-domain|--tls-email)
+            return
+            ;;
+    esac
+
+    local flags="--help --version --mode --config --data --cache --log --address --port --baseurl --debug --scan --status --pid --install --uninstall --backup --tor-key --service --daemon --maintenance --update --lang --color --shell --tls --tls-domain --tls-email --tls-cert --tls-key"
+    COMPREPLY=($(compgen -W "$flags" -- "$cur"))
+}
+complete -F _cassonic cassonic
+`
+
+// zshCompletion is the zsh completion script for cassonic.
+const zshCompletion = `#compdef cassonic
+# zsh completion for cassonic
+# Source this file or add to ~/.zshrc: eval "$(cassonic --shell init zsh)"
+_cassonic() {
+    _arguments \
+        '(--help -h)'{--help,-h}'[Show help]' \
+        '(--version -v)'{--version,-v}'[Show version]' \
+        '--mode[Server mode]:mode:(production development)' \
+        '--config[Config directory]:dir:_files -/' \
+        '--data[Data directory]:dir:_files -/' \
+        '--cache[Cache directory]:dir:_files -/' \
+        '--log[Log directory]:dir:_files -/' \
+        '--address[Listen address]:address:' \
+        '--port[Listen port]:port:' \
+        '--baseurl[Base URL path prefix]:path:' \
+        '--debug[Enable debug output]' \
+        '--scan[Run library scan and exit]' \
+        '--status[Show server status and exit]' \
+        '--pid[Write PID to file]:file:_files' \
+        '--install[Install as system service and exit]' \
+        '--uninstall[Remove system service and exit]' \
+        '--backup[Backup directory]:dir:_files -/' \
+        '--tor-key[Tor ed25519 key file]:file:_files' \
+        '--service[Service management command]:cmd:(start restart stop reload --install --uninstall --disable --help)' \
+        '--daemon[Fork to background]' \
+        '--maintenance[Maintenance operation]:cmd:(backup restore update mode setup --help)' \
+        '--update[Update command]:cmd:(check yes branch=stable branch=beta branch=daily)' \
+        '--lang[UI language]:lang:(en es fr de zh ja ar)' \
+        '--color[Color output]:mode:(auto yes no)' \
+        '--shell[Shell integration]:cmd:(completions init --help)' \
+        '--tls[Enable TLS]' \
+        '--tls-domain[TLS domain]:domain:' \
+        '--tls-email[TLS email]:email:' \
+        '--tls-cert[TLS certificate file]:file:_files' \
+        '--tls-key[TLS key file]:file:_files'
+}
+_cassonic
+`
+
+// fishCompletion is the fish completion script for cassonic.
+const fishCompletion = `# fish completion for cassonic
+# Add to fish config: cassonic --shell completions fish | source
+
+complete -c cassonic -l help    -s h -d 'Show help'
+complete -c cassonic -l version -s v -d 'Show version'
+complete -c cassonic -l mode       -r -d 'Server mode' -a 'production development'
+complete -c cassonic -l config     -r -d 'Config directory' -F
+complete -c cassonic -l data       -r -d 'Data directory' -F
+complete -c cassonic -l cache      -r -d 'Cache directory' -F
+complete -c cassonic -l log        -r -d 'Log directory' -F
+complete -c cassonic -l address    -r -d 'Listen address'
+complete -c cassonic -l port       -r -d 'Listen port'
+complete -c cassonic -l baseurl    -r -d 'Base URL path prefix'
+complete -c cassonic -l debug         -d 'Enable debug output'
+complete -c cassonic -l scan          -d 'Run library scan and exit'
+complete -c cassonic -l status        -d 'Show server status and exit'
+complete -c cassonic -l pid        -r -d 'Write PID to file' -F
+complete -c cassonic -l install       -d 'Install as system service and exit'
+complete -c cassonic -l uninstall     -d 'Remove system service and exit'
+complete -c cassonic -l backup     -r -d 'Backup directory' -F
+complete -c cassonic -l tor-key    -r -d 'Tor ed25519 key file' -F
+complete -c cassonic -l service    -r -d 'Service management' -a 'start restart stop reload --install --uninstall --disable --help'
+complete -c cassonic -l daemon        -d 'Fork to background'
+complete -c cassonic -l maintenance -r -d 'Maintenance operation' -a 'backup restore update mode setup --help'
+complete -c cassonic -l update     -r -d 'Update command' -a 'check yes branch=stable branch=beta branch=daily'
+complete -c cassonic -l lang       -r -d 'UI language' -a 'en es fr de zh ja ar'
+complete -c cassonic -l color      -r -d 'Color output' -a 'auto yes no'
+complete -c cassonic -l shell      -r -d 'Shell integration' -a 'completions init --help'
+complete -c cassonic -l tls           -d 'Enable TLS'
+complete -c cassonic -l tls-domain -r -d 'TLS domain'
+complete -c cassonic -l tls-email  -r -d 'TLS email'
+complete -c cassonic -l tls-cert   -r -d 'TLS certificate file' -F
+complete -c cassonic -l tls-key    -r -d 'TLS key file' -F
+`
