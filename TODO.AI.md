@@ -13,25 +13,16 @@ Last updated: 2026-06-10
 - [x] Ampache shares, preferences, social — fully implemented
 - [x] IDEA.md compliance — fixed structure, removed HOW details, removed extra top-level sections
 - [x] CLAUDE.md current state — updated
+- [x] man page + shell completions (triple sync) — man/cassonic.1, completions/_cassonic_completions.bash, completions/_cassonic_completions.zsh
+- [x] --cache flag added to src/main.go (spec PART 8)
+- [x] --shell flag added with completions/init subcommands (spec PART 8)
+- [x] --backup-dir renamed to --backup in src/main.go; deprecated alias kept
+- [x] --service start note already correct (no change needed)
+- [x] Makefile GO_DOCKER image fixed: golang:alpine → $(REGISTRY):build
 
 ---
 
 ## ACTIVE TASKS
-
-### [ ] man page and shell completions (triple sync)
-Read: binary-rules.md, AI.md PART 7, 8
-
-Scope: `man/cassonic.1`, `completions/_cassonic_completions.bash`, `completions/_cassonic_completions.zsh`
-- Generate man page from the flag set in `src/main.go`
-- Generate bash completion script
-- Generate zsh completion script
-
-### [ ] --service start help note
-Read: AI.md PART 24
-
-Scope: `src/main.go` service flag handler or wherever `--service --help` output is built
-- Add note to `--service --help` output that `start` defers to the host init system
-- Document why: cassonic binary does not manage the init system directly
 
 ### [ ] MkDocs content completeness
 Read: AI.md PART 30, testing-rules.md
