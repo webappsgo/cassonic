@@ -16,7 +16,7 @@ Cassonic generates `server.yml` on first run. No manual editing is required to g
 Every setting in `server.yml` can be overridden with a CLI flag or environment variable. CLI flags take precedence over environment variables, which take precedence over the config file.
 
 ```bash
-cassonic --port 4040 --debug --mode development
+cassonic --port 4533 --debug --mode development
 ```
 
 ## Environment Variables
@@ -25,7 +25,7 @@ cassonic --port 4040 --debug --mode development
 |----------|-------------|---------|
 | `MODE` | `production` or `development` | `production` |
 | `DEBUG` | Enable debug mode (`true`/`false`/`1`/`0`/`yes`/`no`) | `false` |
-| `PORT` | Listen port | `4040` (host), `80` (container) |
+| `PORT` | Listen port | `4533` (host), `80` (container) |
 | `ADDRESS` | Listen address | `0.0.0.0` |
 | `TZ` | Timezone | `America/New_York` |
 | `CONFIG_DIR` | Config directory override | platform default |
@@ -37,8 +37,8 @@ cassonic --port 4040 --debug --mode development
 server:
   # Bind address for the HTTP listener
   address: 0.0.0.0
-  # Listen port (default 4040; container default 80)
-  port: 4040
+  # Listen port (default 4533; container default 80)
+  port: 4533
   # Base URL path when running behind a reverse proxy
   baseurl: /
   # Application mode: production or development

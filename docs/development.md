@@ -81,7 +81,7 @@ make docker
 make clean
 ```
 
-All `make` targets build inside a Docker container using `golang:alpine`. No Go toolchain needs to be installed on the host.
+All `make` targets build inside a Docker container using the project's `ghcr.io/local/cassonic:build` image (built from `docker/Dockerfile.build`, which extends `golang:alpine` with extra tooling). No Go toolchain needs to be installed on the host.
 
 ## Environment Variables for the Build
 
@@ -185,7 +185,7 @@ PR titles follow the commit message emoji convention (see CLAUDE.md). Keep PRs f
 
 The production Docker image uses a multi-stage build:
 
-1. **Builder stage** (`golang:alpine`) — compiles the binary with `CGO_ENABLED=0`
+1. **Builder stage** (`ghcr.io/local/cassonic:build`) — compiles the binary with `CGO_ENABLED=0`
 2. **Runtime stage** (`alpine:latest`) — minimal image with `tini`, `tor`, `curl`, `bash`
 
 The binary is the sole artifact copied from the builder stage. No Go toolchain or source code is in the final image.

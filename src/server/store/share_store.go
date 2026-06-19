@@ -171,7 +171,7 @@ func (s *sqliteShareStore) ListSharesByUser(ctx context.Context, userID int64) (
 }
 
 func (s *sqliteShareStore) UpdateShare(ctx context.Context, sh *model.Share) error {
-	const q = `UPDATE shares SET description = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP
+	const q = `UPDATE shares SET description = ?, password_hash = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?`
 
 	var expiresAt any
@@ -179,7 +179,7 @@ func (s *sqliteShareStore) UpdateShare(ctx context.Context, sh *model.Share) err
 		expiresAt = sh.ExpiresAt.UTC().Format(time.RFC3339)
 	}
 
-	_, err := s.db.ExecContext(ctx, q, sh.Description, expiresAt, sh.ID)
+	_, err := s.db.ExecContext(ctx, q, sh.Description, sh.PasswordHash, expiresAt, sh.ID)
 	if err != nil {
 		return fmt.Errorf("share_store update: %w", err)
 	}

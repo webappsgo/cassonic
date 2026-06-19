@@ -37,7 +37,7 @@ chmod +x cassonic
 ./cassonic
 ```
 
-Open `http://localhost:4040` and use the setup token from the banner to create your admin account.
+Open `http://localhost:4533` and use the setup token from the banner to create your admin account.
 
 ## Documentation
 

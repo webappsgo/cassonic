@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS albums (
     musicbrainz_id TEXT NOT NULL DEFAULT '',
     user_edited INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(title, artist_id)
 );
 CREATE INDEX IF NOT EXISTS idx_albums_artist_id ON albums(artist_id);
 CREATE INDEX IF NOT EXISTS idx_albums_year ON albums(year);
@@ -179,7 +180,8 @@ CREATE TABLE IF NOT EXISTS cover_art (
     mime_type TEXT NOT NULL DEFAULT '',
     width INTEGER NOT NULL DEFAULT 0,
     height INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(song_id, album_id)
 );
 
 CREATE TABLE IF NOT EXISTS scan_status (

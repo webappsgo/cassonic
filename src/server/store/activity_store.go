@@ -234,21 +234,18 @@ func (s *sqliteActivityStore) SavePlayQueue(ctx context.Context, pq *model.PlayQ
 			position   = excluded.position,
 			updated_at = CURRENT_TIMESTAMP,
 			changed_by = excluded.changed_by`
-	res, err := tx.ExecContext(ctx, upsertQ, pq.UserID, pq.Current, pq.Position, pq.ChangedBy)
-	if err != nil {
+	if _, err = tx.ExecContext(ctx, upsertQ, pq.UserID, pq.Current, pq.Position, pq.ChangedBy); err != nil {
 		return err
 	}
 
-	queueID, err := res.LastInsertId()
+	// Always query by user_id: SQLite's last_insert_rowid is not updated when
+	// ON CONFLICT DO UPDATE fires an UPDATE (only genuine INSERTs change it),
+	// so relying on LastInsertId() returns a stale rowid in the update path.
+	var queueID int64
+	err = tx.QueryRowContext(ctx,
+		`SELECT id FROM play_queues WHERE user_id = ?`, pq.UserID).Scan(&queueID)
 	if err != nil {
 		return err
-	}
-	if queueID == 0 {
-		err = tx.QueryRowContext(ctx,
-			`SELECT id FROM play_queues WHERE user_id = ?`, pq.UserID).Scan(&queueID)
-		if err != nil {
-			return err
-		}
 	}
 
 	if _, err = tx.ExecContext(ctx,

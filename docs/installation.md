@@ -55,9 +55,9 @@ On first run, cassonic:
 1. Auto-creates the configuration directory (`~/.config/local/cassonic/` for a user install, `/etc/local/cassonic/` for root).
 2. Generates `server.yml` with safe defaults.
 3. Prints a one-time **setup token** in the startup banner.
-4. Listens on `http://0.0.0.0:4040` by default.
+4. Listens on `http://0.0.0.0:4533` by default.
 
-Open `http://localhost:4040` and use the setup token to create your primary admin account. The setup token is invalidated after the first admin is created.
+Open `http://localhost:4533` and use the setup token to create your primary admin account. The setup token is invalidated after the first admin is created.
 
 ## Install as a System Service
 
@@ -85,7 +85,7 @@ When installed as root, cassonic creates a dedicated `cassonic` system user and 
 cassonic --service --install
 ```
 
-User services bind to ports above 1024 only. Default port is `4040`.
+User services bind to ports above 1024 only. Default port is `4533`.
 
 ### Uninstall
 
@@ -112,7 +112,7 @@ services:
     image: ghcr.io/local/cassonic:latest
     restart: unless-stopped
     ports:
-      - "4040:80"
+      - "4533:80"
     volumes:
       - ./volumes/config:/config:z
       - ./volumes/data:/data:z
@@ -167,6 +167,6 @@ cassonic --status
 ```
 
 ```bash
-curl http://localhost:4040/health
+curl http://localhost:4533/health
 # {"status":"ok","version":"1.2.3"}
 ```

@@ -27,10 +27,13 @@ cassonic [flags]
 | `--log {dir}` | | Log directory override |
 | `--pid {file}` | | Write PID to file |
 | `--address {addr}` | | Bind address (default: `0.0.0.0`) |
-| `--port {port}` | | Listen port (default: `4040`) |
+| `--port {port}` | | Listen port (default: `4533`) |
+| `--cache {dir}` | | Cache directory override |
+| `--backup {dir}` | | Directory for backup archives (optional) |
 | `--baseurl {path}` | | Base URL path for reverse proxy (e.g. `/music`) |
 | `--debug` | | Enable debug logging |
 | `--status` | | Show server status and exit |
+| `--shell {completions\|init} [SHELL]` | | Print shell completions or init script; SHELL: bash, zsh, fish |
 
 ### Service Management
 
@@ -101,8 +104,11 @@ cassonic --update check
 # Install as a system service
 sudo cassonic --service --install
 
-# Trigger an immediate backup
+# Trigger an immediate backup (writes to the configured backup dir)
 cassonic --maintenance backup
+
+# Trigger an immediate backup to a specific directory
+cassonic --backup /tmp/mybackup --maintenance backup
 ```
 
 ---
@@ -123,7 +129,7 @@ cassonic-cli [flags] [command] [args...]
 |------|-------|-------------|
 | `--help` | `-h` | Show help |
 | `--version` | `-v` | Show version |
-| `--server {url}` | | Server URL (default: `http://localhost:4040`) |
+| `--server {url}` | | Server URL (default: `http://localhost:4533`) |
 | `--token {token}` | | API Bearer token (or set `CASSONIC_TOKEN` env var) |
 | `--debug` | | Enable debug output |
 | `--color {auto\|yes\|no}` | | Color output control |
@@ -135,7 +141,7 @@ cassonic-cli [flags] [command] [args...]
 
 ```bash
 # Log in and save token to keyring
-cassonic-cli auth login --server http://localhost:4040
+cassonic-cli auth login --server http://localhost:4533
 
 # Log out and remove saved token
 cassonic-cli auth logout
