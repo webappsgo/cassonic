@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    container:
+      image: casjaysdev/go:latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - run: go vet ./...
+      - run: staticcheck ./...
+
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    container:
+      image: casjaysdev/go:latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - name: Run tests with coverage
+        run: |
+          mkdir -p "/tmp/${{ github.repository_owner }}"
+          COVDIR=$(mktemp -d "/tmp/${{ github.repository_owner }}/$(basename "${{ github.repository }}")-XXXXXX")
+          echo "COVDIR=$COVDIR" >> "$GITHUB_ENV"
+          go test -cover -coverprofile="$COVDIR/coverage.out" ./...
+      - name: Enforce coverage threshold
+        run: |
+          THRESHOLD=60
+          PCT=$(go tool cover -func="$COVDIR/coverage.out" | awk '/^total:/ {gsub("%","",$3); print int($3)}')
+          if [ "$PCT" -lt "$THRESHOLD" ]; then
+            echo "::error::coverage $PCT% < threshold $THRESHOLD%"
+            exit 1
+          fi
+
+  build:
+    if: github.event_name != 'schedule'
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    container:
+      image: casjaysdev/go:latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - run: go build -buildvcs=false ./...
+
+  vuln-check:
+    runs-on: ubuntu-latest
+    container:
+      image: casjaysdev/go:latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - run: govulncheck ./...
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    container:
+      image: casjaysdev/go:latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        run: |
+          FROM="${{ github.event.before }}"
+          TO="${{ github.event.after }}"
+          if [ -z "$FROM" ] || [ "$FROM" = "0000000000000000000000000000000000000000" ]; then
+            trufflehog git file://. --since-commit HEAD~1 --no-verification --fail
+          else
+            trufflehog git file://. --since-commit "$FROM" --branch "$TO" --no-verification --fail
+          fi
+
+  workflow-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - name: Verify all Actions are SHA-pinned
+        run: |
+          FAIL=0
+          for f in .github/workflows/*.yml; do
+            if grep -E 'uses: [^@]+@[^@]+$' "$f" | grep -vE '@[0-9a-f]{40}'; then
+              echo "::error file=$f::Found unpinned Actions (tag/branch ref instead of full SHA)"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" -eq 0 ] || exit 1
+
+  image-scan:
+    if: github.event_name != 'schedule'
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - name: Scan Dockerfile for issues
+        run: |
+          if command -v trivy >/dev/null 2>&1; then
+            trivy config --exit-code 1 --severity HIGH,CRITICAL docker/Dockerfile
+          else
+            echo "trivy not available — skipping image scan"
+          fi
