@@ -6,15 +6,7 @@ import (
 
 	"github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	"github.com/local/cassonic/src/server/store"
 )
-
-// PodcastStore groups podcast-related store methods expected by the handler.
-// The methods are satisfied by store.DB if a podcast store is registered;
-// otherwise the handler returns empty results gracefully.
-type podcastStoreProvider interface {
-	ListPodcasts(podcasts store.DB) ([]*model.PodcastChannel, error)
-}
 
 // getPodcasts returns all subscribed podcast channels.
 func (h *Handler) getPodcasts(w http.ResponseWriter, r *http.Request) {

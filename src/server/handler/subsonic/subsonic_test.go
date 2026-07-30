@@ -145,8 +145,23 @@ func (s *stubMusicStore) GetLastScanStatus(_ context.Context) (*model.ScanStatus
 	return s.scanStatus, s.scanErr
 }
 
-// stubUserStore satisfies store.UserStore with no-op implementations.
-type stubUserStore struct{}
+// stubUserStore satisfies store.UserStore with no-op implementations. The
+// radio* fields allow tests to configure internet radio station behavior.
+// The byUsername* fields allow tests to configure GetUserByUsername lookups.
+type stubUserStore struct {
+	radioStations     []*model.InternetRadioStation
+	radioListErr      error
+	radioStation      *model.InternetRadioStation
+	radioGetErr       error
+	radioCreateErr    error
+	radioUpdateErr    error
+	radioDeleteErr    error
+	createdRadio      *model.InternetRadioStation
+	updatedRadio      *model.InternetRadioStation
+	deletedRadioID    int64
+	byUsername        *model.User
+	byUsernameErr     error
+}
 
 func (s *stubUserStore) CreateUser(_ context.Context, _ *model.User) (int64, error) {
 	return 0, errors.New("not implemented")
@@ -155,6 +170,9 @@ func (s *stubUserStore) GetUser(_ context.Context, _ int64) (*model.User, error)
 	return nil, errors.New("not found")
 }
 func (s *stubUserStore) GetUserByUsername(_ context.Context, _ string) (*model.User, error) {
+	if s.byUsername != nil || s.byUsernameErr != nil {
+		return s.byUsername, s.byUsernameErr
+	}
 	return nil, errors.New("not found")
 }
 func (s *stubUserStore) GetUserByEmail(_ context.Context, _ string) (*model.User, error) {
@@ -207,20 +225,85 @@ func (s *stubUserStore) GetSubsonicPassword(_ context.Context, _ string) (string
 func (s *stubUserStore) SetSubsonicPassword(_ context.Context, _, _ string) error {
 	return errors.New("not implemented")
 }
-func (s *stubUserStore) CreateRadioStation(_ context.Context, _ *model.InternetRadioStation) (int64, error) {
-	return 0, errors.New("not implemented")
+func (s *stubUserStore) CreateRadioStation(_ context.Context, station *model.InternetRadioStation) (int64, error) {
+	if s.radioCreateErr != nil {
+		return 0, s.radioCreateErr
+	}
+	s.createdRadio = station
+	return 1, nil
 }
 func (s *stubUserStore) GetRadioStation(_ context.Context, _ int64) (*model.InternetRadioStation, error) {
-	return nil, errors.New("not found")
+	return s.radioStation, s.radioGetErr
 }
 func (s *stubUserStore) ListRadioStations(_ context.Context) ([]*model.InternetRadioStation, error) {
+	return s.radioStations, s.radioListErr
+}
+func (s *stubUserStore) UpdateRadioStation(_ context.Context, station *model.InternetRadioStation) error {
+	if s.radioUpdateErr != nil {
+		return s.radioUpdateErr
+	}
+	s.updatedRadio = station
+	return nil
+}
+func (s *stubUserStore) DeleteRadioStation(_ context.Context, id int64) error {
+	if s.radioDeleteErr != nil {
+		return s.radioDeleteErr
+	}
+	s.deletedRadioID = id
+	return nil
+}
+
+// stubActivityStore satisfies store.ActivityStore with no-op implementations.
+// The starred* fields allow tests to configure GetStarred behavior.
+type stubActivityStore struct {
+	starred    *store.StarredItems
+	starredErr error
+}
+
+func (s *stubActivityStore) Star(_ context.Context, _ int64, _ string, _ int64) error {
+	return errors.New("not implemented")
+}
+func (s *stubActivityStore) Unstar(_ context.Context, _ int64, _ string, _ int64) error {
+	return errors.New("not implemented")
+}
+func (s *stubActivityStore) GetStarred(_ context.Context, _ int64) (*store.StarredItems, error) {
+	if s.starredErr != nil {
+		return nil, s.starredErr
+	}
+	if s.starred == nil {
+		return &store.StarredItems{}, nil
+	}
+	return s.starred, nil
+}
+func (s *stubActivityStore) IsStarred(_ context.Context, _ int64, _ string, _ int64) (bool, error) {
+	return false, nil
+}
+func (s *stubActivityStore) SetRating(_ context.Context, _ int64, _ string, _ int64, _ int) error {
+	return errors.New("not implemented")
+}
+func (s *stubActivityStore) GetRating(_ context.Context, _ int64, _ string, _ int64) (int, error) {
+	return 0, nil
+}
+func (s *stubActivityStore) RecordPlay(_ context.Context, _ *model.PlayHistory) error {
+	return errors.New("not implemented")
+}
+func (s *stubActivityStore) GetPlayHistory(_ context.Context, _ int64, _ int) ([]*model.PlayHistory, error) {
 	return nil, nil
 }
-func (s *stubUserStore) UpdateRadioStation(_ context.Context, _ *model.InternetRadioStation) error {
+func (s *stubActivityStore) SetBookmark(_ context.Context, _ *model.Bookmark) error {
 	return errors.New("not implemented")
 }
-func (s *stubUserStore) DeleteRadioStation(_ context.Context, _ int64) error {
+func (s *stubActivityStore) GetBookmarks(_ context.Context, _ int64) ([]*model.Bookmark, error) {
+	return nil, nil
+}
+func (s *stubActivityStore) DeleteBookmark(_ context.Context, _ int64, _ string, _ int64) error {
 	return errors.New("not implemented")
+}
+func (s *stubActivityStore) SavePlayQueue(_ context.Context, _ *model.PlayQueue, _ []*model.PlayQueueEntry) error {
+	return errors.New("not implemented")
+}
+func (s *stubActivityStore) GetPlayQueue(_ context.Context, _ int64) (*model.PlayQueue, []*model.PlayQueueEntry, error) {
+	return nil, nil, nil
 }
 
 // ---- helpers ---------------------------------------------------------------
@@ -228,8 +311,33 @@ func (s *stubUserStore) DeleteRadioStation(_ context.Context, _ int64) error {
 // newTestHandler builds a Handler backed entirely by stub stores.
 func newTestHandler(music *stubMusicStore) *Handler {
 	db := &store.DB{
-		Users: &stubUserStore{},
-		Music: music,
+		Users:    &stubUserStore{},
+		Music:    music,
+		Activity: &stubActivityStore{},
+	}
+	return &Handler{
+		db:         db,
+		nowPlaying: NewNowPlayingTracker(),
+		subsPass:   func(_ context.Context, _ string) (string, bool) { return "", false },
+	}
+}
+
+// newTestHandlerFull builds a Handler backed by the given stub stores,
+// allowing tests to configure music, user, and activity behavior together.
+func newTestHandlerFull(music *stubMusicStore, users *stubUserStore, activity *stubActivityStore) *Handler {
+	if music == nil {
+		music = &stubMusicStore{}
+	}
+	if users == nil {
+		users = &stubUserStore{}
+	}
+	if activity == nil {
+		activity = &stubActivityStore{}
+	}
+	db := &store.DB{
+		Users:    users,
+		Music:    music,
+		Activity: activity,
 	}
 	return &Handler{
 		db:         db,

@@ -37,36 +37,6 @@ func lastfmSign(params map[string]string, apiSecret string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-// lastfmAuth obtains a Last.fm session key using mobile session authentication.
-// passphrase = MD5(username + MD5(password)) as required by auth.getMobileSession.
-func (s *Service) lastfmAuth(ctx context.Context, svc *model.ScrobbleService, password string) (string, error) {
-	passHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
-	authToken := fmt.Sprintf("%x", md5.Sum([]byte(svc.Username+passHash)))
-
-	params := map[string]string{
-		"method":    "auth.getMobileSession",
-		"api_key":   svc.APIKey,
-		"username":  svc.Username,
-		"authToken": authToken,
-		"format":    "json",
-	}
-
-	resp, err := s.lastfmCall(ctx, svc.BaseURL, svc.APIKey, svc.APISecretEnc, "", params)
-	if err != nil {
-		return "", err
-	}
-
-	session, ok := resp["session"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf("lastfm auth: missing session in response")
-	}
-	key, ok := session["key"].(string)
-	if !ok || key == "" {
-		return "", fmt.Errorf("lastfm auth: missing session key")
-	}
-	return key, nil
-}
-
 // lastfmCall makes a signed Last.fm API call and returns the parsed JSON response.
 func (s *Service) lastfmCall(ctx context.Context, baseURL, apiKey, apiSecret, sessionKey string, params map[string]string) (map[string]any, error) {
 	params["api_key"] = apiKey

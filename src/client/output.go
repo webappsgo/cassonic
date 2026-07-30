@@ -45,11 +45,6 @@ func colorize(code, text string) string {
 	return code + text + ansiReset
 }
 
-// printHeading prints a bold-cyan section heading.
-func printHeading(s string) {
-	fmt.Println(colorize(ansiBoldCyan, s))
-}
-
 // printSuccess prints a green success message.
 func printSuccess(s string) {
 	fmt.Println(colorize(ansiGreen, s))

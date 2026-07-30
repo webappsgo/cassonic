@@ -226,3 +226,128 @@ func TestIsContainerFalse(t *testing.T) {
 		t.Log("IsContainer() returned true — running inside a container; this is expected in CI")
 	}
 }
+
+// TestContainerPaths verifies the fixed container path layout.
+func TestContainerPaths(t *testing.T) {
+	p := containerPaths()
+	if p == nil {
+		t.Fatal("containerPaths returned nil")
+	}
+	if p.Config != "/config/cassonic" {
+		t.Errorf("Config: got %q, want %q", p.Config, "/config/cassonic")
+	}
+	if p.Data != "/data/cassonic" {
+		t.Errorf("Data: got %q, want %q", p.Data, "/data/cassonic")
+	}
+	if p.Log != "/data/log/cassonic" {
+		t.Errorf("Log: got %q, want %q", p.Log, "/data/log/cassonic")
+	}
+	if p.Cache != "/data/cache/cassonic" {
+		t.Errorf("Cache: got %q, want %q", p.Cache, "/data/cache/cassonic")
+	}
+	if p.Run != "/run/cassonic" {
+		t.Errorf("Run: got %q, want %q", p.Run, "/run/cassonic")
+	}
+}
+
+// TestDarwinPaths verifies darwinPaths returns non-empty fields regardless of
+// the current process privilege level.
+func TestDarwinPaths(t *testing.T) {
+	p := darwinPaths()
+	if p == nil {
+		t.Fatal("darwinPaths returned nil")
+	}
+	fields := []string{p.Config, p.Data, p.Log, p.Cache, p.Run}
+	for _, f := range fields {
+		if f == "" {
+			t.Error("darwinPaths: got empty field")
+		}
+	}
+	if !strings.Contains(p.Config, "cassonic") {
+		t.Errorf("darwinPaths.Config: got %q, want it to contain 'cassonic'", p.Config)
+	}
+}
+
+// TestBSDPaths verifies bsdPaths returns non-empty fields.
+func TestBSDPaths(t *testing.T) {
+	p := bsdPaths()
+	if p == nil {
+		t.Fatal("bsdPaths returned nil")
+	}
+	fields := []string{p.Config, p.Data, p.Log, p.Cache, p.Run}
+	for _, f := range fields {
+		if f == "" {
+			t.Error("bsdPaths: got empty field")
+		}
+	}
+}
+
+// TestWindowsPaths verifies windowsPaths returns non-empty fields and honors
+// the PROGRAMDATA / APPDATA environment variables.
+func TestWindowsPaths(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PROGRAMDATA", filepath.Join(dir, "programdata"))
+	t.Setenv("APPDATA", filepath.Join(dir, "appdata"))
+
+	p := windowsPaths()
+	if p == nil {
+		t.Fatal("windowsPaths returned nil")
+	}
+	fields := []string{p.Config, p.Data, p.Log, p.Cache, p.Run}
+	for _, f := range fields {
+		if f == "" {
+			t.Error("windowsPaths: got empty field")
+		}
+	}
+}
+
+// TestWindowsEnvFallback verifies windowsEnv returns the default when the
+// env var is unset, and the env var value when set.
+func TestWindowsEnvFallback(t *testing.T) {
+	t.Setenv("CASSONIC_TEST_WINENV", "")
+	os.Unsetenv("CASSONIC_TEST_WINENV")
+	if got := windowsEnv("CASSONIC_TEST_WINENV", "fallback"); got != "fallback" {
+		t.Errorf("windowsEnv unset: got %q, want %q", got, "fallback")
+	}
+
+	t.Setenv("CASSONIC_TEST_WINENV", "customval")
+	if got := windowsEnv("CASSONIC_TEST_WINENV", "fallback"); got != "customval" {
+		t.Errorf("windowsEnv set: got %q, want %q", got, "customval")
+	}
+}
+
+// TestResolveReturnsNonNil exercises resolve() for the current runtime GOOS
+// (indirectly covering the linux/darwin/bsd/windows dispatch for whichever
+// platform CI runs on).
+func TestResolveReturnsNonNil(t *testing.T) {
+	p := resolve()
+	if p == nil {
+		t.Fatal("resolve returned nil")
+	}
+}
+
+// TestIsPrivileged just verifies the function returns a bool without panicking;
+// the actual value depends on the test runner's UID.
+func TestIsPrivileged(t *testing.T) {
+	_ = isPrivileged()
+}
+
+// TestUserHomeNonEmpty verifies userHome never returns an empty string.
+func TestUserHomeNonEmpty(t *testing.T) {
+	if h := userHome(); h == "" {
+		t.Error("userHome returned empty string")
+	}
+}
+
+// TestXDGDirFallback verifies xdgDir falls back to the default when unset.
+func TestXDGDirFallback(t *testing.T) {
+	os.Unsetenv("CASSONIC_TEST_XDG")
+	if got := xdgDir("CASSONIC_TEST_XDG", "/default/path"); got != "/default/path" {
+		t.Errorf("xdgDir unset: got %q, want %q", got, "/default/path")
+	}
+
+	t.Setenv("CASSONIC_TEST_XDG", "/custom/path")
+	if got := xdgDir("CASSONIC_TEST_XDG", "/default/path"); got != "/custom/path" {
+		t.Errorf("xdgDir set: got %q, want %q", got, "/custom/path")
+	}
+}

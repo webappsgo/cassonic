@@ -215,7 +215,7 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 		return nil
 
 	default:
-		return fmt.Errorf("unknown command: %s\nRun 'cassonic-cli --help' for usage.", cmd)
+		return fmt.Errorf("unknown command: %s\nRun 'cassonic-cli --help' for usage", cmd)
 	}
 }
 

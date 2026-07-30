@@ -30,7 +30,7 @@ func cmdLogin(c *Client, cfg CLIConfig) error {
 	username, _ := reader.ReadString('\n')
 	username = strings.TrimRight(username, "\r\n")
 
-	password, err := readPassword("Password: ")
+	password, err := readPassword("Password: ", reader)
 	if err != nil {
 		return fmt.Errorf("reading password: %w", err)
 	}
@@ -647,7 +647,7 @@ func cmdUsersList(c *Client, wantJSON bool) error {
 // cmdUsersCreate creates a user via POST /api/v1/admin/users.
 // Prompts for a password; admin flag makes the user an admin.
 func cmdUsersCreate(c *Client, username string, admin bool, wantJSON bool) error {
-	password, err := readPassword("Password for " + username + ": ")
+	password, err := readPassword("Password for "+username+": ", bufio.NewReader(os.Stdin))
 	if err != nil {
 		return fmt.Errorf("reading password: %w", err)
 	}

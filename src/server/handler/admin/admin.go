@@ -34,7 +34,7 @@ type Handler struct {
 	cfg       *config.Config
 	version   string
 	sched     *scheduler.Scheduler
-	tmpls     *template.Template
+	tmpls     map[string]*template.Template
 	startTime time.Time
 }
 
@@ -52,7 +52,15 @@ func New(db *store.DB, cfg *config.Config, version string, sched *scheduler.Sche
 }
 
 // parseTemplates loads all HTML templates from the embedded filesystem.
-func (h *Handler) parseTemplates() *template.Template {
+//
+// Each page template is parsed into its own isolated *template.Template together
+// with the shared base.html layout. Page templates are NOT parsed all together
+// into one shared namespace: every page defines a template block named "content",
+// and html/template's ParseFS shares a single definition namespace across all
+// files passed to it — so parsing them together would let the last-parsed file's
+// "content" block silently win for every page. Parsing each page separately with
+// base.html keeps each page's "content" block isolated to its own template.
+func (h *Handler) parseTemplates() map[string]*template.Template {
 	funcMap := template.FuncMap{
 		"formatTime": func(t time.Time) string {
 			if t.IsZero() {
@@ -81,16 +89,29 @@ func (h *Handler) parseTemplates() *template.Template {
 		},
 	}
 
-	tmpl := template.New("").Funcs(funcMap)
 	sub, err := fs.Sub(assets, "template")
 	if err != nil {
 		panic(fmt.Sprintf("admin: sub template fs: %v", err))
 	}
-	tmpl, err = tmpl.ParseFS(sub, "*.html")
+
+	names, err := fs.Glob(sub, "*.html")
 	if err != nil {
-		panic(fmt.Sprintf("admin: parse templates: %v", err))
+		panic(fmt.Sprintf("admin: glob templates: %v", err))
 	}
-	return tmpl
+
+	out := make(map[string]*template.Template, len(names))
+	for _, name := range names {
+		if name == "base.html" {
+			continue
+		}
+		files := []string{"base.html", name}
+		tmpl, err := template.New("").Funcs(funcMap).ParseFS(sub, files...)
+		if err != nil {
+			panic(fmt.Sprintf("admin: parse template %s: %v", name, err))
+		}
+		out[name] = tmpl
+	}
+	return out
 }
 
 // Routes assembles the chi router for the admin panel.
@@ -169,8 +190,13 @@ func (h *Handler) render(w http.ResponseWriter, name, title, active string, data
 		Active:  active,
 		Data:    data,
 	}
+	tmpl, ok := h.tmpls[name]
+	if !ok {
+		http.Error(w, "template error: unknown template "+name, http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpls.ExecuteTemplate(w, name, pd); err != nil {
+	if err := tmpl.ExecuteTemplate(w, name, pd); err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 	}
 }

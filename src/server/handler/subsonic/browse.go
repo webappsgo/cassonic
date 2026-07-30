@@ -995,14 +995,16 @@ func (h *Handler) getTopSongs(w http.ResponseWriter, r *http.Request) {
 // Names starting with a digit go under "#". Non-ASCII leading characters use "?".
 func artistIndexLetter(name string) string {
 	name = stripIgnoredArticle(name)
-	for _, r := range name {
-		if unicode.IsDigit(r) {
-			return "#"
-		}
-		if unicode.IsLetter(r) {
-			return strings.ToUpper(string(r))
-		}
+	runes := []rune(name)
+	if len(runes) == 0 {
 		return "#"
+	}
+	r := runes[0]
+	if unicode.IsDigit(r) {
+		return "#"
+	}
+	if unicode.IsLetter(r) {
+		return strings.ToUpper(string(r))
 	}
 	return "#"
 }

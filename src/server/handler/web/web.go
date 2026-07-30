@@ -30,7 +30,7 @@ type Handler struct {
 	db      *store.DB
 	cfg     *config.Config
 	version string
-	tmpls   *template.Template
+	tmpls   map[string]*template.Template
 	i18n    *i18n.Bundle
 }
 
@@ -62,7 +62,15 @@ func NewHandlerWithConfig(db *store.DB, cfg *config.Config, version string) *Han
 }
 
 // parseTemplates parses all HTML templates from the embedded filesystem.
-func (h *Handler) parseTemplates() *template.Template {
+//
+// Each page template is parsed into its own isolated *template.Template together
+// with the shared base.html layout. Page templates are NOT parsed all together
+// into one shared namespace: every page defines a template block named "content",
+// and html/template's ParseFS shares a single definition namespace across all
+// files passed to it — so parsing them together would let the last-parsed file's
+// "content" block silently win for every page. Parsing each page separately with
+// base.html keeps each page's "content" block isolated to its own template.
+func (h *Handler) parseTemplates() map[string]*template.Template {
 	funcMap := template.FuncMap{
 		"formatDuration": formatDuration,
 		"formatDate":     formatDate,
@@ -76,18 +84,29 @@ func (h *Handler) parseTemplates() *template.Template {
 		"t": func(key string) string { return key },
 	}
 
-	tmpl := template.New("").Funcs(funcMap)
-
 	sub, err := fs.Sub(assets, "template")
 	if err != nil {
 		panic(fmt.Sprintf("web: sub template fs: %v", err))
 	}
 
-	tmpl, err = tmpl.ParseFS(sub, "*.html")
+	names, err := fs.Glob(sub, "*.html")
 	if err != nil {
-		panic(fmt.Sprintf("web: parse templates: %v", err))
+		panic(fmt.Sprintf("web: glob templates: %v", err))
 	}
-	return tmpl
+
+	out := make(map[string]*template.Template, len(names))
+	for _, name := range names {
+		if name == "base.html" {
+			continue
+		}
+		files := []string{"base.html", name}
+		tmpl, err := template.New("").Funcs(funcMap).ParseFS(sub, files...)
+		if err != nil {
+			panic(fmt.Sprintf("web: parse template %s: %v", name, err))
+		}
+		out[name] = tmpl
+	}
+	return out
 }
 
 // staticFS exposes only the static/ subtree for the file server.
@@ -224,8 +243,13 @@ func (h *Handler) resolveLocale(w http.ResponseWriter, r *http.Request) string {
 
 // render executes a named template and writes the result to w.
 func (h *Handler) render(w http.ResponseWriter, name string, data any) {
+	tmpl, ok := h.tmpls[name]
+	if !ok {
+		http.Error(w, "template error: unknown template "+name, http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpls.ExecuteTemplate(w, name, data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -315,13 +339,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	h.render(w, "login.html", data)
 }
-
-// argon2id cost parameters matching the API handler.
-const (
-	argon2Memory      = 65536
-	argon2Iterations  = 3
-	argon2Parallelism = 4
-)
 
 // verifyPassword checks a plaintext password against a stored Argon2id hash.
 func verifyPassword(password, hash string) (bool, error) {

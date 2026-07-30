@@ -1,0 +1,584 @@
+=== RUN   TestGetIndexesUnauthenticated
+--- PASS: TestGetIndexesUnauthenticated (0.00s)
+=== RUN   TestGetIndexesGroupsByLetter
+--- PASS: TestGetIndexesGroupsByLetter (0.00s)
+=== RUN   TestGetIndexesStoreError
+--- PASS: TestGetIndexesStoreError (0.00s)
+=== RUN   TestGetMusicDirectoryMissingID
+--- PASS: TestGetMusicDirectoryMissingID (0.00s)
+=== RUN   TestGetMusicDirectoryMalformedID
+--- PASS: TestGetMusicDirectoryMalformedID (0.00s)
+=== RUN   TestGetMusicDirectoryArtistNotFound
+--- PASS: TestGetMusicDirectoryArtistNotFound (0.00s)
+=== RUN   TestGetGenresEmpty
+--- PASS: TestGetGenresEmpty (0.00s)
+=== RUN   TestGetArtistMissingID
+--- PASS: TestGetArtistMissingID (0.00s)
+=== RUN   TestGetArtistNotFound
+--- PASS: TestGetArtistNotFound (0.00s)
+=== RUN   TestGetAlbumMissingID
+--- PASS: TestGetAlbumMissingID (0.00s)
+=== RUN   TestGetAlbumNotFound
+--- PASS: TestGetAlbumNotFound (0.00s)
+=== RUN   TestGetSongMissingID
+--- PASS: TestGetSongMissingID (0.00s)
+=== RUN   TestGetSongNotFound
+--- PASS: TestGetSongNotFound (0.00s)
+=== RUN   TestGetAlbumListDefaultsToNewest
+--- PASS: TestGetAlbumListDefaultsToNewest (0.00s)
+=== RUN   TestGetAlbumList2Unauthenticated
+--- PASS: TestGetAlbumList2Unauthenticated (0.00s)
+=== RUN   TestGetRandomSongsEmpty
+--- PASS: TestGetRandomSongsEmpty (0.00s)
+=== RUN   TestGetSongsByGenreMissingGenre
+--- PASS: TestGetSongsByGenreMissingGenre (0.00s)
+=== RUN   TestGetSongsByGenreSuccess
+--- PASS: TestGetSongsByGenreSuccess (0.00s)
+=== RUN   TestGetStarredUnauthenticated
+--- PASS: TestGetStarredUnauthenticated (0.00s)
+=== RUN   TestGetStarredWithItems
+--- PASS: TestGetStarredWithItems (0.00s)
+=== RUN   TestGetStarredStoreError
+--- PASS: TestGetStarredStoreError (0.00s)
+=== RUN   TestGetStarred2WithItems
+--- PASS: TestGetStarred2WithItems (0.00s)
+=== RUN   TestGetNowPlayingEmpty
+--- PASS: TestGetNowPlayingEmpty (0.00s)
+=== RUN   TestGetNowPlayingWithActiveStream
+--- PASS: TestGetNowPlayingWithActiveStream (0.00s)
+=== RUN   TestGetVideosAlwaysEmpty
+--- PASS: TestGetVideosAlwaysEmpty (0.00s)
+=== RUN   TestGetVideoInfoNotFound
+--- PASS: TestGetVideoInfoNotFound (0.00s)
+=== RUN   TestGetArtistInfoMissingID
+--- PASS: TestGetArtistInfoMissingID (0.00s)
+=== RUN   TestGetArtistInfoNotFound
+--- PASS: TestGetArtistInfoNotFound (0.00s)
+=== RUN   TestGetArtistInfo2NotFound
+--- PASS: TestGetArtistInfo2NotFound (0.00s)
+=== RUN   TestGetAlbumInfoMissingID
+--- PASS: TestGetAlbumInfoMissingID (0.00s)
+=== RUN   TestGetAlbumInfo2DelegatesToGetAlbumInfo
+--- PASS: TestGetAlbumInfo2DelegatesToGetAlbumInfo (0.00s)
+=== RUN   TestGetSimilarSongsMissingID
+--- PASS: TestGetSimilarSongsMissingID (0.00s)
+=== RUN   TestGetSimilarSongsSongNotFound
+--- PASS: TestGetSimilarSongsSongNotFound (0.00s)
+=== RUN   TestGetSimilarSongs2ArtistNotFound
+--- PASS: TestGetSimilarSongs2ArtistNotFound (0.00s)
+=== RUN   TestGetTopSongsMissingArtist
+--- PASS: TestGetTopSongsMissingArtist (0.00s)
+=== RUN   TestGetTopSongsArtistNotFoundReturnsEmpty
+--- PASS: TestGetTopSongsArtistNotFoundReturnsEmpty (0.00s)
+=== RUN   TestArtistIndexLetter
+=== RUN   TestArtistIndexLetter/The_Beatles
+=== RUN   TestArtistIndexLetter/ABBA
+=== RUN   TestArtistIndexLetter/1990s_Band
+=== RUN   TestArtistIndexLetter/#00
+=== RUN   TestArtistIndexLetter/élan
+=== RUN   TestArtistIndexLetter/An_Apple
+=== RUN   TestArtistIndexLetter/A_Band
+--- PASS: TestArtistIndexLetter (0.00s)
+    --- PASS: TestArtistIndexLetter/The_Beatles (0.00s)
+    --- PASS: TestArtistIndexLetter/ABBA (0.00s)
+    --- PASS: TestArtistIndexLetter/1990s_Band (0.00s)
+    --- PASS: TestArtistIndexLetter/#00 (0.00s)
+    --- PASS: TestArtistIndexLetter/élan (0.00s)
+    --- PASS: TestArtistIndexLetter/An_Apple (0.00s)
+    --- PASS: TestArtistIndexLetter/A_Band (0.00s)
+=== RUN   TestStripIgnoredArticle
+=== RUN   TestStripIgnoredArticle/The_Beatles
+=== RUN   TestStripIgnoredArticle/A_Band
+=== RUN   TestStripIgnoredArticle/An_Apple
+=== RUN   TestStripIgnoredArticle/Metallica
+=== RUN   TestStripIgnoredArticle/THE_Who
+--- PASS: TestStripIgnoredArticle (0.00s)
+    --- PASS: TestStripIgnoredArticle/The_Beatles (0.00s)
+    --- PASS: TestStripIgnoredArticle/A_Band (0.00s)
+    --- PASS: TestStripIgnoredArticle/An_Apple (0.00s)
+    --- PASS: TestStripIgnoredArticle/Metallica (0.00s)
+    --- PASS: TestStripIgnoredArticle/THE_Who (0.00s)
+=== RUN   TestQueryIntDefault
+--- PASS: TestQueryIntDefault (0.00s)
+=== RUN   TestSongToChildSuffixFromPath
+--- PASS: TestSongToChildSuffixFromPath (0.00s)
+=== RUN   TestAlbumToChildIsDir
+--- PASS: TestAlbumToChildIsDir (0.00s)
+=== RUN   TestArtistToChildIsDir
+--- PASS: TestArtistToChildIsDir (0.00s)
+=== RUN   TestHashPasswordFormat
+--- PASS: TestHashPasswordFormat (1.07s)
+=== RUN   TestVerifyPasswordCorrect
+--- PASS: TestVerifyPasswordCorrect (1.54s)
+=== RUN   TestVerifyPasswordIncorrect
+--- PASS: TestVerifyPasswordIncorrect (1.18s)
+=== RUN   TestVerifyPasswordMalformedHash
+=== RUN   TestVerifyPasswordMalformedHash/#00
+=== RUN   TestVerifyPasswordMalformedHash/not-a-hash-at-all
+=== RUN   TestVerifyPasswordMalformedHash/$argon2id$v=19$m=65536,t=3,p=4$onlyonemore
+=== RUN   TestVerifyPasswordMalformedHash/$bcrypt$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA
+--- PASS: TestVerifyPasswordMalformedHash (0.00s)
+    --- PASS: TestVerifyPasswordMalformedHash/#00 (0.00s)
+    --- PASS: TestVerifyPasswordMalformedHash/not-a-hash-at-all (0.00s)
+    --- PASS: TestVerifyPasswordMalformedHash/$argon2id$v=19$m=65536,t=3,p=4$onlyonemore (0.00s)
+    --- PASS: TestVerifyPasswordMalformedHash/$bcrypt$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA (0.00s)
+=== RUN   TestHashPasswordUniqueSalt
+--- PASS: TestHashPasswordUniqueSalt (1.45s)
+=== RUN   TestHashPasswordEmptyPassword
+--- PASS: TestHashPasswordEmptyPassword (3.74s)
+=== RUN   TestEncodeIDs
+=== RUN   TestEncodeIDs/song
+=== RUN   TestEncodeIDs/album
+=== RUN   TestEncodeIDs/artist
+=== RUN   TestEncodeIDs/podcast
+=== RUN   TestEncodeIDs/radio
+--- PASS: TestEncodeIDs (0.00s)
+    --- PASS: TestEncodeIDs/song (0.00s)
+    --- PASS: TestEncodeIDs/album (0.00s)
+    --- PASS: TestEncodeIDs/artist (0.00s)
+    --- PASS: TestEncodeIDs/podcast (0.00s)
+    --- PASS: TestEncodeIDs/radio (0.00s)
+=== RUN   TestDecodeIDPrefixes
+=== RUN   TestDecodeIDPrefixes/so-42
+=== RUN   TestDecodeIDPrefixes/al-7
+=== RUN   TestDecodeIDPrefixes/ar-1
+=== RUN   TestDecodeIDPrefixes/li-5
+=== RUN   TestDecodeIDPrefixes/pc-9
+=== RUN   TestDecodeIDPrefixes/ep-11
+=== RUN   TestDecodeIDPrefixes/sh-3
+=== RUN   TestDecodeIDPrefixes/ra-2
+--- PASS: TestDecodeIDPrefixes (0.02s)
+    --- PASS: TestDecodeIDPrefixes/so-42 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/al-7 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/ar-1 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/li-5 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/pc-9 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/ep-11 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/sh-3 (0.00s)
+    --- PASS: TestDecodeIDPrefixes/ra-2 (0.00s)
+=== RUN   TestDecodeIDLegacyBareInteger
+--- PASS: TestDecodeIDLegacyBareInteger (0.00s)
+=== RUN   TestDecodeIDMalformed
+=== RUN   TestDecodeIDMalformed/so-abc
+=== RUN   TestDecodeIDMalformed/not-a-number
+=== RUN   TestDecodeIDMalformed/#00
+=== RUN   TestDecodeIDMalformed/al-
+--- PASS: TestDecodeIDMalformed (0.00s)
+    --- PASS: TestDecodeIDMalformed/so-abc (0.00s)
+    --- PASS: TestDecodeIDMalformed/not-a-number (0.00s)
+    --- PASS: TestDecodeIDMalformed/#00 (0.00s)
+    --- PASS: TestDecodeIDMalformed/al- (0.00s)
+=== RUN   TestDecodeTypedWrappers
+--- PASS: TestDecodeTypedWrappers (0.00s)
+=== RUN   TestDecodeTypedWrappersError
+--- PASS: TestDecodeTypedWrappersError (0.00s)
+=== RUN   TestNowPlayingTrackerEmpty
+--- PASS: TestNowPlayingTrackerEmpty (0.00s)
+=== RUN   TestNowPlayingTrackerRegisterAndAll
+--- PASS: TestNowPlayingTrackerRegisterAndAll (0.00s)
+=== RUN   TestNowPlayingTrackerRegisterReplacesExisting
+--- PASS: TestNowPlayingTrackerRegisterReplacesExisting (0.00s)
+=== RUN   TestNowPlayingTrackerForUser
+--- PASS: TestNowPlayingTrackerForUser (0.00s)
+=== RUN   TestNowPlayingTrackerUnregister
+--- PASS: TestNowPlayingTrackerUnregister (0.00s)
+=== RUN   TestNowPlayingTrackerUnregisterNonexistent
+--- PASS: TestNowPlayingTrackerUnregisterNonexistent (0.00s)
+=== RUN   TestNowPlayingTrackerAllReturnsCopies
+--- PASS: TestNowPlayingTrackerAllReturnsCopies (0.00s)
+=== RUN   TestGetPlaylistsUnauthenticated
+--- PASS: TestGetPlaylistsUnauthenticated (0.00s)
+=== RUN   TestGetPlaylistsOwn
+--- PASS: TestGetPlaylistsOwn (0.00s)
+=== RUN   TestGetPlaylistsOtherUserForbiddenNonAdmin
+--- PASS: TestGetPlaylistsOtherUserForbiddenNonAdmin (0.00s)
+=== RUN   TestGetPlaylistsOtherUserAdminUserNotFound
+--- PASS: TestGetPlaylistsOtherUserAdminUserNotFound (0.00s)
+=== RUN   TestGetPlaylistsOtherUserAdminSuccess
+--- PASS: TestGetPlaylistsOtherUserAdminSuccess (0.00s)
+=== RUN   TestGetPlaylistsStoreError
+--- PASS: TestGetPlaylistsStoreError (0.00s)
+=== RUN   TestGetPlaylistUnauthenticated
+--- PASS: TestGetPlaylistUnauthenticated (0.00s)
+=== RUN   TestGetPlaylistMissingID
+--- PASS: TestGetPlaylistMissingID (0.00s)
+=== RUN   TestGetPlaylistInvalidID
+--- PASS: TestGetPlaylistInvalidID (0.00s)
+=== RUN   TestGetPlaylistNotFound
+--- PASS: TestGetPlaylistNotFound (0.00s)
+=== RUN   TestGetPlaylistPrivateForbidden
+--- PASS: TestGetPlaylistPrivateForbidden (0.00s)
+=== RUN   TestGetPlaylistSuccessWithEntries
+--- PASS: TestGetPlaylistSuccessWithEntries (0.00s)
+=== RUN   TestCreatePlaylistUnauthenticated
+--- PASS: TestCreatePlaylistUnauthenticated (0.00s)
+=== RUN   TestCreatePlaylistDefaultName
+--- PASS: TestCreatePlaylistDefaultName (0.00s)
+=== RUN   TestCreatePlaylistWithSongs
+--- PASS: TestCreatePlaylistWithSongs (0.00s)
+=== RUN   TestCreatePlaylistStoreError
+--- PASS: TestCreatePlaylistStoreError (0.00s)
+=== RUN   TestUpdatePlaylistUnauthenticated
+--- PASS: TestUpdatePlaylistUnauthenticated (0.00s)
+=== RUN   TestUpdatePlaylistMissingID
+--- PASS: TestUpdatePlaylistMissingID (0.00s)
+=== RUN   TestUpdatePlaylistNotFound
+--- PASS: TestUpdatePlaylistNotFound (0.00s)
+=== RUN   TestUpdatePlaylistForbiddenNonOwner
+--- PASS: TestUpdatePlaylistForbiddenNonOwner (0.00s)
+=== RUN   TestUpdatePlaylistSuccess
+--- PASS: TestUpdatePlaylistSuccess (0.00s)
+=== RUN   TestUpdatePlaylistStoreError
+--- PASS: TestUpdatePlaylistStoreError (0.00s)
+=== RUN   TestDeletePlaylistUnauthenticated
+--- PASS: TestDeletePlaylistUnauthenticated (0.00s)
+=== RUN   TestDeletePlaylistMissingID
+--- PASS: TestDeletePlaylistMissingID (0.00s)
+=== RUN   TestDeletePlaylistInvalidID
+--- PASS: TestDeletePlaylistInvalidID (0.00s)
+=== RUN   TestDeletePlaylistNotFound
+--- PASS: TestDeletePlaylistNotFound (0.00s)
+=== RUN   TestDeletePlaylistForbiddenNonOwner
+--- PASS: TestDeletePlaylistForbiddenNonOwner (0.00s)
+=== RUN   TestDeletePlaylistAdminOverride
+--- PASS: TestDeletePlaylistAdminOverride (0.00s)
+=== RUN   TestDeletePlaylistStoreError
+--- PASS: TestDeletePlaylistStoreError (0.00s)
+=== RUN   TestSearchUnauthenticated
+--- PASS: TestSearchUnauthenticated (0.00s)
+=== RUN   TestSearchFallsBackToQueryParam
+--- PASS: TestSearchFallsBackToQueryParam (0.00s)
+=== RUN   TestSearch2MissingQuery
+--- PASS: TestSearch2MissingQuery (0.00s)
+=== RUN   TestSearch2Success
+--- PASS: TestSearch2Success (0.00s)
+=== RUN   TestSearch3MissingQuery
+--- PASS: TestSearch3MissingQuery (0.00s)
+=== RUN   TestSearch3Success
+--- PASS: TestSearch3Success (0.00s)
+=== RUN   TestStarUnauthenticated
+--- PASS: TestStarUnauthenticated (0.00s)
+=== RUN   TestStarAllIDKinds
+--- PASS: TestStarAllIDKinds (0.00s)
+=== RUN   TestUnstarUnauthenticated
+--- PASS: TestUnstarUnauthenticated (0.00s)
+=== RUN   TestUnstarAllIDKinds
+--- PASS: TestUnstarAllIDKinds (0.00s)
+=== RUN   TestSetRatingUnauthenticated
+--- PASS: TestSetRatingUnauthenticated (0.00s)
+=== RUN   TestSetRatingMissingID
+--- PASS: TestSetRatingMissingID (0.00s)
+=== RUN   TestSetRatingMissingRating
+--- PASS: TestSetRatingMissingRating (0.00s)
+=== RUN   TestSetRatingOutOfRange
+--- PASS: TestSetRatingOutOfRange (0.00s)
+=== RUN   TestSetRatingInvalidID
+--- PASS: TestSetRatingInvalidID (0.00s)
+=== RUN   TestSetRatingZeroClears
+--- PASS: TestSetRatingZeroClears (0.00s)
+=== RUN   TestSetRatingAlbum
+--- PASS: TestSetRatingAlbum (0.00s)
+=== RUN   TestScrobbleUnauthenticated
+--- PASS: TestScrobbleUnauthenticated (0.00s)
+=== RUN   TestScrobbleMissingID
+--- PASS: TestScrobbleMissingID (0.00s)
+=== RUN   TestScrobbleInvalidID
+--- PASS: TestScrobbleInvalidID (0.00s)
+=== RUN   TestScrobbleNonSubmission
+--- PASS: TestScrobbleNonSubmission (0.00s)
+=== RUN   TestScrobbleWithExplicitTime
+--- PASS: TestScrobbleWithExplicitTime (0.00s)
+=== RUN   TestGetSharesUnauthenticated
+--- PASS: TestGetSharesUnauthenticated (0.00s)
+=== RUN   TestGetSharesSuccess
+--- PASS: TestGetSharesSuccess (0.00s)
+=== RUN   TestCreateShareUnauthenticated
+--- PASS: TestCreateShareUnauthenticated (0.00s)
+=== RUN   TestCreateShareSuccess
+--- PASS: TestCreateShareSuccess (0.00s)
+=== RUN   TestUpdateShareUnauthenticated
+--- PASS: TestUpdateShareUnauthenticated (0.00s)
+=== RUN   TestUpdateShareSuccess
+--- PASS: TestUpdateShareSuccess (0.00s)
+=== RUN   TestDeleteShareUnauthenticated
+--- PASS: TestDeleteShareUnauthenticated (0.00s)
+=== RUN   TestDeleteShareSuccess
+--- PASS: TestDeleteShareSuccess (0.00s)
+=== RUN   TestGetBookmarksUnauthenticated
+--- PASS: TestGetBookmarksUnauthenticated (0.00s)
+=== RUN   TestGetBookmarksStoreError
+--- PASS: TestGetBookmarksStoreError (0.00s)
+=== RUN   TestCreateBookmarkUnauthenticated
+--- PASS: TestCreateBookmarkUnauthenticated (0.00s)
+=== RUN   TestCreateBookmarkMissingID
+--- PASS: TestCreateBookmarkMissingID (0.00s)
+=== RUN   TestCreateBookmarkMissingPosition
+--- PASS: TestCreateBookmarkMissingPosition (0.00s)
+=== RUN   TestCreateBookmarkInvalidPosition
+--- PASS: TestCreateBookmarkInvalidPosition (0.00s)
+=== RUN   TestCreateBookmarkInvalidID
+--- PASS: TestCreateBookmarkInvalidID (0.00s)
+=== RUN   TestCreateBookmarkSuccess
+    playlists_test.go:1133: createBookmark: status "failed", want ok, err &{Code:0 Message:Failed to save bookmark.}
+--- FAIL: TestCreateBookmarkSuccess (0.00s)
+=== RUN   TestDeleteBookmarkUnauthenticated
+--- PASS: TestDeleteBookmarkUnauthenticated (0.00s)
+=== RUN   TestDeleteBookmarkMissingID
+--- PASS: TestDeleteBookmarkMissingID (0.00s)
+=== RUN   TestDeleteBookmarkInvalidID
+--- PASS: TestDeleteBookmarkInvalidID (0.00s)
+=== RUN   TestDeleteBookmarkSuccess
+--- PASS: TestDeleteBookmarkSuccess (0.00s)
+=== RUN   TestGetPlayQueueUnauthenticated
+--- PASS: TestGetPlayQueueUnauthenticated (0.00s)
+=== RUN   TestGetPlayQueueEmpty
+--- PASS: TestGetPlayQueueEmpty (0.00s)
+=== RUN   TestSavePlayQueueUnauthenticated
+--- PASS: TestSavePlayQueueUnauthenticated (0.00s)
+=== RUN   TestSavePlayQueueSuccess
+    playlists_test.go:1243: savePlayQueue: status "failed", want ok, err &{Code:0 Message:Failed to save play queue.}
+--- FAIL: TestSavePlayQueueSuccess (0.00s)
+=== RUN   TestGetChatMessagesUnauthenticated
+--- PASS: TestGetChatMessagesUnauthenticated (0.00s)
+=== RUN   TestGetChatMessagesSuccess
+--- PASS: TestGetChatMessagesSuccess (0.00s)
+=== RUN   TestGetChatMessagesStoreError
+--- PASS: TestGetChatMessagesStoreError (0.00s)
+=== RUN   TestAddChatMessageUnauthenticated
+--- PASS: TestAddChatMessageUnauthenticated (0.00s)
+=== RUN   TestAddChatMessageMissingMessage
+--- PASS: TestAddChatMessageMissingMessage (0.00s)
+=== RUN   TestAddChatMessageStoreError
+--- PASS: TestAddChatMessageStoreError (0.00s)
+=== RUN   TestAddChatMessageSuccess
+--- PASS: TestAddChatMessageSuccess (0.00s)
+=== RUN   TestModelPlaylistToEntry
+--- PASS: TestModelPlaylistToEntry (0.00s)
+=== RUN   TestGetPodcastsUnauthenticated
+--- PASS: TestGetPodcastsUnauthenticated (0.00s)
+=== RUN   TestGetPodcastsEmpty
+--- PASS: TestGetPodcastsEmpty (0.00s)
+=== RUN   TestGetPodcastsIncludeEpisodesFlag
+--- PASS: TestGetPodcastsIncludeEpisodesFlag (0.00s)
+=== RUN   TestGetNewestPodcastsUnauthenticated
+--- PASS: TestGetNewestPodcastsUnauthenticated (0.00s)
+=== RUN   TestGetNewestPodcastsEmpty
+--- PASS: TestGetNewestPodcastsEmpty (0.00s)
+=== RUN   TestRefreshPodcastsUnauthenticated
+--- PASS: TestRefreshPodcastsUnauthenticated (0.00s)
+=== RUN   TestRefreshPodcastsForbiddenNonAdmin
+--- PASS: TestRefreshPodcastsForbiddenNonAdmin (0.00s)
+=== RUN   TestRefreshPodcastsAdminSucceeds
+--- PASS: TestRefreshPodcastsAdminSucceeds (0.00s)
+=== RUN   TestCreatePodcastChannelForbiddenNonAdmin
+--- PASS: TestCreatePodcastChannelForbiddenNonAdmin (0.00s)
+=== RUN   TestCreatePodcastChannelMissingURL
+--- PASS: TestCreatePodcastChannelMissingURL (0.00s)
+=== RUN   TestCreatePodcastChannelSucceeds
+--- PASS: TestCreatePodcastChannelSucceeds (0.00s)
+=== RUN   TestDeletePodcastChannelForbiddenNonAdmin
+--- PASS: TestDeletePodcastChannelForbiddenNonAdmin (0.00s)
+=== RUN   TestDeletePodcastChannelMissingID
+--- PASS: TestDeletePodcastChannelMissingID (0.00s)
+=== RUN   TestDeletePodcastChannelSucceeds
+--- PASS: TestDeletePodcastChannelSucceeds (0.00s)
+=== RUN   TestDeletePodcastEpisodeForbiddenNonAdmin
+--- PASS: TestDeletePodcastEpisodeForbiddenNonAdmin (0.00s)
+=== RUN   TestDeletePodcastEpisodeMissingID
+--- PASS: TestDeletePodcastEpisodeMissingID (0.00s)
+=== RUN   TestDownloadPodcastEpisodeUnauthenticated
+--- PASS: TestDownloadPodcastEpisodeUnauthenticated (0.00s)
+=== RUN   TestDownloadPodcastEpisodeMissingID
+--- PASS: TestDownloadPodcastEpisodeMissingID (0.00s)
+=== RUN   TestDownloadPodcastEpisodeSucceeds
+--- PASS: TestDownloadPodcastEpisodeSucceeds (0.00s)
+=== RUN   TestPodcastChannelToResp
+--- PASS: TestPodcastChannelToResp (0.00s)
+=== RUN   TestPodcastChannelToRespErrorStatus
+--- PASS: TestPodcastChannelToRespErrorStatus (0.00s)
+=== RUN   TestGetInternetRadioStationsUnauthenticated
+--- PASS: TestGetInternetRadioStationsUnauthenticated (0.00s)
+=== RUN   TestGetInternetRadioStationsSuccess
+--- PASS: TestGetInternetRadioStationsSuccess (0.00s)
+=== RUN   TestGetInternetRadioStationsStoreError
+--- PASS: TestGetInternetRadioStationsStoreError (0.00s)
+=== RUN   TestCreateInternetRadioStationForbiddenNonAdmin
+--- PASS: TestCreateInternetRadioStationForbiddenNonAdmin (0.00s)
+=== RUN   TestCreateInternetRadioStationMissingName
+--- PASS: TestCreateInternetRadioStationMissingName (0.00s)
+=== RUN   TestCreateInternetRadioStationMissingStreamURL
+--- PASS: TestCreateInternetRadioStationMissingStreamURL (0.00s)
+=== RUN   TestCreateInternetRadioStationSuccess
+--- PASS: TestCreateInternetRadioStationSuccess (0.00s)
+=== RUN   TestCreateInternetRadioStationStoreError
+--- PASS: TestCreateInternetRadioStationStoreError (0.00s)
+=== RUN   TestUpdateInternetRadioStationMissingID
+--- PASS: TestUpdateInternetRadioStationMissingID (0.00s)
+=== RUN   TestUpdateInternetRadioStationNotFound
+--- PASS: TestUpdateInternetRadioStationNotFound (0.00s)
+=== RUN   TestUpdateInternetRadioStationSuccess
+--- PASS: TestUpdateInternetRadioStationSuccess (0.00s)
+=== RUN   TestDeleteInternetRadioStationForbiddenNonAdmin
+--- PASS: TestDeleteInternetRadioStationForbiddenNonAdmin (0.00s)
+=== RUN   TestDeleteInternetRadioStationMalformedID
+--- PASS: TestDeleteInternetRadioStationMalformedID (0.00s)
+=== RUN   TestDeleteInternetRadioStationSuccess
+--- PASS: TestDeleteInternetRadioStationSuccess (0.00s)
+=== RUN   TestDeleteInternetRadioStationStoreError
+--- PASS: TestDeleteInternetRadioStationStoreError (0.00s)
+=== RUN   TestJukeboxControlAlwaysUnsupported
+--- PASS: TestJukeboxControlAlwaysUnsupported (0.00s)
+=== RUN   TestModelRadioToResp
+--- PASS: TestModelRadioToResp (0.00s)
+=== RUN   TestStreamUnauthenticated
+--- PASS: TestStreamUnauthenticated (0.00s)
+=== RUN   TestStreamMissingID
+--- PASS: TestStreamMissingID (0.00s)
+=== RUN   TestStreamInvalidID
+--- PASS: TestStreamInvalidID (0.00s)
+=== RUN   TestStreamSongNotFound
+--- PASS: TestStreamSongNotFound (0.00s)
+=== RUN   TestStreamSuccessDirect
+--- PASS: TestStreamSuccessDirect (0.00s)
+=== RUN   TestStreamFileNotAccessible
+--- PASS: TestStreamFileNotAccessible (0.00s)
+=== RUN   TestDownloadUnauthenticated
+--- PASS: TestDownloadUnauthenticated (0.00s)
+=== RUN   TestDownloadForbiddenNonAdminNoPermission
+--- PASS: TestDownloadForbiddenNonAdminNoPermission (0.00s)
+=== RUN   TestDownloadMissingID
+--- PASS: TestDownloadMissingID (0.00s)
+=== RUN   TestDownloadInvalidID
+--- PASS: TestDownloadInvalidID (0.00s)
+=== RUN   TestDownloadSongNotFound
+--- PASS: TestDownloadSongNotFound (0.00s)
+=== RUN   TestDownloadFileNotAccessible
+--- PASS: TestDownloadFileNotAccessible (0.00s)
+=== RUN   TestDownloadSuccessAdmin
+--- PASS: TestDownloadSuccessAdmin (0.00s)
+=== RUN   TestDownloadSuccessNonAdminWithPermission
+--- PASS: TestDownloadSuccessNonAdminWithPermission (0.00s)
+=== RUN   TestHLSUnauthenticated
+--- PASS: TestHLSUnauthenticated (0.00s)
+=== RUN   TestHLSMissingID
+--- PASS: TestHLSMissingID (0.00s)
+=== RUN   TestHLSSongNotFound
+--- PASS: TestHLSSongNotFound (0.00s)
+=== RUN   TestHLSSuccess
+--- PASS: TestHLSSuccess (0.00s)
+=== RUN   TestGetCoverArtUnauthenticated
+--- PASS: TestGetCoverArtUnauthenticated (0.00s)
+=== RUN   TestGetCoverArtMissingID
+--- PASS: TestGetCoverArtMissingID (0.00s)
+=== RUN   TestGetCoverArtInvalidID
+--- PASS: TestGetCoverArtInvalidID (0.00s)
+=== RUN   TestGetCoverArtAlbumNotFound
+--- PASS: TestGetCoverArtAlbumNotFound (0.00s)
+=== RUN   TestGetCoverArtAlbumStoreError
+--- PASS: TestGetCoverArtAlbumStoreError (0.00s)
+=== RUN   TestGetCoverArtSongSuccess
+--- PASS: TestGetCoverArtSongSuccess (0.00s)
+=== RUN   TestGetCoverArtSongNoCover
+--- PASS: TestGetCoverArtSongNoCover (0.00s)
+=== RUN   TestGetCoverArtArtistNotFound
+--- PASS: TestGetCoverArtArtistNotFound (0.00s)
+=== RUN   TestGetLyricsUnauthenticated
+--- PASS: TestGetLyricsUnauthenticated (0.00s)
+=== RUN   TestGetLyricsNoArtistOrTitle
+--- PASS: TestGetLyricsNoArtistOrTitle (0.00s)
+=== RUN   TestGetAvatarUnauthenticated
+--- PASS: TestGetAvatarUnauthenticated (0.00s)
+=== RUN   TestGetAvatarSuccess
+--- PASS: TestGetAvatarSuccess (0.00s)
+=== RUN   TestGetCaptionsAlwaysNotFound
+--- PASS: TestGetCaptionsAlwaysNotFound (0.00s)
+=== RUN   TestFormatToMIME
+--- PASS: TestFormatToMIME (0.00s)
+=== RUN   TestOkBuildsCorrectResponse
+--- PASS: TestOkBuildsCorrectResponse (0.00s)
+=== RUN   TestOkAppliesPayloadFunc
+--- PASS: TestOkAppliesPayloadFunc (0.00s)
+=== RUN   TestOkNilPayload
+--- PASS: TestOkNilPayload (0.00s)
+=== RUN   TestErrRespBuildsCorrectResponse
+--- PASS: TestErrRespBuildsCorrectResponse (0.00s)
+=== RUN   TestErrRespAllCodes
+--- PASS: TestErrRespAllCodes (0.00s)
+=== RUN   TestSubsonicResponseXMLMarshal
+--- PASS: TestSubsonicResponseXMLMarshal (0.00s)
+=== RUN   TestSubsonicErrorXMLMarshal
+--- PASS: TestSubsonicErrorXMLMarshal (0.00s)
+=== RUN   TestRespondXMLDefault
+--- PASS: TestRespondXMLDefault (0.00s)
+=== RUN   TestRespondJSONFormat
+--- PASS: TestRespondJSONFormat (0.00s)
+=== RUN   TestRespondJSONPFormat
+--- PASS: TestRespondJSONPFormat (0.00s)
+=== RUN   TestRespondJSONPDefaultCallback
+--- PASS: TestRespondJSONPDefaultCallback (0.00s)
+=== RUN   TestRespondAlwaysHTTP200
+=== RUN   TestRespondAlwaysHTTP200/format=
+=== RUN   TestRespondAlwaysHTTP200/format=json
+=== RUN   TestRespondAlwaysHTTP200/format=jsonp
+--- PASS: TestRespondAlwaysHTTP200 (0.00s)
+    --- PASS: TestRespondAlwaysHTTP200/format= (0.00s)
+    --- PASS: TestRespondAlwaysHTTP200/format=json (0.00s)
+    --- PASS: TestRespondAlwaysHTTP200/format=jsonp (0.00s)
+=== RUN   TestRespondJSONErrorResponse
+--- PASS: TestRespondJSONErrorResponse (0.00s)
+=== RUN   TestPingXMLReturns200WithOK
+--- PASS: TestPingXMLReturns200WithOK (0.00s)
+=== RUN   TestPingJSONReturnsOKStatus
+--- PASS: TestPingJSONReturnsOKStatus (0.00s)
+=== RUN   TestPingNoPayloadFields
+--- PASS: TestPingNoPayloadFields (0.00s)
+=== RUN   TestPingUnauthenticated
+--- PASS: TestPingUnauthenticated (0.00s)
+=== RUN   TestPingVersionMatchesConstant
+--- PASS: TestPingVersionMatchesConstant (0.00s)
+=== RUN   TestGetLicenseXMLReturnsValidTrue
+--- PASS: TestGetLicenseXMLReturnsValidTrue (0.00s)
+=== RUN   TestGetLicenseXMLParsed
+--- PASS: TestGetLicenseXMLParsed (0.00s)
+=== RUN   TestGetLicenseJSONReturnsValid
+--- PASS: TestGetLicenseJSONReturnsValid (0.00s)
+=== RUN   TestGetLicenseJSONEmailEmpty
+--- PASS: TestGetLicenseJSONEmailEmpty (0.00s)
+=== RUN   TestGetMusicFoldersEmptyLibrary
+--- PASS: TestGetMusicFoldersEmptyLibrary (0.00s)
+=== RUN   TestGetMusicFoldersWithLibraries
+--- PASS: TestGetMusicFoldersWithLibraries (0.00s)
+=== RUN   TestGetMusicFoldersJSONFormat
+--- PASS: TestGetMusicFoldersJSONFormat (0.00s)
+=== RUN   TestGetMusicFoldersUnauthenticated
+--- PASS: TestGetMusicFoldersUnauthenticated (0.00s)
+=== RUN   TestGetMusicFoldersStoreError
+--- PASS: TestGetMusicFoldersStoreError (0.00s)
+=== RUN   TestGetUserUnauthenticated
+--- PASS: TestGetUserUnauthenticated (0.00s)
+=== RUN   TestGetUserMissingParam
+--- PASS: TestGetUserMissingParam (0.00s)
+=== RUN   TestGetUserForbiddenNonAdmin
+--- PASS: TestGetUserForbiddenNonAdmin (0.00s)
+=== RUN   TestGetUsersUnauthenticated
+--- PASS: TestGetUsersUnauthenticated (0.00s)
+=== RUN   TestGetUsersNonAdminForbidden
+--- PASS: TestGetUsersNonAdminForbidden (0.00s)
+=== RUN   TestParseBoolParam
+--- PASS: TestParseBoolParam (0.00s)
+=== RUN   TestGetScanStatusNoScanYet
+--- PASS: TestGetScanStatusNoScanYet (0.00s)
+=== RUN   TestGetScanStatusRunning
+--- PASS: TestGetScanStatusRunning (0.00s)
+=== RUN   TestGetScanStatusStoreError
+--- PASS: TestGetScanStatusStoreError (0.00s)
+=== RUN   TestPingIdempotent
+--- PASS: TestPingIdempotent (0.00s)
+=== RUN   TestGetLicenseIdempotent
+--- PASS: TestGetLicenseIdempotent (0.00s)
+FAIL
+coverage: 66.0% of statements
+FAIL	github.com/local/cassonic/src/server/handler/subsonic	9.355s
+FAIL
+TESTDONE=1
+total:									(statements)			66.0%

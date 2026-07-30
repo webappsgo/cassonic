@@ -72,12 +72,14 @@ jobs:
 
   secret-scan:
     runs-on: ubuntu-latest
-    container:
-      image: casjaysdev/go:latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0
+      - name: Install trufflehog
+        run: |
+          curl -sSfL https://github.com/trufflesecurity/trufflehog/releases/download/v3.95.8/trufflehog_3.95.8_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin trufflehog
       - name: Scan for secrets
         run: |
           FROM="${{ github.event.before }}"

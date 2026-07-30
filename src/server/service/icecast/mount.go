@@ -18,24 +18,37 @@ const maxBackoff = 30 * time.Second
 // allSongsLimit is the maximum number of songs fetched when streaming the full library.
 const allSongsLimit = 100_000
 
+// updateStatus persists mount status using a fresh background context
+// rather than the (possibly already-cancelled) streaming context. Status
+// writes record the final observable state of a mount — including why a
+// goroutine is exiting — so they must survive even when the streaming
+// context is cancelled concurrently (e.g. Stop() racing a fresh error);
+// otherwise ExecContext fails immediately on the cancelled context and the
+// terminal status/error is silently lost.
+func (m *Manager) updateStatus(mountID int64, status model.MountStatus, currentSong, lastErr string) {
+	statusCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = m.db.Icecast.UpdateMountStatus(statusCtx, mountID, status, currentSong, lastErr)
+}
+
 // streamMount is the long-running goroutine for one Icecast mount.
 // It reconnects on failure with exponential backoff (1s → 2s → 4s → 8s → 16s → 30s max).
 func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, handle *MountStream) {
 	if m.ff == nil {
 		m.logger.Printf("icecast: mount %d (%s): ffmpeg unavailable, stream disabled", mount.ID, mount.MountPath)
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", "ffmpeg not configured")
+		m.updateStatus(mount.ID, model.StatusError, "", "ffmpeg not configured")
 		return
 	}
 
 	queue, err := m.buildQueue(ctx, mount)
 	if err != nil {
 		m.logger.Printf("icecast: mount %d: build queue: %v", mount.ID, err)
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", err.Error())
+		m.updateStatus(mount.ID, model.StatusError, "", err.Error())
 		return
 	}
 	if len(queue) == 0 {
 		m.logger.Printf("icecast: mount %d: no songs in queue", mount.ID)
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", "no songs available")
+		m.updateStatus(mount.ID, model.StatusError, "", "no songs available")
 		return
 	}
 
@@ -44,7 +57,7 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 
 	for {
 		if ctx.Err() != nil {
-			_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusDisconnected, "", "")
+			m.updateStatus(mount.ID, model.StatusDisconnected, "", "")
 			return
 		}
 
@@ -52,7 +65,7 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 			queue, err = m.buildQueue(ctx, mount)
 			if err != nil {
 				m.logger.Printf("icecast: mount %d: rebuild queue: %v", mount.ID, err)
-				_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", err.Error())
+				m.updateStatus(mount.ID, model.StatusError, "", err.Error())
 				return
 			}
 			queuePos = 0
@@ -67,7 +80,7 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 			continue
 		}
 
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusConnecting, "", "")
+		m.updateStatus(mount.ID, model.StatusConnecting, "", "")
 
 		server, err := m.db.Icecast.GetServer(ctx, mount.ServerID)
 		if err != nil || server == nil {
@@ -76,9 +89,9 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 				errMsg = err.Error()
 			}
 			m.logger.Printf("icecast: mount %d: get server %d: %v", mount.ID, mount.ServerID, err)
-			_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", errMsg)
+			m.updateStatus(mount.ID, model.StatusError, "", errMsg)
 			if err := sleepWithContext(ctx, backoff); err != nil {
-				_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusDisconnected, "", "")
+				m.updateStatus(mount.ID, model.StatusDisconnected, "", "")
 				return
 			}
 			backoff = nextBackoff(backoff)
@@ -88,9 +101,9 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 		conn, err := Connect(server, mount)
 		if err != nil {
 			m.logger.Printf("icecast: mount %d: connect: %v", mount.ID, err)
-			_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", err.Error())
+			m.updateStatus(mount.ID, model.StatusError, "", err.Error())
 			if err := sleepWithContext(ctx, backoff); err != nil {
-				_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusDisconnected, "", "")
+				m.updateStatus(mount.ID, model.StatusDisconnected, "", "")
 				return
 			}
 			backoff = nextBackoff(backoff)
@@ -104,22 +117,22 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 		handle.mu.Lock()
 		handle.currentSong = songTitle
 		handle.mu.Unlock()
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusConnected, songTitle, "")
+		m.updateStatus(mount.ID, model.StatusConnected, songTitle, "")
 
 		streamErr := m.streamSongs(ctx, mount, handle, conn, queue, &queuePos)
 
 		conn.Close()
 
 		if ctx.Err() != nil {
-			_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusDisconnected, "", "")
+			m.updateStatus(mount.ID, model.StatusDisconnected, "", "")
 			return
 		}
 
 		if streamErr != nil {
 			m.logger.Printf("icecast: mount %d: stream error: %v", mount.ID, streamErr)
-			_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusError, "", streamErr.Error())
+			m.updateStatus(mount.ID, model.StatusError, "", streamErr.Error())
 			if err := sleepWithContext(ctx, backoff); err != nil {
-				_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusDisconnected, "", "")
+				m.updateStatus(mount.ID, model.StatusDisconnected, "", "")
 				return
 			}
 			backoff = nextBackoff(backoff)
@@ -159,7 +172,7 @@ func (m *Manager) streamSongs(
 		handle.mu.Lock()
 		handle.currentSong = songTitle
 		handle.mu.Unlock()
-		_ = m.db.Icecast.UpdateMountStatus(ctx, mount.ID, model.StatusConnected, songTitle, "")
+		m.updateStatus(mount.ID, model.StatusConnected, songTitle, "")
 
 		transcodeErr := m.transcodeAndSend(ctx, mount, conn, song.Path)
 		if transcodeErr != nil {

@@ -41,6 +41,13 @@ type fakePodcastStore struct {
 	episodes []*model.PodcastEpisode
 	// updateErr is returned by UpdateChannel when non-nil.
 	updateErr error
+	// singleEpisode, when non-nil, is returned by GetEpisode regardless of the
+	// requested ID. Used by tests that exercise DownloadEpisode/DeleteEpisodeFile.
+	singleEpisode *model.PodcastEpisode
+	// getEpisodeErr is returned by GetEpisode when non-nil.
+	getEpisodeErr error
+	// upsertErr is returned by UpsertEpisode when non-nil.
+	upsertErr error
 }
 
 func (f *fakePodcastStore) CreateChannel(_ context.Context, ch *model.PodcastChannel) (int64, error) {
@@ -73,7 +80,10 @@ func (f *fakePodcastStore) UpdateChannel(_ context.Context, ch *model.PodcastCha
 func (f *fakePodcastStore) DeleteChannel(_ context.Context, _ int64) error { return nil }
 
 func (f *fakePodcastStore) GetEpisode(_ context.Context, _ int64) (*model.PodcastEpisode, error) {
-	return nil, nil
+	if f.getEpisodeErr != nil {
+		return nil, f.getEpisodeErr
+	}
+	return f.singleEpisode, nil
 }
 
 func (f *fakePodcastStore) ListEpisodesByChannel(_ context.Context, _ int64) ([]*model.PodcastEpisode, error) {
@@ -81,11 +91,19 @@ func (f *fakePodcastStore) ListEpisodesByChannel(_ context.Context, _ int64) ([]
 }
 
 func (f *fakePodcastStore) UpsertEpisode(_ context.Context, ep *model.PodcastEpisode) (int64, error) {
+	if f.upsertErr != nil {
+		return 0, f.upsertErr
+	}
+	f.singleEpisode = ep
 	f.episodes = append(f.episodes, ep)
 	return int64(len(f.episodes)), nil
 }
 
-func (f *fakePodcastStore) UpdateEpisodeStatus(_ context.Context, _ int64, _ model.EpisodeStatus, _ string) error {
+func (f *fakePodcastStore) UpdateEpisodeStatus(_ context.Context, _ int64, status model.EpisodeStatus, lastErr string) error {
+	if f.singleEpisode != nil {
+		f.singleEpisode.Status = status
+		f.singleEpisode.LastError = lastErr
+	}
 	return nil
 }
 

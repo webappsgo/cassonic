@@ -53,6 +53,21 @@ var activeLang = "en"
 // ansiEnabled controls whether ANSI colour codes are emitted.
 var ansiEnabled = true
 
+// ansiBoldCyan is the escape sequence used for status/version headings.
+const ansiBoldCyan = "\033[1;36m"
+
+// ansiReset clears any active ANSI colour state.
+const ansiReset = "\033[0m"
+
+// colorHeading wraps text in bold cyan when ansiEnabled is true, honouring
+// the --color flag and NO_COLOR environment variable resolved by resolveColor.
+func colorHeading(text string) string {
+	if !ansiEnabled {
+		return text
+	}
+	return ansiBoldCyan + text + ansiReset
+}
+
 func main() {
 	var (
 		flagHelp        = flag.Bool("help", false, "Show help")
@@ -746,7 +761,7 @@ func removePID(path string) {
 }
 
 func printStatus(db *store.DB) {
-	fmt.Printf("cassonic status:\n")
+	fmt.Println(colorHeading("cassonic status:"))
 	status, err := db.Music.GetLastScanStatus(context.Background())
 	if err != nil || status == nil {
 		fmt.Printf("  Last scan: never\n")

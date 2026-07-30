@@ -85,16 +85,6 @@ func (c *Client) do(method, path string, body any) (*http.Response, error) {
 	return resp, nil
 }
 
-// get performs a GET request and unmarshals the JSON response into out.
-func (c *Client) get(path string, out any) error {
-	resp, err := c.do(http.MethodGet, path, nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	return c.decodeResponse(resp, out)
-}
-
 // post performs a POST request with a JSON body and unmarshals the response.
 func (c *Client) post(path string, body, out any) error {
 	resp, err := c.do(http.MethodPost, path, body)

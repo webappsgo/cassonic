@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/local/cassonic/src/server/model"
@@ -271,18 +272,6 @@ type AmpStats struct {
 	Catalogs int      `xml:"catalogs" json:"catalogs"`
 }
 
-// ampacheRoot wraps any payload for XML marshaling under a <root> element.
-type ampacheRoot struct {
-	XMLName xml.Name
-	Payload any
-}
-
-// ampacheXMLWrapper is a typed XML marshaling envelope for a known payload type.
-type ampacheXMLWrapper struct {
-	XMLName xml.Name
-	Data    []byte `xml:",innerxml"`
-}
-
 // errResp builds an AmpError with the given code and message.
 func errResp(code int, msg string) *AmpError {
 	return &AmpError{ErrorCode: code, ErrorMessage: msg}
@@ -313,17 +302,40 @@ func respondXML(w http.ResponseWriter, _ *http.Request, v any) {
 	switch payload := v.(type) {
 	case *AmpError:
 		_ = xml.NewEncoder(w).Encode(struct {
-			XMLName xml.Name `xml:"root"`
+			XMLName xml.Name  `xml:"root"`
 			Error   *AmpError `xml:"error"`
 		}{Error: payload})
 	case map[string]any:
-		_ = xml.NewEncoder(w).Encode(struct {
-			XMLName xml.Name `xml:"root"`
-			Data    map[string]any
-		}{Data: payload})
+		_ = xml.NewEncoder(w).Encode(okEnvelope(payload))
 	default:
-		_ = xml.NewEncoder(w).Encode(v)
+		_ = xml.NewEncoder(w).Encode(payload)
 	}
+}
+
+// okEnvelope XML-encodes an Ampache success payload built by okResp.
+// encoding/xml cannot marshal map[string]any directly ("unsupported type"),
+// so this hand-rolls MarshalXML: each map entry becomes a top-level element
+// under <root>, named after its key, with its value encoded by its own type.
+// Keys are sorted for deterministic output.
+type okEnvelope map[string]any
+
+func (e okEnvelope) MarshalXML(enc *xml.Encoder, _ xml.StartElement) error {
+	root := xml.StartElement{Name: xml.Name{Local: "root"}}
+	if err := enc.EncodeToken(root); err != nil {
+		return err
+	}
+	keys := make([]string, 0, len(e))
+	for key := range e {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		elem := xml.StartElement{Name: xml.Name{Local: key}}
+		if err := enc.EncodeElement(e[key], elem); err != nil {
+			return err
+		}
+	}
+	return enc.EncodeToken(root.End())
 }
 
 // okResp returns a standard Ampache success envelope for simple responses.
