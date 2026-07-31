@@ -253,9 +253,17 @@ func (s *sqliteMusicStore) SearchArtists(ctx context.Context, query string, opts
 	return artists, rows.Err()
 }
 
+// DeleteArtistsWithNoSongs removes artists with no referencing song. It checks
+// actual song rows rather than the cached artists.song_count column, because
+// nothing recomputes that column after a scan upserts songs — using it here
+// would delete every artist immediately after every scan (and, via
+// albums.artist_id ON DELETE CASCADE, their albums too).
 func (s *sqliteMusicStore) DeleteArtistsWithNoSongs(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx,
-		`DELETE FROM artists WHERE song_count = 0`)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM artists WHERE id NOT IN (
+		SELECT artist_id FROM songs WHERE artist_id != 0
+		UNION
+		SELECT album_artist_id FROM songs WHERE album_artist_id != 0
+	)`)
 	return err
 }
 
@@ -459,9 +467,15 @@ func (s *sqliteMusicStore) SearchAlbums(ctx context.Context, query string, opts 
 	return albums, rows.Err()
 }
 
+// DeleteAlbumsWithNoSongs removes albums with no referencing song. It checks
+// actual song rows rather than the cached albums.song_count column, for the
+// same reason as DeleteArtistsWithNoSongs above: that column is never
+// recomputed after a scan, so trusting it would delete every album on
+// every scan.
 func (s *sqliteMusicStore) DeleteAlbumsWithNoSongs(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx,
-		`DELETE FROM albums WHERE song_count = 0`)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM albums WHERE id NOT IN (
+		SELECT album_id FROM songs WHERE album_id != 0
+	)`)
 	return err
 }
 

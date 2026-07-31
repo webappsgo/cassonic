@@ -291,7 +291,7 @@ func (s *stubActivityStore) GetPlayHistory(_ context.Context, _ int64, _ int) ([
 	return nil, nil
 }
 func (s *stubActivityStore) SetBookmark(_ context.Context, _ *model.Bookmark) error {
-	return errors.New("not implemented")
+	return nil
 }
 func (s *stubActivityStore) GetBookmarks(_ context.Context, _ int64) ([]*model.Bookmark, error) {
 	return nil, nil
@@ -300,7 +300,7 @@ func (s *stubActivityStore) DeleteBookmark(_ context.Context, _ int64, _ string,
 	return errors.New("not implemented")
 }
 func (s *stubActivityStore) SavePlayQueue(_ context.Context, _ *model.PlayQueue, _ []*model.PlayQueueEntry) error {
-	return errors.New("not implemented")
+	return nil
 }
 func (s *stubActivityStore) GetPlayQueue(_ context.Context, _ int64) (*model.PlayQueue, []*model.PlayQueueEntry, error) {
 	return nil, nil, nil

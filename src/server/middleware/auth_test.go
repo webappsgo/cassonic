@@ -16,7 +16,6 @@ package middleware
 import (
 	"context"
 	"crypto/md5"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
@@ -292,11 +291,6 @@ func TestExtractBearerToken(t *testing.T) {
 }
 
 // --- auth_native.go: NativeAuth ---
-
-func hashToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
-}
 
 func TestNativeAuthNoToken(t *testing.T) {
 	f := newFakeAuthStore()

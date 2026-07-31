@@ -453,7 +453,7 @@ func TestVerifySHA256(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	// sha256("hello world")
-	const wantSum = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde"
+	const wantSum = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
 
 	if err := verifySHA256(path, wantSum); err != nil {
 		t.Errorf("verifySHA256 with correct checksum: %v", err)

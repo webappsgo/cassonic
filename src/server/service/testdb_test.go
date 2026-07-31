@@ -6,11 +6,13 @@ package service
 // a throwaway temp directory rather than hand-rolled store interface stubs.
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/store"
 )
 
@@ -45,4 +47,29 @@ func newTestDB(t *testing.T) *store.DB {
 // silentLogger returns a logger that discards all output.
 func silentLogger() *log.Logger {
 	return log.New(io.Discard, "", 0)
+}
+
+// seedMinimalLibrary inserts a minimal Library row and returns its ID.
+// songs.library_id is a NOT NULL foreign key, so any test that upserts a Song
+// must seed one of these first. Named distinctly from scanner_test.go's own
+// seedLibrary helper, which takes a directory path and enabled flag.
+func seedMinimalLibrary(t *testing.T, db *store.DB) int64 {
+	t.Helper()
+	id, err := db.Music.CreateLibrary(context.Background(), &model.Library{Name: "lib", Path: "/music"})
+	if err != nil {
+		t.Fatalf("seedMinimalLibrary: CreateLibrary: %v", err)
+	}
+	return id
+}
+
+// seedArtist inserts a minimal Artist row and returns its ID. albums.artist_id
+// is a NOT NULL foreign key, so any test that upserts an Album must seed one
+// of these first.
+func seedArtist(t *testing.T, db *store.DB, name string) int64 {
+	t.Helper()
+	id, err := db.Music.UpsertArtist(context.Background(), &model.Artist{Name: name})
+	if err != nil {
+		t.Fatalf("seedArtist: UpsertArtist: %v", err)
+	}
+	return id
 }

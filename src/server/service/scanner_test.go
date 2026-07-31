@@ -26,6 +26,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,7 +36,13 @@ import (
 
 // stubTagReader implements TagReader with a fixed or per-path response,
 // letting tests control scanner behavior without real audio files.
+// ScanLibrary processes files concurrently across a worker pool (up to
+// runtime.NumCPU(), capped at 8), so Read is called from multiple goroutines
+// at once — mu guards the maps to avoid a data race (confirmed via
+// `go test -race`, which corrupted scanner state badly enough that
+// GetArtistByName intermittently failed to find a just-upserted artist).
 type stubTagReader struct {
+	mu sync.Mutex
 	// byPath overrides the response for a specific path.
 	byPath map[string]*SongMeta
 	// errByPath forces an error for a specific path.
@@ -60,6 +67,8 @@ func newStubTagReader() *stubTagReader {
 }
 
 func (r *stubTagReader) Read(path string) (*SongMeta, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.calls[path]++
 	if err, ok := r.errByPath[path]; ok {
 		return nil, err

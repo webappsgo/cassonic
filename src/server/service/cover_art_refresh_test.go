@@ -22,15 +22,17 @@ func TestRefreshAllWarmsThumbnailsForAlbumsWithCoverArt(t *testing.T) {
 	thumbDir := tempDir(t)
 	svc := NewCoverArtService(db.Music, thumbDir)
 
+	artistID := seedArtist(t, db, "Artist")
+
 	caID, err := db.Music.UpsertCoverArt(ctx, &model.CoverArt{Data: makeJPEG(t, 32, 32), MimeType: "image/jpeg"})
 	if err != nil {
 		t.Fatalf("UpsertCoverArt: %v", err)
 	}
-	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "With Cover", CoverArtID: caID}); err != nil {
+	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "With Cover", ArtistID: artistID, CoverArtID: caID}); err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}
 	// An album with no cover art should be skipped entirely (no lookup error).
-	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "No Cover"}); err != nil {
+	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "No Cover", ArtistID: artistID}); err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}
 
@@ -60,9 +62,11 @@ func TestRefreshAllContinuesPastThumbnailError(t *testing.T) {
 	ctx := context.Background()
 	svc := NewCoverArtService(db.Music, tempDir(t))
 
+	artistID := seedArtist(t, db, "Artist")
+
 	// CoverArtID points at a row that doesn't exist, so GetThumbnail will
 	// fail for every size; RefreshAll must swallow that and still return nil.
-	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Stale Cover", CoverArtID: 999999}); err != nil {
+	if _, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Stale Cover", ArtistID: artistID, CoverArtID: 999999}); err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}
 

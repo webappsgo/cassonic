@@ -184,36 +184,94 @@ func (s *Server) buildRouter() http.Handler {
 	// Optional Bearer token auth when MetricsToken is configured.
 	r.Handle("/metrics", s.metricsHandler())
 
+	// Native REST API, Subsonic REST API, Ampache API, and the WebUI
+	// catch-all are each a self-contained chi.Router whose routes already
+	// carry their own fully-qualified paths, and all four are logically
+	// mounted at the literal root "/". chi.Mux.Mount forbids mounting more
+	// than one handler on the exact same pattern (it panics with
+	// "attempting to Mount() a handler on an existing path"), so they cannot
+	// be composed with four separate r.Mount("/", ...) calls (even inside
+	// separate r.Group() blocks — Group() shares the parent's routing tree).
+	// Instead, dispatch to the first router whose own Match() reports it owns
+	// the request path — this only inspects the routing tree, so it never
+	// buffers the response, keeping streaming endpoints (audio/video) intact
+	// — and fall through to the WebUI catch-all if none matches.
+	nativeH := s.nativeHandler()
+	nativeRoutes, ok := nativeH.Routes().(chi.Routes)
+	if !ok {
+		panic("server: native handler Routes() does not implement chi.Routes")
+	}
+	subsonicRoutes, ok := s.subsonicHandler().Routes().(chi.Routes)
+	if !ok {
+		panic("server: subsonic handler Routes() does not implement chi.Routes")
+	}
+	ampacheRoutes, ok := s.ampacheHandler().Routes().(chi.Routes)
+	if !ok {
+		panic("server: ampache handler Routes() does not implement chi.Routes")
+	}
+
 	// Native REST API — auth is optional at the middleware level; individual
 	// routes enforce RequireAuth / RequireAdmin via their own With() calls.
-	r.Group(func(r chi.Router) {
-		r.Use(s.nativeRL.Middleware("native"))
-		r.Use(mw.NativeAuth(s.db.Users))
-		// Login endpoint gets tighter rate limiting; mount before the group handler.
-		r.With(s.loginRL.Middleware("login")).Post("/api/v1/auth/login", s.nativeHandler().Login)
-		r.Mount("/", s.nativeHandler().Routes())
-	})
-
+	nativeDispatch := chainMiddleware(nativeRoutes.(http.Handler), s.nativeRL.Middleware("native"), mw.NativeAuth(s.db.Users))
 	// Subsonic REST API.
-	r.Group(func(r chi.Router) {
-		r.Use(s.subsonicRL.Middleware("subsonic"))
-		r.Use(mw.SubsonicAuth(s.db.Users, s.getSubsonicPassword))
-		r.Mount("/", s.subsonicHandler().Routes())
-	})
-
+	subsonicDispatch := chainMiddleware(subsonicRoutes.(http.Handler), s.subsonicRL.Middleware("subsonic"), mw.SubsonicAuth(s.db.Users, s.getSubsonicPassword))
 	// Ampache API — auth middleware is applied inside the handler's own Routes().
-	r.Group(func(r chi.Router) {
-		r.Use(s.ampacheRL.Middleware("ampache"))
-		r.Mount("/", s.ampacheHandler().Routes())
-	})
+	ampacheDispatch := chainMiddleware(ampacheRoutes.(http.Handler), s.ampacheRL.Middleware("ampache"))
 
-	// Admin panel — mounted before WebUI catch-all.
+	// Login endpoint gets tighter rate limiting than the rest of the native
+	// API; registered directly on r as a literal (non-wildcard) path, so chi
+	// matches it before the "/*" fallback dispatcher below is ever reached.
+	r.With(s.loginRL.Middleware("login")).Post("/api/v1/auth/login", nativeH.Login)
+
+	// Admin panel — mounted before WebUI catch-all. This is a distinct
+	// literal prefix, so it does not conflict with the "/*" dispatch below,
+	// and chi's radix tree matches it ahead of the "/*" wildcard regardless.
 	r.Mount("/server/admin", s.adminHandler().Routes())
 
-	// WebUI — catch-all last; includes its own embedded /static/* handler.
-	r.Mount("/", s.webHandler().Routes())
+	// WebUI — catch-all fallback; includes its own embedded /static/* handler.
+	webRoutes := s.webHandler().Routes()
+
+	r.Handle("/*", firstMatchDispatcher([]routeGroup{
+		{routes: nativeRoutes, handler: nativeDispatch},
+		{routes: subsonicRoutes, handler: subsonicDispatch},
+		{routes: ampacheRoutes, handler: ampacheDispatch},
+	}, webRoutes))
 
 	return r
+}
+
+// routeGroup pairs a router (used only to check ownership of a request path
+// via Match, without executing it) with the fully middleware-wrapped handler
+// that actually serves requests it owns.
+type routeGroup struct {
+	routes  chi.Routes
+	handler http.Handler
+}
+
+// firstMatchDispatcher tries each group's router in turn via Match() — which
+// only inspects the routing tree and never invokes a handler — dispatching to
+// the first group that owns the request path. If none match, it falls
+// through to fallback (the WebUI catch-all, which matches everything).
+func firstMatchDispatcher(groups []routeGroup, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		for _, g := range groups {
+			rctx := chi.NewRouteContext()
+			if g.routes.Match(rctx, req.Method, req.URL.Path) {
+				g.handler.ServeHTTP(w, req)
+				return
+			}
+		}
+		fallback.ServeHTTP(w, req)
+	}
+}
+
+// chainMiddleware wraps h with mws, applied in the order given (the first
+// middleware in the slice is the outermost — it runs first).
+func chainMiddleware(h http.Handler, mws ...func(http.Handler) http.Handler) http.Handler {
+	for i := len(mws) - 1; i >= 0; i-- {
+		h = mws[i](h)
+	}
+	return h
 }
 
 // Start begins listening on the configured address and port. It blocks until the

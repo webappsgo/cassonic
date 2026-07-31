@@ -88,12 +88,14 @@ func TestGetForSongEmbeddedTakesPriority(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
+	libID := seedMinimalLibrary(t, db)
+
 	caID, err := db.Music.UpsertCoverArt(ctx, &model.CoverArt{Data: makeJPEG(t, 8, 8), MimeType: "image/jpeg"})
 	if err != nil {
 		t.Fatalf("UpsertCoverArt: %v", err)
 	}
 
-	songID, err := db.Music.UpsertSong(ctx, &model.Song{Path: path, Title: "t", CoverArtID: caID})
+	songID, err := db.Music.UpsertSong(ctx, &model.Song{LibraryID: libID, Path: path, Title: "t", CoverArtID: caID})
 	if err != nil {
 		t.Fatalf("UpsertSong: %v", err)
 	}
@@ -121,7 +123,9 @@ func TestGetForSongFallsBackToDirectoryFile(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	songID, err := db.Music.UpsertSong(ctx, &model.Song{Path: path, Title: "t"})
+	libID := seedMinimalLibrary(t, db)
+
+	songID, err := db.Music.UpsertSong(ctx, &model.Song{LibraryID: libID, Path: path, Title: "t"})
 	if err != nil {
 		t.Fatalf("UpsertSong: %v", err)
 	}
@@ -143,9 +147,11 @@ func TestGetForSongNoCoverReturnsErrNoCoverArt(t *testing.T) {
 	ctx := context.Background()
 	svc := NewCoverArtService(db.Music, tempDir(t))
 
+	libID := seedMinimalLibrary(t, db)
+
 	songDir := tempDir(t)
 	path := writeFile(t, songDir, "track.mp3")
-	songID, err := db.Music.UpsertSong(ctx, &model.Song{Path: path, Title: "t"})
+	songID, err := db.Music.UpsertSong(ctx, &model.Song{LibraryID: libID, Path: path, Title: "t"})
 	if err != nil {
 		t.Fatalf("UpsertSong: %v", err)
 	}
@@ -171,11 +177,13 @@ func TestGetForAlbumEmbeddedTakesPriority(t *testing.T) {
 	ctx := context.Background()
 	svc := NewCoverArtService(db.Music, tempDir(t))
 
+	artistID := seedArtist(t, db, "Artist")
+
 	caID, err := db.Music.UpsertCoverArt(ctx, &model.CoverArt{Data: makeJPEG(t, 8, 8), MimeType: "image/jpeg"})
 	if err != nil {
 		t.Fatalf("UpsertCoverArt: %v", err)
 	}
-	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Album", CoverArtID: caID})
+	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Album", ArtistID: artistID, CoverArtID: caID})
 	if err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}
@@ -194,7 +202,10 @@ func TestGetForAlbumDelegatesToFirstSong(t *testing.T) {
 	ctx := context.Background()
 	svc := NewCoverArtService(db.Music, tempDir(t))
 
-	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Album"})
+	artistID := seedArtist(t, db, "Artist")
+	libID := seedMinimalLibrary(t, db)
+
+	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Album", ArtistID: artistID})
 	if err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}
@@ -204,7 +215,7 @@ func TestGetForAlbumDelegatesToFirstSong(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(songDir, "album.jpg"), makeJPEG(t, 4, 4), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	if _, err := db.Music.UpsertSong(ctx, &model.Song{Path: path, Title: "t", AlbumID: albumID}); err != nil {
+	if _, err := db.Music.UpsertSong(ctx, &model.Song{LibraryID: libID, Path: path, Title: "t", AlbumID: albumID}); err != nil {
 		t.Fatalf("UpsertSong: %v", err)
 	}
 
@@ -222,7 +233,9 @@ func TestGetForAlbumEmptyAlbumReturnsErrNoCoverArt(t *testing.T) {
 	ctx := context.Background()
 	svc := NewCoverArtService(db.Music, tempDir(t))
 
-	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Empty Album"})
+	artistID := seedArtist(t, db, "Artist")
+
+	albumID, err := db.Music.UpsertAlbum(ctx, &model.Album{Title: "Empty Album", ArtistID: artistID})
 	if err != nil {
 		t.Fatalf("UpsertAlbum: %v", err)
 	}

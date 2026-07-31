@@ -403,12 +403,19 @@ func setLang(lang string) {
 // resolveColor applies the --color flag and the NO_COLOR environment variable
 // to the ansiEnabled package variable.
 func resolveColor(mode string) {
-	if os.Getenv("NO_COLOR") != "" || mode == "no" {
+	// Priority order (AI.md PART 8 "NO_COLOR Support"): CLI flag first, then
+	// NO_COLOR env var, then auto-detect — an explicit --color=yes must win
+	// even when NO_COLOR is set.
+	if mode == "yes" {
+		ansiEnabled = true
+		return
+	}
+	if mode == "no" {
 		ansiEnabled = false
 		return
 	}
-	if mode == "yes" {
-		ansiEnabled = true
+	if os.Getenv("NO_COLOR") != "" {
+		ansiEnabled = false
 		return
 	}
 	// "auto": enable only when stdout is a terminal (fd 1).
