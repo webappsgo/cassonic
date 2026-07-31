@@ -13,10 +13,10 @@ import (
 
 // listenBrainzAdditionalInfo carries the extra fields in a ListenBrainz listen payload.
 type listenBrainzAdditionalInfo struct {
-	ListeningFrom  string `json:"listening_from"`
-	DurationMS     int    `json:"duration_ms,omitempty"`
-	TrackNumber    int    `json:"tracknumber,omitempty"`
-	RecordingMBID  string `json:"recording_mbid,omitempty"`
+	ListeningFrom string `json:"listening_from"`
+	DurationMS    int    `json:"duration_ms,omitempty"`
+	TrackNumber   int    `json:"tracknumber,omitempty"`
+	RecordingMBID string `json:"recording_mbid,omitempty"`
 }
 
 // listenBrainzTrackMetadata is the track_metadata block in a ListenBrainz listen.

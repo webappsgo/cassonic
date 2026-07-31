@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/service/tags"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // songTagFields maps a SongMeta field name to its value for the JSON response.

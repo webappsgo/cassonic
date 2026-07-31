@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	flac "github.com/go-flac/go-flac"
 	"github.com/go-flac/flacvorbis"
+	flac "github.com/go-flac/go-flac"
 )
 
 // minimalFLACBytes builds the smallest byte sequence go-flac/go-flac will
@@ -65,11 +65,11 @@ func TestWriteFLACHappyPath(t *testing.T) {
 	}
 
 	want := map[string]string{
-		"TITLE":     "Test Title",
-		"ARTIST":    "Test Artist",
-		"ALBUM":     "Test Album",
-		"DATE":      "2024",
-		"BPM":       "128",
+		"TITLE":               "Test Title",
+		"ARTIST":              "Test Artist",
+		"ALBUM":               "Test Album",
+		"DATE":                "2024",
+		"BPM":                 "128",
 		"MUSICBRAINZ_TRACKID": "track-mbid",
 	}
 	for key, wantVal := range want {

@@ -20,8 +20,12 @@ type testMusicStore struct {
 	listLibrariesErr    error
 }
 
-func (s *testMusicStore) CreateLibrary(ctx context.Context, l *model.Library) (int64, error) { return 0, nil }
-func (s *testMusicStore) GetLibrary(ctx context.Context, id int64) (*model.Library, error)   { return nil, nil }
+func (s *testMusicStore) CreateLibrary(ctx context.Context, l *model.Library) (int64, error) {
+	return 0, nil
+}
+func (s *testMusicStore) GetLibrary(ctx context.Context, id int64) (*model.Library, error) {
+	return nil, nil
+}
 func (s *testMusicStore) ListLibraries(ctx context.Context) ([]*model.Library, error) {
 	return s.listLibrariesResult, s.listLibrariesErr
 }
@@ -30,7 +34,9 @@ func (s *testMusicStore) DeleteLibrary(ctx context.Context, id int64) error     
 func (s *testMusicStore) UpsertArtist(ctx context.Context, a *model.Artist) (int64, error) {
 	return 0, nil
 }
-func (s *testMusicStore) GetArtist(ctx context.Context, id int64) (*model.Artist, error) { return nil, nil }
+func (s *testMusicStore) GetArtist(ctx context.Context, id int64) (*model.Artist, error) {
+	return nil, nil
+}
 func (s *testMusicStore) GetArtistByName(ctx context.Context, name string) (*model.Artist, error) {
 	return nil, nil
 }
@@ -44,7 +50,9 @@ func (s *testMusicStore) DeleteArtistsWithNoSongs(ctx context.Context) error { r
 func (s *testMusicStore) UpsertAlbum(ctx context.Context, a *model.Album) (int64, error) {
 	return 0, nil
 }
-func (s *testMusicStore) GetAlbum(ctx context.Context, id int64) (*model.Album, error) { return nil, nil }
+func (s *testMusicStore) GetAlbum(ctx context.Context, id int64) (*model.Album, error) {
+	return nil, nil
+}
 func (s *testMusicStore) ListAlbums(ctx context.Context, opts store.ListOpts) ([]*model.Album, error) {
 	return nil, nil
 }
@@ -83,8 +91,8 @@ func (s *testMusicStore) GetRandomSongs(ctx context.Context, limit int, genre, f
 func (s *testMusicStore) SearchSongs(ctx context.Context, q string, opts store.ListOpts) ([]*model.Song, error) {
 	return nil, nil
 }
-func (s *testMusicStore) MarkSongMissing(ctx context.Context, id int64) error { return nil }
-func (s *testMusicStore) DeleteMissingSongs(ctx context.Context) error        { return nil }
+func (s *testMusicStore) MarkSongMissing(ctx context.Context, id int64) error    { return nil }
+func (s *testMusicStore) DeleteMissingSongs(ctx context.Context) error           { return nil }
 func (s *testMusicStore) IncrementPlayCount(ctx context.Context, id int64) error { return nil }
 func (s *testMusicStore) ListGenres(ctx context.Context) ([]*model.Genre, error) { return nil, nil }
 func (s *testMusicStore) UpsertCoverArt(ctx context.Context, c *model.CoverArt) (int64, error) {
@@ -96,7 +104,9 @@ func (s *testMusicStore) GetCoverArt(ctx context.Context, id int64) (*model.Cove
 func (s *testMusicStore) CreateScanStatus(ctx context.Context, st *model.ScanStatus) (int64, error) {
 	return 0, nil
 }
-func (s *testMusicStore) UpdateScanStatus(ctx context.Context, st *model.ScanStatus) error { return nil }
+func (s *testMusicStore) UpdateScanStatus(ctx context.Context, st *model.ScanStatus) error {
+	return nil
+}
 func (s *testMusicStore) GetLastScanStatus(ctx context.Context) (*model.ScanStatus, error) {
 	return nil, nil
 }
@@ -121,9 +131,9 @@ func (s *testUserStore) GetUserByUsername(ctx context.Context, username string) 
 func (s *testUserStore) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	return nil, nil
 }
-func (s *testUserStore) UpdateUser(ctx context.Context, u *model.User) error  { return nil }
-func (s *testUserStore) DeleteUser(ctx context.Context, id int64) error      { return nil }
-func (s *testUserStore) ListUsers(ctx context.Context) ([]*model.User, error) { return nil, nil }
+func (s *testUserStore) UpdateUser(ctx context.Context, u *model.User) error        { return nil }
+func (s *testUserStore) DeleteUser(ctx context.Context, id int64) error             { return nil }
+func (s *testUserStore) ListUsers(ctx context.Context) ([]*model.User, error)       { return nil, nil }
 func (s *testUserStore) IncrementLoginAttempts(ctx context.Context, id int64) error { return nil }
 func (s *testUserStore) ResetLoginAttempts(ctx context.Context, id int64) error     { return nil }
 func (s *testUserStore) SetLockedUntil(ctx context.Context, id int64, until time.Time) error {

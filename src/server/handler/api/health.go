@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Build info variables set at compile time via -ldflags.
@@ -48,8 +48,8 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"ok":     true,
-			"status": overallStatus,
+			"ok":      true,
+			"status":  overallStatus,
 			"version": Version,
 			"db": map[string]any{
 				"server": serverDBStatus,

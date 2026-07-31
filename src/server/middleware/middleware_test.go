@@ -408,8 +408,8 @@ func TestAcceptedFormat(t *testing.T) {
 // TestGeoIPFilterNilDB verifies that a nil DB is a pass-through regardless of country lists.
 func TestGeoIPFilterNilDB(t *testing.T) {
 	cases := []struct {
-		name          string
-		denyCountries []string
+		name           string
+		denyCountries  []string
 		allowCountries []string
 	}{
 		{"nil db no lists", nil, nil},
@@ -746,9 +746,9 @@ func TestVerifyHandshakeLockedAccount(t *testing.T) {
 
 func TestExtractIP(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(r *http.Request)
-		wantIP  string
+		name   string
+		setup  func(r *http.Request)
+		wantIP string
 	}{
 		{
 			name:   "remote addr only",

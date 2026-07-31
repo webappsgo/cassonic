@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	flac "github.com/go-flac/go-flac"
 	"github.com/go-flac/flacvorbis"
+	flac "github.com/go-flac/go-flac"
 )
 
 // vorbisFieldMap maps SongMeta field names to their canonical Vorbis Comment keys.

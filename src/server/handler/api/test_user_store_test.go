@@ -14,18 +14,18 @@ import (
 // configUserStore is a configurable stub implementing store.UserStore for handler tests.
 type configUserStore struct {
 	// user CRUD
-	createUserID  int64
-	createUserErr error
-	getUserResult *model.User
-	getUserErr    error
+	createUserID            int64
+	createUserErr           error
+	getUserResult           *model.User
+	getUserErr              error
 	getUserByUsernameResult *model.User
 	getUserByUsernameErr    error
-	getUserByEmailResult *model.User
-	getUserByEmailErr    error
-	updateUserErr error
-	deleteUserErr error
-	listUsersResult []*model.User
-	listUsersErr    error
+	getUserByEmailResult    *model.User
+	getUserByEmailErr       error
+	updateUserErr           error
+	deleteUserErr           error
+	listUsersResult         []*model.User
+	listUsersErr            error
 
 	// login tracking
 	incrementLoginAttemptsErr error
@@ -34,20 +34,20 @@ type configUserStore struct {
 	updateLastLoginErr        error
 
 	// API tokens
-	createAPITokenErr    error
-	getAPITokenByHashResult *model.APIToken
-	getAPITokenByHashErr    error
-	listAPITokensResult []*model.APIToken
-	listAPITokensErr    error
-	deleteAPITokenErr   error
+	createAPITokenErr         error
+	getAPITokenByHashResult   *model.APIToken
+	getAPITokenByHashErr      error
+	listAPITokensResult       []*model.APIToken
+	listAPITokensErr          error
+	deleteAPITokenErr         error
 	updateAPITokenLastUsedErr error
 
 	// sessions
-	createSessionErr      error
-	getSessionByHashResult *store.Session
-	getSessionByHashErr    error
-	deleteSessionErr       error
-	deleteUserSessionsErr  error
+	createSessionErr        error
+	getSessionByHashResult  *store.Session
+	getSessionByHashErr     error
+	deleteSessionErr        error
+	deleteUserSessionsErr   error
 	purgeExpiredSessionsErr error
 
 	// subsonic
@@ -57,10 +57,10 @@ type configUserStore struct {
 	setSubsonicPasswordErr       error
 
 	// radio stations
-	createRadioStationID  int64
-	createRadioStationErr error
-	getRadioStationResult *model.InternetRadioStation
-	getRadioStationErr    error
+	createRadioStationID    int64
+	createRadioStationErr   error
+	getRadioStationResult   *model.InternetRadioStation
+	getRadioStationErr      error
 	listRadioStationsResult []*model.InternetRadioStation
 	listRadioStationsErr    error
 	updateRadioStationErr   error

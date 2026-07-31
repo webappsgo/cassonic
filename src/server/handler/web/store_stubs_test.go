@@ -16,12 +16,12 @@ type testMusicStore struct {
 	lastScanResult      *model.ScanStatus
 	lastScanErr         error
 
-	listArtistsResult   []*model.Artist
-	listArtistsErr      error
-	searchArtistsResult []*model.Artist
-	searchArtistsErr    error
-	getArtistResult     *model.Artist
-	getArtistErr        error
+	listArtistsResult    []*model.Artist
+	listArtistsErr       error
+	searchArtistsResult  []*model.Artist
+	searchArtistsErr     error
+	getArtistResult      *model.Artist
+	getArtistErr         error
 	albumsByArtistResult []*model.Album
 	albumsByArtistErr    error
 
@@ -121,8 +121,8 @@ func (s *testMusicStore) GetRandomSongs(ctx context.Context, limit int, genre, f
 func (s *testMusicStore) SearchSongs(ctx context.Context, query string, opts store.ListOpts) ([]*model.Song, error) {
 	return s.searchSongsResult, s.searchSongsErr
 }
-func (s *testMusicStore) MarkSongMissing(ctx context.Context, id int64) error   { return nil }
-func (s *testMusicStore) DeleteMissingSongs(ctx context.Context) error         { return nil }
+func (s *testMusicStore) MarkSongMissing(ctx context.Context, id int64) error    { return nil }
+func (s *testMusicStore) DeleteMissingSongs(ctx context.Context) error           { return nil }
 func (s *testMusicStore) IncrementPlayCount(ctx context.Context, id int64) error { return nil }
 
 func (s *testMusicStore) ListGenres(ctx context.Context) ([]*model.Genre, error) {
@@ -180,7 +180,7 @@ func (s *testUserStore) GetUserByEmail(ctx context.Context, email string) (*mode
 	return nil, nil
 }
 func (s *testUserStore) UpdateUser(ctx context.Context, u *model.User) error { return nil }
-func (s *testUserStore) DeleteUser(ctx context.Context, id int64) error     { return nil }
+func (s *testUserStore) DeleteUser(ctx context.Context, id int64) error      { return nil }
 func (s *testUserStore) ListUsers(ctx context.Context) ([]*model.User, error) {
 	return nil, nil
 }
@@ -344,7 +344,7 @@ func (s *testShareStore) ListSharesByUser(ctx context.Context, userID int64) ([]
 	return nil, nil
 }
 func (s *testShareStore) UpdateShare(ctx context.Context, sh *model.Share) error { return nil }
-func (s *testShareStore) DeleteShare(ctx context.Context, id int64) error       { return nil }
+func (s *testShareStore) DeleteShare(ctx context.Context, id int64) error        { return nil }
 func (s *testShareStore) IncrementViewCount(ctx context.Context, id int64) error {
 	return s.incrementViewCountErr
 }

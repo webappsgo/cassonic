@@ -233,6 +233,19 @@ func main() {
 		}
 	}
 
+	// First-run secret generation: the auth secret must never be empty,
+	// otherwise the derived AES key and HMAC signing key are publicly
+	// reproducible and stored credentials can be decrypted by anyone.
+	if changed, secErr := config.EnsureSecrets(cfg); secErr != nil {
+		fmt.Fprintf(os.Stderr, "cassonic: failed to generate auth secret: %v\n", secErr)
+		os.Exit(1)
+	} else if changed {
+		if err := config.Save(cfg, cfgPath); err != nil {
+			fmt.Fprintf(os.Stderr, "cassonic: warning: could not persist generated auth secret: %v\n", err)
+		}
+		log.Printf("cassonic: generated new auth secret on first run")
+	}
+
 	// --maintenance subcommand (needs cfg + detectedPaths resolved).
 	if *flagMaintenance != "" {
 		handleMaintenanceCmd(*flagMaintenance, cfg, cfgPath, *flagBackup, detectedPaths.Data)

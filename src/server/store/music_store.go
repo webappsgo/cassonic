@@ -197,15 +197,28 @@ func (s *sqliteMusicStore) GetArtistByName(ctx context.Context, name string) (*m
 const artistSelectCols = `id, name, sort_name, album_count, song_count, cover_art_id, biography,
 	musicbrainz_id, user_edited, created_at, updated_at`
 
+// artistSortCols is the allowlist of columns a client may sort artists by.
+// Any value outside this set falls back to the default to prevent SQL injection
+// via the untrusted ?sort= query parameter.
+var artistSortCols = map[string]bool{
+	"name": true, "sort_name": true, "album_count": true,
+	"song_count": true, "created_at": true, "updated_at": true,
+}
+
+// sortColumn returns col when it is present in the allowed set, otherwise def.
+func sortColumn(col string, allowed map[string]bool, def string) string {
+	if col != "" && allowed[col] {
+		return col
+	}
+	return def
+}
+
 func (s *sqliteMusicStore) ListArtists(ctx context.Context, opts ListOpts) ([]*model.Artist, error) {
 	orderDir := "ASC"
 	if opts.Desc {
 		orderDir = "DESC"
 	}
-	sortCol := "name"
-	if opts.SortBy != "" {
-		sortCol = opts.SortBy
-	}
+	sortCol := sortColumn(opts.SortBy, artistSortCols, "name")
 	q := fmt.Sprintf(`SELECT %s FROM artists ORDER BY %s %s LIMIT ? OFFSET ?`,
 		artistSelectCols, sortCol, orderDir)
 	limit := opts.Limit
@@ -301,6 +314,14 @@ func scanAlbum(row interface {
 const albumSelectCols = `id, title, sort_title, artist_id, artist_name, year, genre, song_count, duration,
 	cover_art_id, musicbrainz_id, user_edited, created_at, updated_at`
 
+// albumSortCols is the allowlist of columns a client may sort albums by.
+// Guards the untrusted ?sort= query parameter against SQL injection.
+var albumSortCols = map[string]bool{
+	"title": true, "sort_title": true, "artist_name": true, "year": true,
+	"genre": true, "song_count": true, "duration": true,
+	"created_at": true, "updated_at": true,
+}
+
 func (s *sqliteMusicStore) UpsertAlbum(ctx context.Context, a *model.Album) (int64, error) {
 	const q = `INSERT INTO albums
 		(title, sort_title, artist_id, artist_name, year, genre, song_count, duration, cover_art_id, musicbrainz_id, user_edited, created_at, updated_at)
@@ -359,10 +380,7 @@ func (s *sqliteMusicStore) ListAlbums(ctx context.Context, opts ListOpts) ([]*mo
 	if opts.Desc {
 		orderDir = "DESC"
 	}
-	sortCol := "title"
-	if opts.SortBy != "" {
-		sortCol = opts.SortBy
-	}
+	sortCol := sortColumn(opts.SortBy, albumSortCols, "title")
 	limit := opts.Limit
 	if limit <= 0 {
 		limit = 500

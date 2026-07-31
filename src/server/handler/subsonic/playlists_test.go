@@ -23,15 +23,15 @@ import (
 // fields to control lookups; mutation methods record their arguments so
 // tests can assert on them.
 type stubPlaylistStore struct {
-	playlists       []*model.Playlist
-	playlistByID    map[int64]*model.Playlist
-	entries         map[int64][]*model.PlaylistEntry
-	listErr         error
-	getErr          error
-	createErr       error
-	updateErr       error
-	deleteErr       error
-	entriesErr      error
+	playlists    []*model.Playlist
+	playlistByID map[int64]*model.Playlist
+	entries      map[int64][]*model.PlaylistEntry
+	listErr      error
+	getErr       error
+	createErr    error
+	updateErr    error
+	deleteErr    error
+	entriesErr   error
 
 	createdPlaylist *model.Playlist
 	updatedPlaylist *model.Playlist
@@ -96,10 +96,10 @@ func (s *stubPlaylistStore) RemoveFromPlaylist(_ context.Context, _ int64, indic
 // ---- stub ChatStore ---------------------------------------------------------
 
 type stubChatStore struct {
-	messages   []*model.ChatMessage
-	getErr     error
-	addErr     error
-	addedMsg   *model.ChatMessage
+	messages []*model.ChatMessage
+	getErr   error
+	addErr   error
+	addedMsg *model.ChatMessage
 }
 
 func (s *stubChatStore) AddMessage(_ context.Context, msg *model.ChatMessage) error {

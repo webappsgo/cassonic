@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/service"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // ListLibraries returns all configured music libraries.
@@ -179,4 +179,3 @@ func (h *Handler) ScanLibrary(w http.ResponseWriter, r *http.Request) {
 		"scan_id": scanID,
 	})
 }
-

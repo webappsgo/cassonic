@@ -3,6 +3,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -276,6 +278,23 @@ func applyDefaults(cfg *Config) {
 	if cfg.Email.Port == 0 {
 		cfg.Email.Port = d.Email.Port
 	}
+}
+
+// EnsureSecrets fills in any auto-generated secret that is currently empty and
+// reports whether cfg was modified. It generates the auth secret (the HMAC
+// signing key and the base for AES key derivation) on first run so that a
+// fresh install never falls back to an empty, publicly reproducible key. The
+// caller must persist cfg with Save when changed is true.
+func EnsureSecrets(cfg *Config) (changed bool, err error) {
+	if cfg.Auth.JWTSecret == "" {
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			return false, fmt.Errorf("generate auth secret: %w", err)
+		}
+		cfg.Auth.JWTSecret = hex.EncodeToString(buf)
+		changed = true
+	}
+	return changed, nil
 }
 
 // Save writes cfg to path as YAML. Parent directories are created if needed.

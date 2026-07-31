@@ -61,14 +61,14 @@ type ScrobbleService struct {
 	// SessionKeyEnc holds the AES-256-GCM encrypted session key
 	SessionKeyEnc string `db:"session_key_enc"`
 	// TokenEnc holds the AES-256-GCM encrypted authentication token
-	TokenEnc       string      `db:"token_enc"`
-	Username       string      `db:"username"`
-	Enabled        bool        `db:"enabled"`
-	Verified       bool        `db:"verified"`
-	LastVerifiedAt time.Time   `db:"last_verified_at"`
-	LastError      string      `db:"last_error"`
-	CreatedAt      time.Time   `db:"created_at"`
-	UpdatedAt      time.Time   `db:"updated_at"`
+	TokenEnc       string    `db:"token_enc"`
+	Username       string    `db:"username"`
+	Enabled        bool      `db:"enabled"`
+	Verified       bool      `db:"verified"`
+	LastVerifiedAt time.Time `db:"last_verified_at"`
+	LastError      string    `db:"last_error"`
+	CreatedAt      time.Time `db:"created_at"`
+	UpdatedAt      time.Time `db:"updated_at"`
 }
 
 // ScrobbleTrackData holds the track metadata sent to a scrobbling service
@@ -78,19 +78,19 @@ type ScrobbleTrackData struct {
 	Album       string `json:"album"`
 	AlbumArtist string `json:"album_artist,omitempty"`
 	// Duration is the track length in seconds
-	Duration    int    `json:"duration"`
-	TrackNumber int    `json:"track_number,omitempty"`
+	Duration    int `json:"duration"`
+	TrackNumber int `json:"track_number,omitempty"`
 	// MBID is the MusicBrainz recording ID for the track
-	MBID      string `json:"mbid,omitempty"`
+	MBID string `json:"mbid,omitempty"`
 	// Timestamp is the Unix epoch second when the track started playing
-	Timestamp int64  `json:"timestamp"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 // ScrobbleQueueEntry is a pending scrobble awaiting delivery to a service
 type ScrobbleQueueEntry struct {
-	ID        int64             `db:"id"`
-	UserID    int64             `db:"user_id"`
-	ServiceID int64             `db:"service_id"`
+	ID        int64 `db:"id"`
+	UserID    int64 `db:"user_id"`
+	ServiceID int64 `db:"service_id"`
 	// TrackData is serialized as JSON in the database column
 	TrackData     ScrobbleTrackData `db:"track_data"`
 	QueuedAt      time.Time         `db:"queued_at"`

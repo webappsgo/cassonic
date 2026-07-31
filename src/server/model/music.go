@@ -16,12 +16,12 @@ type Library struct {
 
 // Artist represents a music artist
 type Artist struct {
-	ID        int64  `db:"id"`
-	Name      string `db:"name"`
-	SortName  string `db:"sort_name"`
-	AlbumCount int   `db:"album_count"`
-	SongCount  int   `db:"song_count"`
-	CoverArtID int64 `db:"cover_art_id"`
+	ID         int64  `db:"id"`
+	Name       string `db:"name"`
+	SortName   string `db:"sort_name"`
+	AlbumCount int    `db:"album_count"`
+	SongCount  int    `db:"song_count"`
+	CoverArtID int64  `db:"cover_art_id"`
 	Biography  string `db:"biography"`
 	// MusicBrainzID is the MusicBrainz artist MBID
 	MusicBrainzID string `db:"musicbrainz_id"`
@@ -33,10 +33,10 @@ type Artist struct {
 
 // Album represents a music album
 type Album struct {
-	ID       int64  `db:"id"`
-	Title    string `db:"title"`
+	ID        int64  `db:"id"`
+	Title     string `db:"title"`
 	SortTitle string `db:"sort_title"`
-	ArtistID int64  `db:"artist_id"`
+	ArtistID  int64  `db:"artist_id"`
 	// ArtistName is denormalized from the artist row to avoid joins on hot paths
 	ArtistName string `db:"artist_name"`
 	Year       int    `db:"year"`
@@ -56,29 +56,29 @@ type Album struct {
 
 // Song represents a single audio track
 type Song struct {
-	ID        int64  `db:"id"`
-	LibraryID int64  `db:"library_id"`
-	Path      string `db:"path"`
-	Title     string `db:"title"`
-	SortTitle string `db:"sort_title"`
-	ArtistID  int64  `db:"artist_id"`
-	ArtistName string `db:"artist_name"`
+	ID              int64  `db:"id"`
+	LibraryID       int64  `db:"library_id"`
+	Path            string `db:"path"`
+	Title           string `db:"title"`
+	SortTitle       string `db:"sort_title"`
+	ArtistID        int64  `db:"artist_id"`
+	ArtistName      string `db:"artist_name"`
 	AlbumArtistID   int64  `db:"album_artist_id"`
 	AlbumArtistName string `db:"album_artist_name"`
-	AlbumID    int64  `db:"album_id"`
-	AlbumName  string `db:"album_name"`
-	TrackNumber int   `db:"track_number"`
-	DiscNumber  int   `db:"disc_number"`
-	Year        int   `db:"year"`
-	Genre       string `db:"genre"`
+	AlbumID         int64  `db:"album_id"`
+	AlbumName       string `db:"album_name"`
+	TrackNumber     int    `db:"track_number"`
+	DiscNumber      int    `db:"disc_number"`
+	Year            int    `db:"year"`
+	Genre           string `db:"genre"`
 	// Duration is the track length in seconds
 	Duration int `db:"duration"`
 	// BitRate is the encoding bit rate in kbps
 	BitRate int `db:"bit_rate"`
 	// SampleRate is the audio sample rate in Hz
-	SampleRate int   `db:"sample_rate"`
-	Channels   int   `db:"channels"`
-	FileSize   int64 `db:"file_size"`
+	SampleRate  int    `db:"sample_rate"`
+	Channels    int    `db:"channels"`
+	FileSize    int64  `db:"file_size"`
 	ContentType string `db:"content_type"`
 	// FileFormat is the container/codec name, e.g. "mp3", "flac", "ogg"
 	FileFormat string `db:"file_format"`
@@ -90,13 +90,13 @@ type Song struct {
 	// MBAlbumArtistID is the MusicBrainz release artist MBID
 	MBAlbumArtistID string `db:"mb_album_artist_id"`
 	// MBArtistID is the MusicBrainz artist MBID
-	MBArtistID  string `db:"mb_artist_id"`
-	Composer    string `db:"composer"`
-	Lyricist    string `db:"lyricist"`
-	Conductor   string `db:"conductor"`
-	Comment     string `db:"comment"`
-	Lyrics      string `db:"lyrics"`
-	BPM         int    `db:"bpm"`
+	MBArtistID string `db:"mb_artist_id"`
+	Composer   string `db:"composer"`
+	Lyricist   string `db:"lyricist"`
+	Conductor  string `db:"conductor"`
+	Comment    string `db:"comment"`
+	Lyrics     string `db:"lyrics"`
+	BPM        int    `db:"bpm"`
 	// ReplayGainTrack is the track-level replay gain value in dB
 	ReplayGainTrack float64 `db:"replay_gain_track"`
 	// ReplayGainAlbum is the album-level replay gain value in dB

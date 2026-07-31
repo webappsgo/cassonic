@@ -1,2 +1,0 @@
-go: downloading github.com/kylelemons/godebug v1.1.0
-VETDONE=0

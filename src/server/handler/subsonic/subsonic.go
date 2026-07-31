@@ -20,12 +20,12 @@ const XMLNamespace = "http://subsonic.org/restapi"
 
 // Handler holds all dependencies for the Subsonic API layer.
 type Handler struct {
-	db          *store.DB
-	scanner     *service.Scanner
-	coverArt    *service.CoverArtService
-	ffmpeg      *ffmpeg.Manager
-	nowPlaying  *NowPlayingTracker
-	subsPass    func(ctx context.Context, username string) (string, bool)
+	db         *store.DB
+	scanner    *service.Scanner
+	coverArt   *service.CoverArtService
+	ffmpeg     *ffmpeg.Manager
+	nowPlaying *NowPlayingTracker
+	subsPass   func(ctx context.Context, username string) (string, bool)
 }
 
 // NewHandler creates a Subsonic API handler with all required dependencies.

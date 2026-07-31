@@ -6,11 +6,10 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
-
 
 // ListPlaylists returns all playlists visible to the authenticated user.
 func (h *Handler) ListPlaylists(w http.ResponseWriter, r *http.Request) {

@@ -10,9 +10,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/bogem/id3v2/v2"
-	flac "github.com/go-flac/go-flac"
-	"github.com/go-flac/flacvorbis"
 	"github.com/dhowden/tag"
+	"github.com/go-flac/flacvorbis"
+	flac "github.com/go-flac/go-flac"
 	"github.com/local/cassonic/src/server/service"
 )
 

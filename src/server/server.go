@@ -20,23 +20,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/local/cassonic/src/config"
-	"github.com/local/cassonic/src/server/service/crypto"
+	handleradmin "github.com/local/cassonic/src/server/handler/admin"
+	"github.com/local/cassonic/src/server/handler/ampache"
 	handlerapi "github.com/local/cassonic/src/server/handler/api"
 	"github.com/local/cassonic/src/server/handler/api/swagger"
-	"github.com/local/cassonic/src/server/handler/ampache"
 	"github.com/local/cassonic/src/server/handler/subsonic"
 	"github.com/local/cassonic/src/server/handler/web"
-	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/metrics"
+	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/service"
 	svcbackup "github.com/local/cassonic/src/server/service/backup"
+	"github.com/local/cassonic/src/server/service/crypto"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
 	"github.com/local/cassonic/src/server/service/geoip"
 	"github.com/local/cassonic/src/server/service/scheduler"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/ssl"
 	"github.com/local/cassonic/src/server/store"
-	handleradmin "github.com/local/cassonic/src/server/handler/admin"
 )
 
 // Version, CommitID, and BuildDate are set via -ldflags at build time.
@@ -451,7 +451,6 @@ func (s *Server) healthzJSON() http.HandlerFunc {
 		})
 	}
 }
-
 
 // openAPISpec returns an HTTP handler that serves the cassonic OpenAPI 3.0 specification.
 func (s *Server) openAPISpec() http.HandlerFunc {

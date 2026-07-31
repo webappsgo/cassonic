@@ -53,8 +53,8 @@ type IcecastServer struct {
 
 // IcecastMount represents a configured streaming mount point on an Icecast server
 type IcecastMount struct {
-	ID       int64  `db:"id"`
-	ServerID int64  `db:"server_id"`
+	ID       int64 `db:"id"`
+	ServerID int64 `db:"server_id"`
 	// MountPath is the Icecast mount path, e.g. "/cassonic"
 	MountPath   string      `db:"mount_path"`
 	Name        string      `db:"name"`
@@ -66,9 +66,9 @@ type IcecastMount struct {
 	Genre  string       `db:"genre"`
 	Format StreamFormat `db:"format"`
 	// BitRate is the target encoding bit rate in kbps
-	BitRate int  `db:"bit_rate"`
-	Shuffle bool `db:"shuffle"`
-	Enabled bool `db:"enabled"`
+	BitRate int         `db:"bit_rate"`
+	Shuffle bool        `db:"shuffle"`
+	Enabled bool        `db:"enabled"`
 	Status  MountStatus `db:"status"`
 	// CurrentSong is the ICY metadata display string for the currently playing track
 	CurrentSong string    `db:"current_song"`

@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // formatMIME maps a target format string to the appropriate Content-Type.

@@ -4,17 +4,17 @@ import "time"
 
 // Share represents a public share link for a song, album, or playlist
 type Share struct {
-	ID     int64  `db:"id"`
-	UserID int64  `db:"user_id"`
+	ID     int64 `db:"id"`
+	UserID int64 `db:"user_id"`
 	// Token is the random URL-safe token embedded in the public share URL
-	Token    string `db:"token"`
+	Token string `db:"token"`
 	// ItemType is one of "song", "album", or "playlist"
 	ItemType    string `db:"item_type"`
 	ItemID      int64  `db:"item_id"`
 	Description string `db:"description"`
 	// PasswordHash is the SHA-256 hash of the access password; empty means no password required
-	PasswordHash string    `db:"password_hash"`
-	ViewCount    int       `db:"view_count"`
+	PasswordHash string `db:"password_hash"`
+	ViewCount    int    `db:"view_count"`
 	// ExpiresAt is the share expiry time; zero value means the share never expires
 	ExpiresAt time.Time `db:"expires_at"`
 	CreatedAt time.Time `db:"created_at"`

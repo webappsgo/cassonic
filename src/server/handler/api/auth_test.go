@@ -12,7 +12,6 @@ import (
 	"github.com/local/cassonic/src/server/model"
 )
 
-
 func TestHashPassword_ReturnsArgon2idPrefix(t *testing.T) {
 	h, err := hashPassword("secret")
 	if err != nil {

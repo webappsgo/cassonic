@@ -14,9 +14,9 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // argon2id cost parameters for password hashing.
@@ -231,9 +231,9 @@ func (h *Handler) CreateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := map[string]any{
-		"id":   createdID,
+		"id":    createdID,
 		"token": raw,
-		"name": req.Name,
+		"name":  req.Name,
 	}
 	if !expiresAt.IsZero() {
 		resp["expires_at"] = expiresAt.Format(time.RFC3339)

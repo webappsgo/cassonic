@@ -48,8 +48,8 @@ func (u *User) IsLocked() bool {
 
 // APIToken represents a long-lived API token for a user
 type APIToken struct {
-	ID     int64  `db:"id"`
-	UserID int64  `db:"user_id"`
+	ID     int64 `db:"id"`
+	UserID int64 `db:"user_id"`
 	// TokenHash is the SHA-256 hash of the raw token; the raw value is never stored
 	TokenHash  string    `db:"token_hash"`
 	Name       string    `db:"name"`
@@ -69,9 +69,9 @@ func (t *APIToken) IsExpired() bool {
 
 // ScanStatus tracks a library scan operation
 type ScanStatus struct {
-	ID          int64     `db:"id"`
-	StartedAt   time.Time `db:"started_at"`
-	FinishedAt  time.Time `db:"finished_at"`
+	ID         int64     `db:"id"`
+	StartedAt  time.Time `db:"started_at"`
+	FinishedAt time.Time `db:"finished_at"`
 	// Status is one of "running", "completed", or "failed"
 	Status       string `db:"status"`
 	ScannedFiles int    `db:"scanned_files"`

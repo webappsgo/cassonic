@@ -52,20 +52,20 @@ func (s *stubPodcastStore) DeleteEpisode(ctx context.Context, id int64) error {
 type configPodcastStore struct {
 	*stubPodcastStore
 
-	listChannelsResult  []*model.PodcastChannel
-	listChannelsErr     error
-	createChannelID     int64
-	createChannelErr    error
-	getChannelResult    *model.PodcastChannel
-	getChannelErr       error
-	updateChannelErr    error
-	deleteChannelErr    error
-	getEpisodeResult    *model.PodcastEpisode
-	getEpisodeErr       error
-	listEpisodesResult  []*model.PodcastEpisode
-	listEpisodesErr     error
-	updateEpStatusErr   error
-	deleteEpisodeErr    error
+	listChannelsResult []*model.PodcastChannel
+	listChannelsErr    error
+	createChannelID    int64
+	createChannelErr   error
+	getChannelResult   *model.PodcastChannel
+	getChannelErr      error
+	updateChannelErr   error
+	deleteChannelErr   error
+	getEpisodeResult   *model.PodcastEpisode
+	getEpisodeErr      error
+	listEpisodesResult []*model.PodcastEpisode
+	listEpisodesErr    error
+	updateEpStatusErr  error
+	deleteEpisodeErr   error
 }
 
 func (s *configPodcastStore) ListChannels(ctx context.Context) ([]*model.PodcastChannel, error) {

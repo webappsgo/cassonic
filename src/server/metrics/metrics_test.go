@@ -38,17 +38,17 @@ func TestAllMetricsAreRegistered(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"cassonic_http_requests_total":     false,
-		"cassonic_active_streams":          false,
-		"cassonic_library_songs_total":     false,
-		"cassonic_library_albums_total":    false,
-		"cassonic_library_artists_total":   false,
-		"cassonic_scan_duration_seconds":   false,
-		"cassonic_scan_files_total":        false,
-		"cassonic_scrobbles_total":         false,
-		"cassonic_auth_attempts_total":     false,
-		"cassonic_icecast_mounts_active":   false,
-		"cassonic_scheduler_runs_total":    false,
+		"cassonic_http_requests_total":   false,
+		"cassonic_active_streams":        false,
+		"cassonic_library_songs_total":   false,
+		"cassonic_library_albums_total":  false,
+		"cassonic_library_artists_total": false,
+		"cassonic_scan_duration_seconds": false,
+		"cassonic_scan_files_total":      false,
+		"cassonic_scrobbles_total":       false,
+		"cassonic_auth_attempts_total":   false,
+		"cassonic_icecast_mounts_active": false,
+		"cassonic_scheduler_runs_total":  false,
 	}
 
 	for _, fam := range families {

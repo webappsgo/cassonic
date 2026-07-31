@@ -21,36 +21,36 @@ type stubMusicStore struct {
 	updateLibErr error
 	deleteLibErr error
 
-	artist         *model.Artist
-	artistErr      error
-	artistByName   *model.Artist
-	artists        []*model.Artist
-	artistsErr     error
-	searchArtists  []*model.Artist
-	searchArtErr   error
+	artist        *model.Artist
+	artistErr     error
+	artistByName  *model.Artist
+	artists       []*model.Artist
+	artistsErr    error
+	searchArtists []*model.Artist
+	searchArtErr  error
 
-	album         *model.Album
-	albumErr      error
-	albums        []*model.Album
-	albumsErr     error
+	album          *model.Album
+	albumErr       error
+	albums         []*model.Album
+	albumsErr      error
 	albumsByArtist []*model.Album
-	newestAlbums  []*model.Album
-	randomAlbums  []*model.Album
-	searchAlbums  []*model.Album
-	searchAlbErr  error
+	newestAlbums   []*model.Album
+	randomAlbums   []*model.Album
+	searchAlbums   []*model.Album
+	searchAlbErr   error
 
-	song           *model.Song
-	songErr        error
-	songByPath     *model.Song
-	songsByAlbum   []*model.Song
+	song            *model.Song
+	songErr         error
+	songByPath      *model.Song
+	songsByAlbum    []*model.Song
 	songsByAlbumErr error
-	songsByArtist  []*model.Song
-	songsByGenre   []*model.Song
+	songsByArtist   []*model.Song
+	songsByGenre    []*model.Song
 	songsByGenreErr error
-	randomSongs    []*model.Song
-	randomSongsErr error
-	searchSongs    []*model.Song
-	searchSongsErr error
+	randomSongs     []*model.Song
+	randomSongsErr  error
+	searchSongs     []*model.Song
+	searchSongsErr  error
 
 	genres    []*model.Genre
 	genresErr error
@@ -142,7 +142,7 @@ func (s *stubMusicStore) SearchSongs(ctx context.Context, query string, opts sto
 	return s.searchSongs, s.searchSongsErr
 }
 func (s *stubMusicStore) MarkSongMissing(ctx context.Context, id int64) error { return nil }
-func (s *stubMusicStore) DeleteMissingSongs(ctx context.Context) error       { return nil }
+func (s *stubMusicStore) DeleteMissingSongs(ctx context.Context) error        { return nil }
 func (s *stubMusicStore) IncrementPlayCount(ctx context.Context, id int64) error {
 	return nil
 }
@@ -167,26 +167,26 @@ func (s *stubMusicStore) GetLastScanStatus(ctx context.Context) (*model.ScanStat
 
 // stubUserStore is a configurable implementation of store.UserStore.
 type stubUserStore struct {
-	user            *model.User
-	userErr         error
-	userByUsername  *model.User
+	user              *model.User
+	userErr           error
+	userByUsername    *model.User
 	userByUsernameErr error
-	userByEmail     *model.User
-	users           []*model.User
-	usersErr        error
-	createUserID    int64
-	createUserErr   error
-	updateUserErr   error
-	deleteUserErr   error
+	userByEmail       *model.User
+	users             []*model.User
+	usersErr          error
+	createUserID      int64
+	createUserErr     error
+	updateUserErr     error
+	deleteUserErr     error
 
-	radioStation    *model.InternetRadioStation
-	radioStationErr error
-	radioStations   []*model.InternetRadioStation
+	radioStation     *model.InternetRadioStation
+	radioStationErr  error
+	radioStations    []*model.InternetRadioStation
 	radioStationsErr error
-	createRadioID   int64
-	createRadioErr  error
-	updateRadioErr  error
-	deleteRadioErr  error
+	createRadioID    int64
+	createRadioErr   error
+	updateRadioErr   error
+	deleteRadioErr   error
 
 	subsonicPassword string
 	subsonicOK       bool
@@ -270,24 +270,24 @@ func (s *stubUserStore) DeleteRadioStation(ctx context.Context, id int64) error 
 
 // stubActivityStore is a configurable implementation of store.ActivityStore.
 type stubActivityStore struct {
-	starErr    error
-	unstarErr  error
-	starred    *store.StarredItems
-	starredErr error
-	isStarred  bool
+	starErr      error
+	unstarErr    error
+	starred      *store.StarredItems
+	starredErr   error
+	isStarred    bool
 	isStarredErr error
 
 	setRatingErr error
 	rating       int
 	ratingErr    error
 
-	recordPlayErr error
-	playHistory   []*model.PlayHistory
+	recordPlayErr  error
+	playHistory    []*model.PlayHistory
 	playHistoryErr error
 
-	setBookmarkErr error
-	bookmarks      []*model.Bookmark
-	bookmarksErr   error
+	setBookmarkErr    error
+	bookmarks         []*model.Bookmark
+	bookmarksErr      error
 	deleteBookmarkErr error
 }
 
@@ -333,19 +333,19 @@ func (s *stubActivityStore) GetPlayQueue(ctx context.Context, userID int64) (*mo
 
 // stubPlaylistStore is a configurable implementation of store.PlaylistStore.
 type stubPlaylistStore struct {
-	createID    int64
-	createErr   error
-	playlist    *model.Playlist
-	playlistErr error
-	playlists   []*model.Playlist
-	playlistsErr error
-	updateErr   error
-	deleteErr   error
-	entries     []*model.PlaylistEntry
-	entriesErr  error
+	createID      int64
+	createErr     error
+	playlist      *model.Playlist
+	playlistErr   error
+	playlists     []*model.Playlist
+	playlistsErr  error
+	updateErr     error
+	deleteErr     error
+	entries       []*model.PlaylistEntry
+	entriesErr    error
 	setEntriesErr error
-	addErr      error
-	removeErr   error
+	addErr        error
+	removeErr     error
 }
 
 func (s *stubPlaylistStore) CreatePlaylist(ctx context.Context, p *model.Playlist) (int64, error) {

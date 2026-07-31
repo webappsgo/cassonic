@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // GetPlayQueue returns the authenticated user's play queue with song details.

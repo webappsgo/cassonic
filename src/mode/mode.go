@@ -6,7 +6,7 @@ import "strings"
 type Mode int
 
 const (
-	ModeProduction  Mode = iota
+	ModeProduction Mode = iota
 	ModeDevelopment
 )
 

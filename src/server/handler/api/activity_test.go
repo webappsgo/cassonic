@@ -75,18 +75,18 @@ func (s *stubActivityStore) GetPlayQueue(ctx context.Context, userID int64) (*mo
 type configActivityStore struct {
 	*stubActivityStore
 
-	starErr       error
-	unstarErr     error
-	setRatingErr  error
-	recordPlayErr error
-	setBookmarkErr error
-	getBookmarksResult []*model.Bookmark
-	getBookmarksErr    error
-	deleteBookmarkErr  error
-	savePlayQueueErr   error
-	getPlayQueueResult *model.PlayQueue
+	starErr             error
+	unstarErr           error
+	setRatingErr        error
+	recordPlayErr       error
+	setBookmarkErr      error
+	getBookmarksResult  []*model.Bookmark
+	getBookmarksErr     error
+	deleteBookmarkErr   error
+	savePlayQueueErr    error
+	getPlayQueueResult  *model.PlayQueue
 	getPlayQueueEntries []*model.PlayQueueEntry
-	getPlayQueueErr    error
+	getPlayQueueErr     error
 }
 
 func (s *configActivityStore) Star(ctx context.Context, userID int64, itemType string, itemID int64) error {
@@ -529,8 +529,8 @@ func TestCreateBookmarkMissingFields(t *testing.T) {
 
 func TestCreateBookmarkStoreError(t *testing.T) {
 	act := &configActivityStore{
-		stubActivityStore:  &stubActivityStore{},
-		setBookmarkErr:     errors.New("db error"),
+		stubActivityStore: &stubActivityStore{},
+		setBookmarkErr:    errors.New("db error"),
 	}
 	h := newActivityHandler(act)
 	body := bytes.NewBufferString(`{"item_type":"song","item_id":5,"position":1000}`)

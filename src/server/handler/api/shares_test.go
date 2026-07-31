@@ -15,8 +15,8 @@ import (
 
 // configShareStore is a configurable stub for ShareStore.
 type configShareStore struct {
-	listResult  []*model.Share
-	listErr     error
+	listResult []*model.Share
+	listErr    error
 
 	createResult int64
 	createErr    error
@@ -596,4 +596,3 @@ func TestDeleteShare_DBError(t *testing.T) {
 		t.Fatalf("expected 500, got %d", w.Code)
 	}
 }
-

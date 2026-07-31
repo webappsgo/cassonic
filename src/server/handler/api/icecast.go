@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/local/cassonic/src/server/model"
 	cerr "github.com/local/cassonic/src/common/errors"
+	"github.com/local/cassonic/src/server/model"
 )
 
 // maskPassword replaces the value of a sensitive password field with "*****".
@@ -286,15 +286,15 @@ func (h *Handler) GetIcecastMount(w http.ResponseWriter, r *http.Request) {
 
 // updateIcecastMountRequest is the body for PUT /api/v1/icecast/mounts/{id}.
 type updateIcecastMountRequest struct {
-	Name        string              `json:"name"`
-	Description string              `json:"description"`
-	Scope       model.StreamScope   `json:"scope"`
-	ArtistID    *int64              `json:"artist_id"`
-	Genre       string              `json:"genre"`
-	Format      model.StreamFormat  `json:"format"`
-	BitRate     *int                `json:"bit_rate"`
-	Shuffle     *bool               `json:"shuffle"`
-	Enabled     *bool               `json:"enabled"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Scope       model.StreamScope  `json:"scope"`
+	ArtistID    *int64             `json:"artist_id"`
+	Genre       string             `json:"genre"`
+	Format      model.StreamFormat `json:"format"`
+	BitRate     *int               `json:"bit_rate"`
+	Shuffle     *bool              `json:"shuffle"`
+	Enabled     *bool              `json:"enabled"`
 }
 
 // UpdateIcecastMount updates an Icecast mount point configuration; admin only.

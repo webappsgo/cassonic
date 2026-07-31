@@ -4,7 +4,7 @@ import "time"
 
 // Star represents a user's starred (favorited) item
 type Star struct {
-	ID int64 `db:"id"`
+	ID     int64 `db:"id"`
 	UserID int64 `db:"user_id"`
 	// ItemType is one of "song", "album", or "artist"
 	ItemType  string    `db:"item_type"`
@@ -14,7 +14,7 @@ type Star struct {
 
 // Rating represents a user's 1–5 star rating for an item
 type Rating struct {
-	ID int64 `db:"id"`
+	ID     int64 `db:"id"`
 	UserID int64 `db:"user_id"`
 	// ItemType is one of "song" or "album"
 	ItemType string `db:"item_type"`
@@ -39,7 +39,7 @@ type PlayHistory struct {
 
 // Bookmark saves a playback position so the user can resume later
 type Bookmark struct {
-	ID int64 `db:"id"`
+	ID     int64 `db:"id"`
 	UserID int64 `db:"user_id"`
 	// ItemType is one of "song" or "episode"
 	ItemType string `db:"item_type"`

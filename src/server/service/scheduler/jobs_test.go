@@ -417,7 +417,7 @@ func (f *fakeUserStore) GetUserByEmail(ctx context.Context, email string) (*mode
 	return nil, nil
 }
 func (f *fakeUserStore) UpdateUser(ctx context.Context, u *model.User) error { return nil }
-func (f *fakeUserStore) DeleteUser(ctx context.Context, id int64) error     { return nil }
+func (f *fakeUserStore) DeleteUser(ctx context.Context, id int64) error      { return nil }
 func (f *fakeUserStore) ListUsers(ctx context.Context) ([]*model.User, error) {
 	if f.listUsersErr != nil {
 		return nil, f.listUsersErr
@@ -429,7 +429,7 @@ func (f *fakeUserStore) ResetLoginAttempts(ctx context.Context, id int64) error 
 func (f *fakeUserStore) SetLockedUntil(ctx context.Context, id int64, until time.Time) error {
 	return nil
 }
-func (f *fakeUserStore) UpdateLastLogin(ctx context.Context, id int64) error { return nil }
+func (f *fakeUserStore) UpdateLastLogin(ctx context.Context, id int64) error         { return nil }
 func (f *fakeUserStore) CreateAPIToken(ctx context.Context, t *model.APIToken) error { return nil }
 func (f *fakeUserStore) GetAPITokenByHash(ctx context.Context, hash string) (*model.APIToken, error) {
 	return nil, nil
@@ -454,9 +454,9 @@ func (f *fakeUserStore) CreateSession(ctx context.Context, userID int64, tokenHa
 func (f *fakeUserStore) GetSessionByHash(ctx context.Context, tokenHash string) (*store.Session, error) {
 	return nil, nil
 }
-func (f *fakeUserStore) DeleteSession(ctx context.Context, tokenHash string) error       { return nil }
-func (f *fakeUserStore) DeleteUserSessions(ctx context.Context, userID int64) error      { return nil }
-func (f *fakeUserStore) PurgeExpiredSessions(ctx context.Context) error                  { return nil }
+func (f *fakeUserStore) DeleteSession(ctx context.Context, tokenHash string) error  { return nil }
+func (f *fakeUserStore) DeleteUserSessions(ctx context.Context, userID int64) error { return nil }
+func (f *fakeUserStore) PurgeExpiredSessions(ctx context.Context) error             { return nil }
 func (f *fakeUserStore) GetSubsonicPassword(ctx context.Context, username string) (string, bool, error) {
 	return "", false, nil
 }
@@ -485,7 +485,7 @@ func TestPurgeExpiredTokens(t *testing.T) {
 		users: users,
 		tokens: map[int64][]*model.APIToken{
 			1: {
-				{ID: 10, ExpiresAt: time.Time{}},               // zero value: skipped
+				{ID: 10, ExpiresAt: time.Time{}},                // zero value: skipped
 				{ID: 11, ExpiresAt: time.Now().Add(-time.Hour)}, // expired: deleted
 			},
 			2: {

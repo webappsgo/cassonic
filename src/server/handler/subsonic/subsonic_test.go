@@ -30,10 +30,10 @@ import (
 // stubMusicStore implements store.MusicStore. All methods return empty results
 // or nil errors unless overridden via the corresponding exported field.
 type stubMusicStore struct {
-	libraries    []*model.Library
-	libraryErr   error
-	scanStatus   *model.ScanStatus
-	scanErr      error
+	libraries  []*model.Library
+	libraryErr error
+	scanStatus *model.ScanStatus
+	scanErr    error
 }
 
 func (s *stubMusicStore) CreateLibrary(_ context.Context, _ *model.Library) (int64, error) {
@@ -149,18 +149,18 @@ func (s *stubMusicStore) GetLastScanStatus(_ context.Context) (*model.ScanStatus
 // radio* fields allow tests to configure internet radio station behavior.
 // The byUsername* fields allow tests to configure GetUserByUsername lookups.
 type stubUserStore struct {
-	radioStations     []*model.InternetRadioStation
-	radioListErr      error
-	radioStation      *model.InternetRadioStation
-	radioGetErr       error
-	radioCreateErr    error
-	radioUpdateErr    error
-	radioDeleteErr    error
-	createdRadio      *model.InternetRadioStation
-	updatedRadio      *model.InternetRadioStation
-	deletedRadioID    int64
-	byUsername        *model.User
-	byUsernameErr     error
+	radioStations  []*model.InternetRadioStation
+	radioListErr   error
+	radioStation   *model.InternetRadioStation
+	radioGetErr    error
+	radioCreateErr error
+	radioUpdateErr error
+	radioDeleteErr error
+	createdRadio   *model.InternetRadioStation
+	updatedRadio   *model.InternetRadioStation
+	deletedRadioID int64
+	byUsername     *model.User
+	byUsernameErr  error
 }
 
 func (s *stubUserStore) CreateUser(_ context.Context, _ *model.User) (int64, error) {

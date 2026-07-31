@@ -76,7 +76,7 @@ func TestListUsers_Multiple(t *testing.T) {
 	}
 	var resp struct {
 		Data struct {
-			Total int `json:"total"`
+			Total int              `json:"total"`
 			Users []map[string]any `json:"users"`
 		} `json:"data"`
 	}

@@ -24,7 +24,7 @@ GOMODCACHE := $(HOME)/.local/share/go/pkg/mod
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 freebsd/amd64 freebsd/arm64
 
 REGISTRY ?= ghcr.io/$(PROJECTORG)/$(PROJECTNAME)
-GO_DOCKER := docker run --rm -it \
+GO_DOCKER := docker run --rm \
 	--name $(PROJECTNAME)-$$(tr -dc 'a-z0-9' </dev/urandom | head -c8) \
 	-v $(PWD):/build \
 	-v $(GOCACHE):/root/.cache/go-build \
@@ -32,6 +32,7 @@ GO_DOCKER := docker run --rm -it \
 	-v $(GOMODCACHE):/go/pkg/mod \
 	-w /build \
 	-e CGO_ENABLED=0 \
+	-e GOFLAGS=-buildvcs=false \
 	$(REGISTRY):build
 
 .PHONY: build local release docker test dev clean

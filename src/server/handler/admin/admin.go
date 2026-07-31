@@ -5,8 +5,8 @@ package admin
 import (
 	"bufio"
 	"crypto/sha256"
-	"encoding/hex"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -205,7 +205,7 @@ func (h *Handler) render(w http.ResponseWriter, name, title, active string, data
 type dashboardData struct {
 	Uptime        string
 	Version       string
-	ActiveStreams  int
+	ActiveStreams int
 	TorEnabled    bool
 }
 
@@ -269,10 +269,10 @@ func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request) {
 
 // configFormData carries the editable server settings for the config page.
 type configFormData struct {
-	Port                int
-	Mode                string
-	Debug               bool
-	Flash               string
+	Port  int
+	Mode  string
+	Debug bool
+	Flash string
 }
 
 // Config renders the server configuration form.

@@ -14,14 +14,14 @@ import (
 func buildOGGPage(seq uint32, body []byte) []byte {
 	var out bytes.Buffer
 	out.WriteString("OggS")
-	out.WriteByte(0) // stream structure version
-	out.WriteByte(2) // header type flag (2 = beginning-of-stream on page 0; harmless on others for this test)
-	out.Write(make([]byte, 8))       // granule position
+	out.WriteByte(0)                                   // stream structure version
+	out.WriteByte(2)                                   // header type flag (2 = beginning-of-stream on page 0; harmless on others for this test)
+	out.Write(make([]byte, 8))                         // granule position
 	binary.Write(&out, binary.LittleEndian, uint32(1)) // serial number
 	binary.Write(&out, binary.LittleEndian, seq)       // page sequence number
-	out.Write(make([]byte, 4))       // CRC (unused by the parser under test)
-	out.WriteByte(1)                 // number of segments
-	out.WriteByte(byte(len(body)))   // segment table: single segment
+	out.Write(make([]byte, 4))                         // CRC (unused by the parser under test)
+	out.WriteByte(1)                                   // number of segments
+	out.WriteByte(byte(len(body)))                     // segment table: single segment
 	out.Write(body)
 	return out.Bytes()
 }
@@ -87,9 +87,9 @@ func TestWriteOGGHappyPath(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"TITLE=Test Title":  true,
+		"TITLE=Test Title":   true,
 		"ARTIST=Test Artist": true,
-		"BPM=140":           true,
+		"BPM=140":            true,
 	}
 	for _, c := range comments {
 		delete(want, c)

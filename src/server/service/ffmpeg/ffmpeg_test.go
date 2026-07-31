@@ -328,8 +328,8 @@ func TestParseDuration(t *testing.T) {
 		{"00:00:00", 0},
 		{"00:01:00", 60},
 		{"", 0},
-		{"12:34", 0},   // malformed: only 2 parts
-		{"a:b:c", 0},   // malformed: unparseable numbers
+		{"12:34", 0}, // malformed: only 2 parts
+		{"a:b:c", 0}, // malformed: unparseable numbers
 	}
 	for _, tc := range cases {
 		got := parseDuration(tc.input)

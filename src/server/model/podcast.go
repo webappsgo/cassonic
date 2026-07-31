@@ -48,17 +48,17 @@ type PodcastChannel struct {
 
 // PodcastEpisode represents a single episode within a podcast channel
 type PodcastEpisode struct {
-	ID        int64  `db:"id"`
-	ChannelID int64  `db:"channel_id"`
+	ID        int64 `db:"id"`
+	ChannelID int64 `db:"channel_id"`
 	// GUID is the globally unique identifier from the RSS feed item
 	GUID        string `db:"guid"`
 	Title       string `db:"title"`
 	Description string `db:"description"`
 	AudioURL    string `db:"audio_url"`
 	// DownloadPath is the local filesystem path when the episode has been downloaded
-	DownloadPath string        `db:"download_path"`
-	ContentType  string        `db:"content_type"`
-	FileSize     int64         `db:"file_size"`
+	DownloadPath string `db:"download_path"`
+	ContentType  string `db:"content_type"`
+	FileSize     int64  `db:"file_size"`
 	// Duration is the episode length in seconds
 	Duration    int           `db:"duration"`
 	PublishedAt time.Time     `db:"published_at"`

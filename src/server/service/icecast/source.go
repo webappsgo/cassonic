@@ -141,6 +141,13 @@ func (c *IcecastConn) Close() error {
 func buildMetadataBlock(title string) []byte {
 	escaped := strings.ReplaceAll(title, "'", "\\'")
 	content := fmt.Sprintf("StreamTitle='%s';StreamUrl='';", escaped)
+	// The ICY metadata length is a single byte counting 16-byte blocks, so the
+	// content cannot exceed 255*16 bytes. Truncate long titles to stay within
+	// the limit; otherwise byte(length) overflows and corrupts the block.
+	const maxContent = 255 * 16
+	if len(content) > maxContent {
+		content = content[:maxContent]
+	}
 	length := (len(content) + 15) / 16
 	block := make([]byte, 1+length*16)
 	block[0] = byte(length)

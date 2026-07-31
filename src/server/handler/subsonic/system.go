@@ -1,6 +1,7 @@
 package subsonic
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ func (h *Handler) getScanStatus(w http.ResponseWriter, r *http.Request) {
 // startScan triggers an incremental library scan in the background and returns the initial status.
 func (h *Handler) startScan(w http.ResponseWriter, r *http.Request) {
 	go func() {
-		_ = h.scanner.Scan(r.Context(), service.ScanModeIncremental)
+		_ = h.scanner.Scan(context.Background(), service.ScanModeIncremental)
 	}()
 
 	respond(w, r, ok(func(resp *SubsonicResponse) {
@@ -322,21 +323,21 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 // modelUserToResp converts a model.User to a Subsonic UserResp.
 func modelUserToResp(u *model.User) *UserResp {
 	return &UserResp{
-		Username:          u.Username,
-		Email:             u.Email,
-		ScrobblingEnabled: true,
-		MaxBitRate:        u.MaxBitRate,
-		AdminRole:         u.IsAdmin,
-		SettingsRole:      u.CanManageUsers || u.IsAdmin,
-		DownloadRole:      u.CanDownload,
-		UploadRole:        u.CanUpload,
-		PlaylistRole:      true,
-		CoverArtRole:      true,
-		CommentRole:       u.CanComment,
-		PodcastRole:       u.CanPodcast,
-		StreamRole:        true,
-		JukeboxRole:       false,
-		ShareRole:         u.CanShare,
+		Username:            u.Username,
+		Email:               u.Email,
+		ScrobblingEnabled:   true,
+		MaxBitRate:          u.MaxBitRate,
+		AdminRole:           u.IsAdmin,
+		SettingsRole:        u.CanManageUsers || u.IsAdmin,
+		DownloadRole:        u.CanDownload,
+		UploadRole:          u.CanUpload,
+		PlaylistRole:        true,
+		CoverArtRole:        true,
+		CommentRole:         u.CanComment,
+		PodcastRole:         u.CanPodcast,
+		StreamRole:          true,
+		JukeboxRole:         false,
+		ShareRole:           u.CanShare,
 		VideoConversionRole: false,
 	}
 }

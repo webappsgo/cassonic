@@ -17,8 +17,8 @@ import (
 
 // configPlaylistStore is a configurable stub for PlaylistStore.
 type configPlaylistStore struct {
-	listResult  []*model.Playlist
-	listErr     error
+	listResult []*model.Playlist
+	listErr    error
 
 	createResult int64
 	createErr    error

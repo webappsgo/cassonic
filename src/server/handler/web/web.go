@@ -485,9 +485,9 @@ func (h *Handler) Artists(w http.ResponseWriter, r *http.Request) {
 
 	type artistsData struct {
 		PageData
-		Artists  []*model.Artist
-		Page     int
-		HasMore  bool
+		Artists []*model.Artist
+		Page    int
+		HasMore bool
 	}
 
 	artists, _ := h.db.Music.ListArtists(r.Context(), store.ListOpts{
@@ -830,9 +830,9 @@ func (h *Handler) Share(w http.ResponseWriter, r *http.Request) {
 
 	type shareData struct {
 		PageData
-		Share   *model.Share
-		Songs   []*model.Song
-		Album   *model.Album
+		Share *model.Share
+		Songs []*model.Song
+		Album *model.Album
 	}
 
 	lang := h.resolveLocale(w, r)

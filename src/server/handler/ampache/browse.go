@@ -1,6 +1,7 @@
 package ampache
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -669,7 +670,7 @@ func (h *Handler) systemUpdate(w http.ResponseWriter, r *http.Request, isJSON bo
 	}
 
 	go func() {
-		_ = h.scanner.Scan(r.Context(), scanModeFull)
+		_ = h.scanner.Scan(context.Background(), scanModeFull)
 	}()
 
 	respond(w, r, isJSON, okResp("success", "scan triggered"))
@@ -881,7 +882,7 @@ func (h *Handler) catalogAction(w http.ResponseWriter, r *http.Request, isJSON b
 	}
 
 	go func() {
-		_ = h.scanner.Scan(r.Context(), scanModeFull)
+		_ = h.scanner.Scan(context.Background(), scanModeFull)
 	}()
 
 	respond(w, r, isJSON, okResp("success", "catalog action triggered"))

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/local/cassonic/src/server/store"
 	cerr "github.com/local/cassonic/src/common/errors"
+	"github.com/local/cassonic/src/server/store"
 )
 
 // ListArtists returns a paginated list of artists with optional search and sort.

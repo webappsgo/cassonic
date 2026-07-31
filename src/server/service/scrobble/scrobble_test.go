@@ -62,22 +62,22 @@ type stubScrobbleStore struct {
 	setVerifiedErr   error
 	setVerifiedCalls []setVerifiedCall
 
-	enqueueErr   error
-	enqueued     []*model.ScrobbleQueueEntry
+	enqueueErr error
+	enqueued   []*model.ScrobbleQueueEntry
 
 	pendingByService map[int64][]*model.ScrobbleQueueEntry
 	pendingErr       map[int64]error
 	pendingLimits    map[int64]int
 
-	deleteQueueErr    error
-	deletedQueueIDs   []int64
+	deleteQueueErr  error
+	deletedQueueIDs []int64
 
 	incrementErr   error
 	incrementCalls []incrementCall
 
-	purgeErr      error
-	purgeCalled   bool
-	purgeBefore   time.Time
+	purgeErr         error
+	purgeCalled      bool
+	purgeBefore      time.Time
 	purgeMaxAttempts int
 }
 

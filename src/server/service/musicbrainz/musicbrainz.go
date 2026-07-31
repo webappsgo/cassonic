@@ -21,7 +21,7 @@ const (
 // Recording holds MusicBrainz recording (track) data.
 type Recording struct {
 	// ID is the MusicBrainz recording MBID.
-	ID string
+	ID    string
 	Title string
 	// ArtistMBID is the MBID of the primary artist credit.
 	ArtistMBID string
@@ -36,11 +36,11 @@ type Recording struct {
 // Release holds MusicBrainz release data.
 type Release struct {
 	// ID is the release MBID.
-	ID string
+	ID    string
 	Title string
 	// ArtistMBID is the MBID of the primary artist credit.
 	ArtistMBID string
-	Year int
+	Year       int
 }
 
 // Client queries the MusicBrainz API at 1 request per second as required by MusicBrainz ToS.
@@ -198,10 +198,10 @@ func (c *Client) LookupRelease(ctx context.Context, album, artist string) (*Rele
 
 	var result struct {
 		Releases []struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
-			Score int    `json:"score"`
-			Date  string `json:"date"`
+			ID           string `json:"id"`
+			Title        string `json:"title"`
+			Score        int    `json:"score"`
+			Date         string `json:"date"`
 			ArtistCredit []struct {
 				Artist struct {
 					ID string `json:"id"`

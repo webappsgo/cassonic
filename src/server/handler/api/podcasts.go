@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // ListPodcasts returns all subscribed podcast channels.

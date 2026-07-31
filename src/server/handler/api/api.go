@@ -9,25 +9,25 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/service"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/store"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // Handler holds all native API dependencies.
 type Handler struct {
-	db           *store.DB
-	scanner      *service.Scanner
-	coverArt     *service.CoverArtService
-	ffmpeg       *ffmpeg.Manager
-	tagReader    *tags.Reader
-	nowPlaying   *NowPlayingTracker
-	backupSvc    BackupService
-	subsonicKey  []byte
+	db          *store.DB
+	scanner     *service.Scanner
+	coverArt    *service.CoverArtService
+	ffmpeg      *ffmpeg.Manager
+	tagReader   *tags.Reader
+	nowPlaying  *NowPlayingTracker
+	backupSvc   BackupService
+	subsonicKey []byte
 }
 
 // NowPlayingInfo holds metadata for one active native API stream.

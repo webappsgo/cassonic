@@ -85,7 +85,7 @@ func TestShareHasPassword(t *testing.T) {
 
 func TestServiceTypeProtocol(t *testing.T) {
 	tests := []struct {
-		svc      ServiceType
+		svc       ServiceType
 		wantProto string
 	}{
 		{ServiceLastFM, "lastfm"},

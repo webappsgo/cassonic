@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	cerr "github.com/local/cassonic/src/common/errors"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/service/crypto"
-	cerr "github.com/local/cassonic/src/common/errors"
 )
 
 // safeUser converts a model.User to a response map, omitting sensitive fields.

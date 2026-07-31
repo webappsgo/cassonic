@@ -9,7 +9,7 @@ import (
 type contextKey int
 
 const (
-	ctxKeyRequestID      contextKey = iota
+	ctxKeyRequestID contextKey = iota
 	ctxKeyUser
 	ctxKeyAuthScheme
 	ctxKeySubsonicClient

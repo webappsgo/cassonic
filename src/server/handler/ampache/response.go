@@ -43,51 +43,51 @@ type HandshakeResp struct {
 
 // AmpSong is the Ampache wire representation of a song.
 type AmpSong struct {
-	XMLName     xml.Name `xml:"song" json:"-"`
-	ID          string   `xml:"id,attr" json:"id"`
-	Title       string   `xml:"title" json:"title"`
-	Name        string   `xml:"name" json:"name"`
-	Artist      AmpRef   `xml:"artist" json:"artist"`
-	Album       AmpRef   `xml:"album" json:"album"`
-	AlbumArtist AmpRef   `xml:"albumartist" json:"albumartist"`
-	Disk        int      `xml:"disk" json:"disk"`
-	Track       int      `xml:"track" json:"track"`
-	Year        int      `xml:"year" json:"year"`
-	Genre       []AmpRef `xml:"genre" json:"genre"`
-	Duration    int      `xml:"duration" json:"duration"`
-	BitRate     int      `xml:"bitrate" json:"bitrate"`
-	Rate        int      `xml:"rate" json:"rate"`
-	Mode        string   `xml:"mode" json:"mode"`
-	Channels    int      `xml:"channels" json:"channels"`
-	Mime        string   `xml:"mime" json:"mime"`
-	URL         string   `xml:"url" json:"url"`
-	Size        int64    `xml:"size" json:"size"`
-	MBTrackID   string   `xml:"mbid" json:"mbid"`
-	Art         string   `xml:"art" json:"art"`
-	Flag        int      `xml:"flag" json:"flag"`
-	Preciserating int    `xml:"preciserating" json:"preciserating"`
-	Rating      int      `xml:"rating" json:"rating"`
-	Composer    string   `xml:"composer" json:"composer"`
-	Lyrics      string   `xml:"lyrics" json:"lyrics"`
-	Playcount   int      `xml:"playcount" json:"playcount"`
-	Catalog     string   `xml:"catalog" json:"catalog"`
-	ReplayGain  float64  `xml:"replaygain_track_gain" json:"replaygain_track_gain"`
+	XMLName       xml.Name `xml:"song" json:"-"`
+	ID            string   `xml:"id,attr" json:"id"`
+	Title         string   `xml:"title" json:"title"`
+	Name          string   `xml:"name" json:"name"`
+	Artist        AmpRef   `xml:"artist" json:"artist"`
+	Album         AmpRef   `xml:"album" json:"album"`
+	AlbumArtist   AmpRef   `xml:"albumartist" json:"albumartist"`
+	Disk          int      `xml:"disk" json:"disk"`
+	Track         int      `xml:"track" json:"track"`
+	Year          int      `xml:"year" json:"year"`
+	Genre         []AmpRef `xml:"genre" json:"genre"`
+	Duration      int      `xml:"duration" json:"duration"`
+	BitRate       int      `xml:"bitrate" json:"bitrate"`
+	Rate          int      `xml:"rate" json:"rate"`
+	Mode          string   `xml:"mode" json:"mode"`
+	Channels      int      `xml:"channels" json:"channels"`
+	Mime          string   `xml:"mime" json:"mime"`
+	URL           string   `xml:"url" json:"url"`
+	Size          int64    `xml:"size" json:"size"`
+	MBTrackID     string   `xml:"mbid" json:"mbid"`
+	Art           string   `xml:"art" json:"art"`
+	Flag          int      `xml:"flag" json:"flag"`
+	Preciserating int      `xml:"preciserating" json:"preciserating"`
+	Rating        int      `xml:"rating" json:"rating"`
+	Composer      string   `xml:"composer" json:"composer"`
+	Lyrics        string   `xml:"lyrics" json:"lyrics"`
+	Playcount     int      `xml:"playcount" json:"playcount"`
+	Catalog       string   `xml:"catalog" json:"catalog"`
+	ReplayGain    float64  `xml:"replaygain_track_gain" json:"replaygain_track_gain"`
 }
 
 // AmpAlbum is the Ampache wire representation of an album.
 type AmpAlbum struct {
-	XMLName    xml.Name `xml:"album" json:"-"`
-	ID         string   `xml:"id,attr" json:"id"`
-	Name       string   `xml:"name" json:"name"`
-	Artist     AmpRef   `xml:"artist" json:"artist"`
-	Year       int      `xml:"year" json:"year"`
-	Genre      []AmpRef `xml:"genre" json:"genre"`
-	SongCount  int      `xml:"songcount" json:"songcount"`
-	Duration   int      `xml:"time" json:"time"`
-	Art        string   `xml:"art" json:"art"`
-	MBAlbumID  string   `xml:"mbid" json:"mbid"`
-	Rating     int      `xml:"rating" json:"rating"`
-	Flag       int      `xml:"flag" json:"flag"`
+	XMLName   xml.Name `xml:"album" json:"-"`
+	ID        string   `xml:"id,attr" json:"id"`
+	Name      string   `xml:"name" json:"name"`
+	Artist    AmpRef   `xml:"artist" json:"artist"`
+	Year      int      `xml:"year" json:"year"`
+	Genre     []AmpRef `xml:"genre" json:"genre"`
+	SongCount int      `xml:"songcount" json:"songcount"`
+	Duration  int      `xml:"time" json:"time"`
+	Art       string   `xml:"art" json:"art"`
+	MBAlbumID string   `xml:"mbid" json:"mbid"`
+	Rating    int      `xml:"rating" json:"rating"`
+	Flag      int      `xml:"flag" json:"flag"`
 }
 
 // AmpArtist is the Ampache wire representation of an artist.
@@ -112,25 +112,25 @@ type AmpRef struct {
 
 // AmpGenre is the Ampache wire representation of a genre (also used as label).
 type AmpGenre struct {
-	XMLName    xml.Name `xml:"genre" json:"-"`
-	ID         string   `xml:"id,attr" json:"id"`
-	Name       string   `xml:"name" json:"name"`
-	SongCount  int      `xml:"songs" json:"songs"`
-	AlbumCount int      `xml:"albums" json:"albums"`
-	ArtistCount int     `xml:"artists" json:"artists"`
+	XMLName     xml.Name `xml:"genre" json:"-"`
+	ID          string   `xml:"id,attr" json:"id"`
+	Name        string   `xml:"name" json:"name"`
+	SongCount   int      `xml:"songs" json:"songs"`
+	AlbumCount  int      `xml:"albums" json:"albums"`
+	ArtistCount int      `xml:"artists" json:"artists"`
 }
 
 // AmpCatalog is the Ampache wire representation of a music library.
 type AmpCatalog struct {
-	XMLName   xml.Name `xml:"catalog" json:"-"`
-	ID        string   `xml:"id,attr" json:"id"`
-	Name      string   `xml:"name" json:"name"`
-	Type      string   `xml:"catalog_type" json:"catalog_type"`
-	LastUpdate string  `xml:"last_update" json:"last_update"`
-	LastAdd    string  `xml:"last_add" json:"last_add"`
-	LastClean  string  `xml:"last_clean" json:"last_clean"`
-	Enabled    int     `xml:"enabled" json:"enabled"`
-	Path       string  `xml:"path" json:"path"`
+	XMLName    xml.Name `xml:"catalog" json:"-"`
+	ID         string   `xml:"id,attr" json:"id"`
+	Name       string   `xml:"name" json:"name"`
+	Type       string   `xml:"catalog_type" json:"catalog_type"`
+	LastUpdate string   `xml:"last_update" json:"last_update"`
+	LastAdd    string   `xml:"last_add" json:"last_add"`
+	LastClean  string   `xml:"last_clean" json:"last_clean"`
+	Enabled    int      `xml:"enabled" json:"enabled"`
+	Path       string   `xml:"path" json:"path"`
 }
 
 // AmpUser is the Ampache wire representation of a user account.
@@ -161,18 +161,18 @@ type AmpPreference struct {
 
 // AmpShare is the Ampache wire representation of a share link.
 type AmpShare struct {
-	XMLName     xml.Name `xml:"share" json:"-"`
-	ID          string   `xml:"id,attr" json:"id"`
-	Name        string   `xml:"name" json:"name"`
-	Owner       string   `xml:"owner" json:"owner"`
-	AllowStream int      `xml:"allow_stream" json:"allow_stream"`
-	AllowDownload int    `xml:"allow_download" json:"allow_download"`
-	Expire      string   `xml:"expire" json:"expire"`
-	PublicURL   string   `xml:"public_url" json:"public_url"`
-	Creation    string   `xml:"creation" json:"creation"`
-	LastVisit   string   `xml:"lastvisit" json:"lastvisit"`
-	ObjectType  string   `xml:"object_type" json:"object_type"`
-	ObjectID    string   `xml:"object_id" json:"object_id"`
+	XMLName       xml.Name `xml:"share" json:"-"`
+	ID            string   `xml:"id,attr" json:"id"`
+	Name          string   `xml:"name" json:"name"`
+	Owner         string   `xml:"owner" json:"owner"`
+	AllowStream   int      `xml:"allow_stream" json:"allow_stream"`
+	AllowDownload int      `xml:"allow_download" json:"allow_download"`
+	Expire        string   `xml:"expire" json:"expire"`
+	PublicURL     string   `xml:"public_url" json:"public_url"`
+	Creation      string   `xml:"creation" json:"creation"`
+	LastVisit     string   `xml:"lastvisit" json:"lastvisit"`
+	ObjectType    string   `xml:"object_type" json:"object_type"`
+	ObjectID      string   `xml:"object_id" json:"object_id"`
 }
 
 // AmpBookmark is the Ampache wire representation of a playback bookmark.
@@ -190,30 +190,30 @@ type AmpBookmark struct {
 
 // AmpPlaylist is the Ampache wire representation of a playlist.
 type AmpPlaylist struct {
-	XMLName   xml.Name `xml:"playlist" json:"-"`
-	ID        string   `xml:"id,attr" json:"id"`
-	Name      string   `xml:"name" json:"name"`
-	Owner     string   `xml:"owner" json:"owner"`
-	Items     int      `xml:"items" json:"items"`
-	Type      string   `xml:"type" json:"type"`
-	Duration  int      `xml:"duration" json:"duration"`
-	Art       string   `xml:"art" json:"art"`
+	XMLName  xml.Name `xml:"playlist" json:"-"`
+	ID       string   `xml:"id,attr" json:"id"`
+	Name     string   `xml:"name" json:"name"`
+	Owner    string   `xml:"owner" json:"owner"`
+	Items    int      `xml:"items" json:"items"`
+	Type     string   `xml:"type" json:"type"`
+	Duration int      `xml:"duration" json:"duration"`
+	Art      string   `xml:"art" json:"art"`
 }
 
 // AmpPodcast is the Ampache wire representation of a podcast channel.
 type AmpPodcast struct {
-	XMLName      xml.Name      `xml:"podcast" json:"-"`
-	ID           string        `xml:"id,attr" json:"id"`
-	Name         string        `xml:"name" json:"name"`
-	Description  string        `xml:"description" json:"description"`
-	Language     string        `xml:"language" json:"language"`
-	Copyright    string        `xml:"copyright" json:"copyright"`
-	FeedURL      string        `xml:"feed_url" json:"feed_url"`
-	Generator    string        `xml:"generator" json:"generator"`
-	Website      string        `xml:"website" json:"website"`
-	Build        string        `xml:"build" json:"build"`
-	Status       string        `xml:"status" json:"status"`
-	Episodes     []AmpPodcastEpisode `xml:"episode,omitempty" json:"episode,omitempty"`
+	XMLName     xml.Name            `xml:"podcast" json:"-"`
+	ID          string              `xml:"id,attr" json:"id"`
+	Name        string              `xml:"name" json:"name"`
+	Description string              `xml:"description" json:"description"`
+	Language    string              `xml:"language" json:"language"`
+	Copyright   string              `xml:"copyright" json:"copyright"`
+	FeedURL     string              `xml:"feed_url" json:"feed_url"`
+	Generator   string              `xml:"generator" json:"generator"`
+	Website     string              `xml:"website" json:"website"`
+	Build       string              `xml:"build" json:"build"`
+	Status      string              `xml:"status" json:"status"`
+	Episodes    []AmpPodcastEpisode `xml:"episode,omitempty" json:"episode,omitempty"`
 }
 
 // AmpPodcastEpisode is the Ampache wire representation of a podcast episode.
@@ -237,29 +237,29 @@ type AmpPodcastEpisode struct {
 
 // AmpLiveStream is the Ampache wire representation of an internet radio station.
 type AmpLiveStream struct {
-	XMLName   xml.Name `xml:"live_stream" json:"-"`
-	ID        string   `xml:"id,attr" json:"id"`
-	Name      string   `xml:"name" json:"name"`
-	Codec     string   `xml:"codec" json:"codec"`
-	BitRate   int      `xml:"bitrate" json:"bitrate"`
-	Sampling  int      `xml:"sampling" json:"sampling"`
-	URL       string   `xml:"url" json:"url"`
-	SiteURL   string   `xml:"site_url" json:"site_url"`
-	IsPublic  int      `xml:"is_public" json:"is_public"`
-	Catalog   int      `xml:"catalog" json:"catalog"`
+	XMLName  xml.Name `xml:"live_stream" json:"-"`
+	ID       string   `xml:"id,attr" json:"id"`
+	Name     string   `xml:"name" json:"name"`
+	Codec    string   `xml:"codec" json:"codec"`
+	BitRate  int      `xml:"bitrate" json:"bitrate"`
+	Sampling int      `xml:"sampling" json:"sampling"`
+	URL      string   `xml:"url" json:"url"`
+	SiteURL  string   `xml:"site_url" json:"site_url"`
+	IsPublic int      `xml:"is_public" json:"is_public"`
+	Catalog  int      `xml:"catalog" json:"catalog"`
 }
 
 // AmpNowPlaying is the Ampache wire representation of a current stream.
 type AmpNowPlaying struct {
-	XMLName   xml.Name `xml:"song" json:"-"`
-	ID        string   `xml:"id,attr" json:"id"`
-	Title     string   `xml:"title" json:"title"`
-	Artist    AmpRef   `xml:"artist" json:"artist"`
-	Album     AmpRef   `xml:"album" json:"album"`
-	Client    string   `xml:"client" json:"client"`
-	Expire    int      `xml:"expire" json:"expire"`
-	UserID    string   `xml:"user_id" json:"user_id"`
-	Username  string   `xml:"username" json:"username"`
+	XMLName  xml.Name `xml:"song" json:"-"`
+	ID       string   `xml:"id,attr" json:"id"`
+	Title    string   `xml:"title" json:"title"`
+	Artist   AmpRef   `xml:"artist" json:"artist"`
+	Album    AmpRef   `xml:"album" json:"album"`
+	Client   string   `xml:"client" json:"client"`
+	Expire   int      `xml:"expire" json:"expire"`
+	UserID   string   `xml:"user_id" json:"user_id"`
+	Username string   `xml:"username" json:"username"`
 }
 
 // AmpStats is the Ampache wire representation of server statistics.

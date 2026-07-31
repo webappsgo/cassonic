@@ -123,6 +123,12 @@ compose.default.yaml
 # AI tool — generic
 .ai/
 
-# Go test coverage
+# Go test coverage and build/test output artifacts
 coverage.out
 coverage.html
+*.out
+.coverage*
+.buildout.txt
+.buildlog_tmp.txt
+.testout.txt
+.vetout.txt

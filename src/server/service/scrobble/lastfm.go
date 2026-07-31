@@ -94,12 +94,12 @@ func (s *Service) scrobbleLastFM(ctx context.Context, svc *model.ScrobbleService
 	}
 
 	params := map[string]string{
-		"method":         "track.scrobble",
-		"track[0]":       track.Track,
-		"artist[0]":      track.Artist,
-		"album[0]":       track.Album,
-		"timestamp[0]":   fmt.Sprintf("%d", track.Timestamp),
-		"duration[0]":    fmt.Sprintf("%d", track.Duration),
+		"method":       "track.scrobble",
+		"track[0]":     track.Track,
+		"artist[0]":    track.Artist,
+		"album[0]":     track.Album,
+		"timestamp[0]": fmt.Sprintf("%d", track.Timestamp),
+		"duration[0]":  fmt.Sprintf("%d", track.Duration),
 	}
 	if track.MBID != "" {
 		params["mbid[0]"] = track.MBID

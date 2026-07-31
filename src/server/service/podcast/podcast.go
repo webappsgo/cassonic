@@ -20,10 +20,10 @@ import (
 
 // rssFeed is the top-level RSS wrapper.
 type rssChannel struct {
-	XMLName     xml.Name     `xml:"channel"`
-	Title       string       `xml:"title"`
-	Desc        string       `xml:"description"`
-	Link        string       `xml:"link"`
+	XMLName xml.Name `xml:"channel"`
+	Title   string   `xml:"title"`
+	Desc    string   `xml:"description"`
+	Link    string   `xml:"link"`
 	// rssImage captures the standard RSS <image> element (no namespace).
 	// ITunesImage captures <itunes:image href="…"/> — must use the full
 	// namespace URI so encoding/xml does not shadow it with the unqualified tag.
