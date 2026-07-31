@@ -46,6 +46,7 @@
           {{call $.T "playlists.edit"}}
         </a>
         <form method="post" action="/api/v1/playlists/{{.ID}}/delete" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
           <button
             type="submit"
             class="btn btn-danger btn-sm"

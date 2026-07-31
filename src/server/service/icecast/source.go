@@ -3,6 +3,7 @@ package icecast
 import (
 	"bufio"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -10,7 +11,14 @@ import (
 	"time"
 
 	"github.com/local/cassonic/src/server/model"
+	"github.com/local/cassonic/src/server/service/crypto"
 )
+
+// encPrefix marks a SourcePass value as AES-256-GCM ciphertext produced by
+// EncryptSourcePass. Values without the prefix are treated as plaintext,
+// which lets an operator hand-edit server.yml without needing to encrypt
+// the password themselves.
+const encPrefix = "enc:"
 
 // icyMetaInt is the number of audio bytes between ICY metadata blocks.
 const icyMetaInt = 8192
@@ -30,14 +38,20 @@ type IcecastConn struct {
 }
 
 // Connect establishes an Icecast source connection using the HTTP PUT source protocol.
-func Connect(server *model.IcecastServer, mount *model.IcecastMount) (*IcecastConn, error) {
+// key is the AES-256 key used to decrypt an "enc:"-prefixed SourcePass; pass
+// nil when the source password is known to be stored as plaintext.
+func Connect(server *model.IcecastServer, mount *model.IcecastMount, key []byte) (*IcecastConn, error) {
+	sourcePass, err := decryptOrPlaintext(server.SourcePass, key)
+	if err != nil {
+		return nil, fmt.Errorf("icecast connect: %w", err)
+	}
+
 	address := net.JoinHostPort(server.Host, fmt.Sprintf("%d", server.Port))
 	conn, err := net.DialTimeout("tcp", address, 10*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("icecast connect: dial %s: %w", address, err)
 	}
 
-	sourcePass := decryptOrPlaintext(server.SourcePass, nil)
 	credentials := base64.StdEncoding.EncodeToString(
 		[]byte(server.SourceUser + ":" + sourcePass),
 	)
@@ -172,10 +186,35 @@ func contentTypeForFormat(format model.StreamFormat) string {
 // decryptOrPlaintext returns the decrypted value if encrypted, or the value as-is.
 // AES-256-GCM encrypted values carry an "enc:" prefix; plain values are returned unchanged.
 // key is the AES-256 master key; pass nil when encryption has not yet been configured.
-func decryptOrPlaintext(s string, key []byte) string {
-	if !strings.HasPrefix(s, "enc:") {
-		return s
+// Returns an error when s is "enc:"-prefixed but key is empty or decryption fails,
+// rather than silently returning an empty password.
+func decryptOrPlaintext(s string, key []byte) (string, error) {
+	if !strings.HasPrefix(s, encPrefix) {
+		return s, nil
 	}
-	_ = key
-	return ""
+	if len(key) == 0 {
+		return "", errors.New("icecast: source password is encrypted but no encryption key is configured")
+	}
+	plain, err := crypto.Decrypt(key, strings.TrimPrefix(s, encPrefix))
+	if err != nil {
+		return "", fmt.Errorf("icecast: decrypt source password: %w", err)
+	}
+	return plain, nil
+}
+
+// EncryptSourcePass encrypts plaintext for storage in IcecastServer.SourcePass,
+// returning the "enc:"-prefixed ciphertext that decryptOrPlaintext expects.
+// key is the AES-256 master key derived the same way as the Subsonic password
+// key (crypto.DeriveKey on the server's auth secret); when key is empty the
+// value is stored as plaintext, matching decryptOrPlaintext's fallback so a
+// server started before secrets are configured never loses the password.
+func EncryptSourcePass(key []byte, plaintext string) (string, error) {
+	if len(key) == 0 || plaintext == "" {
+		return plaintext, nil
+	}
+	ciphertext, err := crypto.Encrypt(key, plaintext)
+	if err != nil {
+		return "", fmt.Errorf("icecast: encrypt source password: %w", err)
+	}
+	return encPrefix + ciphertext, nil
 }

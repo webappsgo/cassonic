@@ -50,11 +50,20 @@ func main() {
 		os.Exit(0)
 	}
 
+	// CASSONIC_COLOR env var applies only when --color was not given
+	// explicitly, keeping the precedence flag > env > config file > default.
+	if flagColor == cfg.Color {
+		if v := os.Getenv("CASSONIC_COLOR"); v != "" {
+			flagColor = v
+		}
+	}
 	initColor(flagColor)
 
 	serverURL := cfg.Server.URL
 	if flagServer != "" {
 		serverURL = flagServer
+	} else if v := os.Getenv("CASSONIC_SERVER"); v != "" {
+		serverURL = v
 	}
 	if serverURL == "" {
 		serverURL = "http://localhost:4533"

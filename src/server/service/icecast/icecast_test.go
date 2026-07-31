@@ -132,7 +132,7 @@ func waitForMountStatus(t *testing.T, db *store.DB, mountID int64, want model.Mo
 
 func TestNewManagerReturnsUsableManager(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	if mgr == nil {
 		t.Fatal("NewManager: returned nil")
 	}
@@ -145,7 +145,7 @@ func TestNewManagerReturnsUsableManager(t *testing.T) {
 
 func TestStatusUnknownMountNotStreaming(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	st := mgr.Status(999)
 	if st == nil {
@@ -158,7 +158,7 @@ func TestStatusUnknownMountNotStreaming(t *testing.T) {
 
 func TestStatusRegisteredHandleReportsStreaming(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	started := time.Now().Add(-5 * time.Second)
 	mgr.mu.Lock()
@@ -188,7 +188,7 @@ func TestStatusRegisteredHandleReportsStreaming(t *testing.T) {
 
 func TestStartMountAlreadyRunningIsNoOp(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	existing := &MountStream{doneCh: make(chan struct{})}
 	mgr.mu.Lock()
@@ -209,7 +209,7 @@ func TestStartMountAlreadyRunningIsNoOp(t *testing.T) {
 
 func TestStartMountUnknownIDReturnsError(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	err := mgr.StartMount(context.Background(), 12345)
 	if err == nil {
@@ -221,7 +221,7 @@ func TestStartMountUnknownIDReturnsError(t *testing.T) {
 
 func TestStopMountUnknownIDIsNoOp(t *testing.T) {
 	db := newTestDB(t)
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	done := make(chan struct{})
 	go func() {
@@ -242,7 +242,7 @@ func TestManagerStartStopWithoutFFmpegSetsErrorStatus(t *testing.T) {
 	db := newTestDB(t)
 	_, mountID := seedServerAndMount(t, db, true)
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatalf("Start: unexpected error: %v", err)
@@ -278,7 +278,7 @@ func TestManagerStartSkipsDisabledMounts(t *testing.T) {
 	db := newTestDB(t)
 	_, mountID := seedServerAndMount(t, db, false)
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatalf("Start: unexpected error: %v", err)
 	}

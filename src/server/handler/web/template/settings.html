@@ -20,6 +20,7 @@
     <section id="profile" class="settings-section" aria-label="{{call .T "settings.tab.profile"}}">
       <h2 class="settings-section-title">{{call .T "settings.tab.profile"}}</h2>
       <form method="post" action="/api/v1/users/me">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <input type="hidden" name="_method" value="PUT">
         <div class="card">
           <div class="card-body">
@@ -79,6 +80,7 @@
         <div class="card-body">
           <p class="settings-hint">{{call .T "settings.subsonic.hint"}}</p>
           <form method="post" action="/api/v1/users/me/subsonic-password">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="_method" value="PUT">
             <div class="form-group">
               <label class="form-label" for="subsonic_password">{{call .T "settings.subsonic.password"}}</label>
@@ -108,6 +110,7 @@
         </div>
         <div class="card-body">
           <form method="post" action="/api/v1/auth/tokens">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="form-group">
               <label class="form-label" for="token_name">{{call .T "settings.tokens.name"}}</label>
               <input
@@ -159,6 +162,7 @@
                   </td>
                   <td>
                     <form method="post" action="/api/v1/auth/tokens/{{.ID}}/revoke" class="inline-form">
+                      <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                       <input type="hidden" name="_method" value="DELETE">
                       <button
                         type="submit"

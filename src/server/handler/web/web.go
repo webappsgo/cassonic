@@ -42,6 +42,10 @@ type PageData struct {
 	Flash   string
 	Lang    string
 	T       func(string) string
+	// CSRFToken is the double-submit CSRF token issued by mw.CSRF for this
+	// request; templates embed it as a hidden csrf_token input on every
+	// state-changing (POST/PUT/PATCH/DELETE) form.
+	CSRFToken string
 }
 
 // NewHandler creates a web Handler backed by the given DB aggregate and config.
@@ -148,14 +152,14 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// sessionCookieName is the cookie used to store the web session token.
-const sessionCookieName = "cassonic_session"
+// SessionCookieName is the cookie used to store the web session token.
+const SessionCookieName = "cassonic_session"
 
 // sessionAuth is chi middleware that authenticates the session cookie.
 // On failure it redirects to /login.
 func (h *Handler) sessionAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(sessionCookieName)
+		cookie, err := r.Cookie(SessionCookieName)
 		if err != nil || cookie.Value == "" {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
@@ -171,12 +175,12 @@ func (h *Handler) sessionAuth(next http.Handler) http.Handler {
 				_ = h.db.Users.DeleteSession(r.Context(), tokenHash)
 			}
 			http.SetCookie(w, &http.Cookie{
-				Name:     sessionCookieName,
+				Name:     SessionCookieName,
 				Value:    "",
 				Path:     "/",
 				MaxAge:   -1,
 				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
+				SameSite: http.SameSiteStrictMode,
 			})
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
@@ -278,11 +282,12 @@ func (h *Handler) base(r *http.Request, title string) PageData {
 	}
 	bundle := h.i18n
 	return PageData{
-		Title:   title,
-		User:    mw.UserFromContext(r.Context()),
-		Version: h.version,
-		Lang:    lang,
-		T:       func(key string) string { return bundle.T(lang, key) },
+		Title:     title,
+		User:      mw.UserFromContext(r.Context()),
+		Version:   h.version,
+		Lang:      lang,
+		T:         func(key string) string { return bundle.T(lang, key) },
+		CSRFToken: mw.CSRFTokenFromContext(r.Context()),
 	}
 }
 
@@ -330,10 +335,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	bundle := h.i18n
 	data := loginData{
 		PageData: PageData{
-			Title:   "Login — cassonic",
-			Version: h.version,
-			Lang:    lang,
-			T:       func(key string) string { return bundle.T(lang, key) },
+			Title:     "Login — cassonic",
+			Version:   h.version,
+			Lang:      lang,
+			T:         func(key string) string { return bundle.T(lang, key) },
+			CSRFToken: mw.CSRFTokenFromContext(r.Context()),
 		},
 		Error: r.URL.Query().Get("error"),
 	}
@@ -425,23 +431,26 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 	_ = h.db.Users.UpdateLastLogin(r.Context(), user.ID)
 
 	cookie := &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     SessionCookieName,
 		Value:    raw,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 	if remember {
 		cookie.Expires = expiresAt
 		cookie.MaxAge = int(duration.Seconds())
 	}
 	http.SetCookie(w, cookie)
+	// Regenerate the CSRF token on login to prevent fixation (PART 16 ->
+	// "CSRF Protection" -> "Implementation Rules").
+	mw.ResetCSRFCookie(w, r.TLS != nil)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // Logout clears the session cookie and destroys the server-side session.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie(sessionCookieName)
+	cookie, err := r.Cookie(SessionCookieName)
 	if err == nil && cookie.Value != "" {
 		sum := sha256.Sum256([]byte(cookie.Value))
 		tokenHash := hex.EncodeToString(sum[:])
@@ -449,13 +458,16 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     SessionCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	})
+	// Regenerate the CSRF token on logout to prevent fixation (PART 16 ->
+	// "CSRF Protection" -> "Implementation Rules").
+	mw.ResetCSRFCookie(w, r.TLS != nil)
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 

@@ -31,6 +31,7 @@
       enctype="multipart/form-data"
       aria-label="{{call .T "upload.form.title"}}"
     >
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
       <div class="form-group">
         <label class="form-label" for="library_id">{{call .T "upload.form.library"}}</label>
         <select

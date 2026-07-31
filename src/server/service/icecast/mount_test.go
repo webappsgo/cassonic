@@ -180,7 +180,7 @@ func TestBuildQueueScopeAll(t *testing.T) {
 		seedSong(t, db, libID, artistID, "Artist A", "Jazz", "/music/b.mp3"): true,
 	}
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	mount := &model.IcecastMount{Scope: model.ScopeAll}
 
 	queue, err := mgr.buildQueue(ctx, mount)
@@ -217,7 +217,7 @@ func TestBuildQueueScopeArtist(t *testing.T) {
 	wantID := seedSong(t, db, libID, artistA, "Artist A", "Rock", "/music/a.mp3")
 	seedSong(t, db, libID, artistB, "Artist B", "Rock", "/music/b.mp3")
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	mount := &model.IcecastMount{Scope: model.ScopeArtist, ArtistID: artistA}
 
 	queue, err := mgr.buildQueue(ctx, mount)
@@ -245,7 +245,7 @@ func TestBuildQueueScopeGenre(t *testing.T) {
 	wantID := seedSong(t, db, libID, artistID, "Artist A", "Jazz", "/music/a.mp3")
 	seedSong(t, db, libID, artistID, "Artist A", "Rock", "/music/b.mp3")
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	mount := &model.IcecastMount{Scope: model.ScopeGenre, Genre: "Jazz"}
 
 	queue, err := mgr.buildQueue(ctx, mount)
@@ -261,7 +261,7 @@ func TestBuildQueueScopeArtistNoSongsIsEmptyNotError(t *testing.T) {
 	db := newTestDB(t)
 	ctx := context.Background()
 
-	mgr := NewManager(db, nil, silentLogger())
+	mgr := NewManager(db, nil, silentLogger(), nil)
 	mount := &model.IcecastMount{Scope: model.ScopeArtist, ArtistID: 999}
 
 	queue, err := mgr.buildQueue(ctx, mount)
@@ -297,7 +297,7 @@ func TestManagerStartEmptyQueueSetsErrorStatus(t *testing.T) {
 	// unavailable" short-circuit and reach buildQueue; the empty-queue
 	// path returns before ffmpeg is ever invoked, so a zero-value Manager
 	// is sufficient here.
-	mgr := NewManager(db, &ffmpeg.Manager{}, silentLogger())
+	mgr := NewManager(db, &ffmpeg.Manager{}, silentLogger(), nil)
 	if err := mgr.Start(ctx); err != nil {
 		t.Fatalf("Start: unexpected error: %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	cerr "github.com/local/cassonic/src/common/errors"
 	"github.com/local/cassonic/src/server/model"
+	"github.com/local/cassonic/src/server/service/icecast"
 )
 
 // maskPassword replaces the value of a sensitive password field with "*****".
@@ -78,13 +79,19 @@ func (h *Handler) CreateIcecastServer(w http.ResponseWriter, r *http.Request) {
 		req.SourceUser = "source"
 	}
 
+	sourcePass, err := icecast.EncryptSourcePass(h.subsonicKey, req.SourcePass)
+	if err != nil {
+		writeError(w, r, cerr.InternalServerError("encryption failed"))
+		return
+	}
+
 	s := &model.IcecastServer{
 		Name:       req.Name,
 		Host:       req.Host,
 		Port:       req.Port,
 		Protocol:   req.Protocol,
 		SourceUser: req.SourceUser,
-		SourcePass: req.SourcePass,
+		SourcePass: sourcePass,
 		Enabled:    req.Enabled,
 	}
 
@@ -162,7 +169,12 @@ func (h *Handler) UpdateIcecastServer(w http.ResponseWriter, r *http.Request) {
 		s.SourceUser = req.SourceUser
 	}
 	if req.SourcePass != "" {
-		s.SourcePass = req.SourcePass
+		sourcePass, err := icecast.EncryptSourcePass(h.subsonicKey, req.SourcePass)
+		if err != nil {
+			writeError(w, r, cerr.InternalServerError("encryption failed"))
+			return
+		}
+		s.SourcePass = sourcePass
 	}
 	if req.Enabled != nil {
 		s.Enabled = *req.Enabled

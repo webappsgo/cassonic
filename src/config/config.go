@@ -36,6 +36,8 @@ type Config struct {
 	Email EmailConfig `yaml:"email"`
 	// Features section enables or disables optional capabilities.
 	Features FeaturesConfig `yaml:"features"`
+	// Web section controls WebUI-specific protections such as CSRF.
+	Web WebConfig `yaml:"web"`
 }
 
 // ServerConfig holds network listener and runtime mode settings.
@@ -158,6 +160,23 @@ type FeaturesConfig struct {
 	MusicBrainz bool `yaml:"music_brainz"`
 }
 
+// WebConfig holds WebUI-specific settings such as CSRF protection.
+type WebConfig struct {
+	// csrf holds double-submit CSRF token protection settings.
+	CSRF CSRFConfig `yaml:"csrf"`
+}
+
+// CSRFConfig controls the double-submit cookie CSRF protection layer
+// (PART 16 -> "CSRF Protection").
+type CSRFConfig struct {
+	// enabled activates CSRF validation; set false only for API-only
+	// deployments with no browser forms at all
+	Enabled bool `yaml:"enabled"`
+	// exempt_paths lists glob patterns exempt from CSRF validation, e.g.
+	// OAuth callbacks and webhook receivers
+	ExemptPaths []string `yaml:"exempt_paths"`
+}
+
 // Defaults returns a Config populated with all production-safe default values.
 func Defaults() *Config {
 	return &Config{
@@ -220,6 +239,12 @@ func Defaults() *Config {
 			Tor:          false,
 			Transcoding:  true,
 			MusicBrainz:  true,
+		},
+		Web: WebConfig{
+			CSRF: CSRFConfig{
+				Enabled:     true,
+				ExemptPaths: []string{},
+			},
 		},
 	}
 }

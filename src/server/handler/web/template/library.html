@@ -74,6 +74,7 @@
       {{if $.User.IsAdmin}}
       <div class="library-item-actions" role="group" aria-label="{{call $.T "library.actions"}} {{.Name}}">
         <form method="post" action="/api/v1/libraries/{{.ID}}/scan" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
           <button type="submit" class="btn btn-ghost btn-sm" aria-label="{{call $.T "library.scan.trigger"}} {{.Name}}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             {{call $.T "library.scan.trigger"}}
@@ -84,6 +85,7 @@
           {{call $.T "library.edit"}}
         </a>
         <form method="post" action="/api/v1/libraries/{{.ID}}/delete" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
           <button
             type="submit"
             class="btn btn-danger btn-sm"

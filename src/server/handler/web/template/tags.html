@@ -17,6 +17,7 @@
     </div>
     <div class="card-body">
       <form method="post" action="/api/v1/songs/{{.Song.ID}}/tags">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <input type="hidden" name="_method" value="PATCH">
         <div class="grid grid-2">
           <div class="form-group">

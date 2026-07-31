@@ -129,11 +129,11 @@ cassonic-cli [flags] [command] [args...]
 |------|-------|-------------|
 | `--help` | `-h` | Show help |
 | `--version` | `-v` | Show version |
-| `--server {url}` | | Server URL (default: `http://localhost:4533`) |
+| `--server {url}` | | Server URL (default: `http://localhost:4533`, or set `CASSONIC_SERVER` env var) |
 | `--token {token}` | | API Bearer token (or set `CASSONIC_TOKEN` env var) |
 | `--debug` | | Enable debug output |
-| `--color {auto\|yes\|no}` | | Color output control |
-| `--format {table\|json\|plain}` | | Output format (default: `table`) |
+| `--color {auto\|yes\|no}` | | Color output control (or set `CASSONIC_COLOR` env var) |
+| `--json` | | Output JSON instead of the default table format |
 
 ### Commands
 
@@ -255,9 +255,10 @@ cassonic-cli server status
 
 ### Environment Variables
 
+Precedence for all four: CLI flag > environment variable > `cli.yml` config file > built-in default.
+
 | Variable | Description |
 |----------|-------------|
-| `CASSONIC_SERVER` | Server URL (overrides `--server`) |
-| `CASSONIC_TOKEN` | API Bearer token (overrides `--token`) |
-| `CASSONIC_COLOR` | Color mode: `auto`, `yes`, `no` |
-| `CASSONIC_FORMAT` | Output format: `table`, `json`, `plain` |
+| `CASSONIC_SERVER` | Server URL, used when `--server` is not given |
+| `CASSONIC_TOKEN` | API Bearer token, used when `--token` is not given |
+| `CASSONIC_COLOR` | Color mode: `auto`, `yes`, `no`, used when `--color` is not given |

@@ -10,7 +10,10 @@ package icecast
 //     boundary; verified against a real net.Pipe() peer
 //   - buildMetadataBlock: length byte, NUL padding, and single-quote escaping
 //   - contentTypeForFormat: all known formats plus the default fallback
-//   - decryptOrPlaintext: plaintext passthrough vs. "enc:"-prefixed values
+//   - decryptOrPlaintext: plaintext passthrough, successful "enc:"-prefixed
+//     decryption, and error cases (no key, corrupt ciphertext)
+//   - EncryptSourcePass: round-trips with decryptOrPlaintext; plaintext
+//     passthrough when no key is configured
 
 import (
 	"bufio"
@@ -86,7 +89,7 @@ func TestConnectSuccess(t *testing.T) {
 		BitRate:   128,
 	}
 
-	conn, err := Connect(server, mount)
+	conn, err := Connect(server, mount, nil)
 	if err != nil {
 		t.Fatalf("Connect: unexpected error: %v", err)
 	}
@@ -127,7 +130,7 @@ func TestConnectServerRejects(t *testing.T) {
 	server := &model.IcecastServer{Host: host, Port: port, SourceUser: "u", SourcePass: "p"}
 	mount := &model.IcecastMount{MountPath: "/live", Format: model.FormatMP3}
 
-	_, err = Connect(server, mount)
+	_, err = Connect(server, mount, nil)
 	if err == nil {
 		t.Fatal("Connect: expected error for non-200 status, got nil")
 	}
@@ -137,7 +140,7 @@ func TestConnectDialFailure(t *testing.T) {
 	server := &model.IcecastServer{Host: "127.0.0.1", Port: 1, SourceUser: "u", SourcePass: "p"}
 	mount := &model.IcecastMount{MountPath: "/live", Format: model.FormatMP3}
 
-	_, err := Connect(server, mount)
+	_, err := Connect(server, mount, nil)
 	if err == nil {
 		t.Fatal("Connect: expected dial error, got nil")
 	}
@@ -251,9 +254,9 @@ func TestContentTypeForFormat(t *testing.T) {
 	}
 }
 
-// --- decryptOrPlaintext ---
+// --- decryptOrPlaintext / EncryptSourcePass ---
 
-func TestDecryptOrPlaintext(t *testing.T) {
+func TestDecryptOrPlaintextPassthrough(t *testing.T) {
 	tests := []struct {
 		name string
 		in   string
@@ -261,14 +264,72 @@ func TestDecryptOrPlaintext(t *testing.T) {
 	}{
 		{"plaintext passthrough", "hackme", "hackme"},
 		{"empty passthrough", "", ""},
-		{"encrypted prefix returns empty (unimplemented)", "enc:abcd1234", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := decryptOrPlaintext(tt.in, nil)
+			got, err := decryptOrPlaintext(tt.in, nil)
+			if err != nil {
+				t.Fatalf("decryptOrPlaintext(%q): unexpected error: %v", tt.in, err)
+			}
 			if got != tt.want {
 				t.Errorf("decryptOrPlaintext(%q): got %q, want %q", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDecryptOrPlaintextEncryptedNoKey(t *testing.T) {
+	_, err := decryptOrPlaintext("enc:abcd1234", nil)
+	if err == nil {
+		t.Fatal("decryptOrPlaintext: expected error for encrypted value with no key, got nil")
+	}
+}
+
+func TestDecryptOrPlaintextCorruptCiphertext(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef")
+	_, err := decryptOrPlaintext("enc:not-valid-base64-ciphertext!!", key)
+	if err == nil {
+		t.Fatal("decryptOrPlaintext: expected error for corrupt ciphertext, got nil")
+	}
+}
+
+func TestEncryptSourcePassRoundTrip(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef")
+
+	stored, err := EncryptSourcePass(key, "hackme")
+	if err != nil {
+		t.Fatalf("EncryptSourcePass: unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(stored, "enc:") {
+		t.Fatalf("EncryptSourcePass: result %q missing enc: prefix", stored)
+	}
+
+	plain, err := decryptOrPlaintext(stored, key)
+	if err != nil {
+		t.Fatalf("decryptOrPlaintext: unexpected error: %v", err)
+	}
+	if plain != "hackme" {
+		t.Errorf("round trip: got %q, want %q", plain, "hackme")
+	}
+}
+
+func TestEncryptSourcePassNoKeyPassthrough(t *testing.T) {
+	got, err := EncryptSourcePass(nil, "hackme")
+	if err != nil {
+		t.Fatalf("EncryptSourcePass: unexpected error: %v", err)
+	}
+	if got != "hackme" {
+		t.Errorf("EncryptSourcePass with no key: got %q, want plaintext passthrough %q", got, "hackme")
+	}
+}
+
+func TestEncryptSourcePassEmptyPassthrough(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef")
+	got, err := EncryptSourcePass(key, "")
+	if err != nil {
+		t.Fatalf("EncryptSourcePass: unexpected error: %v", err)
+	}
+	if got != "" {
+		t.Errorf("EncryptSourcePass with empty plaintext: got %q, want empty", got)
 	}
 }

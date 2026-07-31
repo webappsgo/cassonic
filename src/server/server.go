@@ -136,6 +136,12 @@ func (s *Server) buildRouter() http.Handler {
 	r.Use(mw.Logger(os.Stdout))
 	r.Use(mw.Cors())
 	r.Use(mw.SecurityHeaders(s.cfg.Server.Mode == "production"))
+	r.Use(mw.CSRF(mw.CSRFConfig{
+		Enabled:           s.cfg.Web.CSRF.Enabled,
+		Secure:            s.sslMgr != nil,
+		SessionCookieName: web.SessionCookieName,
+		ExemptPaths:       s.cfg.Web.CSRF.ExemptPaths,
+	}))
 	r.Use(s.metricsMiddleware())
 
 	// Suppress the chi default middleware's own request-id header to avoid
@@ -485,6 +491,13 @@ func (s *Server) openAPISpec() http.HandlerFunc {
         "responses": {"200": {"description": "Version info"}}
       }
     },
+    "/api/v1/autodiscover": {
+      "get": {
+        "summary": "Client auto-configuration hints",
+        "security": [],
+        "responses": {"200": {"description": "Server capability endpoints"}}
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "summary": "Authenticate and obtain a session token",
@@ -528,11 +541,24 @@ func (s *Server) openAPISpec() http.HandlerFunc {
         "responses": {"200": {"description": "Paginated list of songs"}}
       }
     },
+    "/api/v1/songs/{id}": {
+      "get": {
+        "summary": "Get song by ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Song object"}}
+      }
+    },
     "/api/v1/songs/{id}/stream": {
       "get": {
         "summary": "Stream a song",
         "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
         "responses": {"200": {"description": "Audio stream"}}
+      }
+    },
+    "/api/v1/genres": {
+      "get": {
+        "summary": "List all genres",
+        "responses": {"200": {"description": "List of genre names"}}
       }
     },
     "/api/v1/playlists": {
@@ -545,6 +571,40 @@ func (s *Server) openAPISpec() http.HandlerFunc {
         "responses": {"201": {"description": "Created playlist"}}
       }
     },
+    "/api/v1/playlists/{id}": {
+      "get": {
+        "summary": "Get playlist",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Playlist object with songs"}}
+      },
+      "put": {
+        "summary": "Update playlist",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Updated playlist"}}
+      },
+      "delete": {
+        "summary": "Delete playlist",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"204": {"description": "Playlist deleted"}}
+      }
+    },
+    "/api/v1/playlists/{id}/songs": {
+      "post": {
+        "summary": "Add songs to playlist",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Updated playlist"}}
+      }
+    },
+    "/api/v1/playlists/{id}/songs/{songId}": {
+      "delete": {
+        "summary": "Remove song from playlist",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "songId", "in": "path", "required": true, "schema": {"type": "integer"}}
+        ],
+        "responses": {"204": {"description": "Song removed from playlist"}}
+      }
+    },
     "/api/v1/search": {
       "get": {
         "summary": "Search artists, albums, and songs",
@@ -552,11 +612,24 @@ func (s *Server) openAPISpec() http.HandlerFunc {
         "responses": {"200": {"description": "Search results"}}
       }
     },
+    "/api/v1/libraries": {
+      "get": {
+        "summary": "List configured library paths",
+        "responses": {"200": {"description": "List of libraries"}}
+      }
+    },
     "/api/v1/libraries/{id}/scan": {
       "post": {
         "summary": "Trigger a library scan",
         "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
         "responses": {"202": {"description": "Scan started"}}
+      }
+    },
+    "/api/v1/libraries/{id}/scan/status": {
+      "get": {
+        "summary": "Current scan progress",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Scan status"}}
       }
     },
     "/api/v1/songs/{id}/tags": {
@@ -591,6 +664,78 @@ func (s *Server) openAPISpec() http.HandlerFunc {
           "content": {"application/json": {"schema": {"type": "object", "properties": {"path": {"type": "string"}}}}}
         },
         "responses": {"200": {"description": "Restore status"}}
+      }
+    },
+    "/api/v1/admin/scheduler": {
+      "get": {
+        "summary": "Scheduler job status (admin only)",
+        "responses": {"200": {"description": "List of scheduler jobs and their state"}}
+      }
+    },
+    "/api/v1/admin/scheduler/{job}/run": {
+      "post": {
+        "summary": "Trigger a scheduler job immediately (admin only)",
+        "parameters": [{"name": "job", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"202": {"description": "Job run started"}}
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "summary": "List users (admin only)",
+        "responses": {"200": {"description": "Paginated list of users"}}
+      },
+      "post": {
+        "summary": "Create user (admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "properties": {"username": {"type": "string"}, "email": {"type": "string"}}}}}
+        },
+        "responses": {"201": {"description": "Created user"}}
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "delete": {
+        "summary": "Delete user (admin only)",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"204": {"description": "User deleted"}}
+      }
+    },
+    "/api/v1/podcasts": {
+      "get": {
+        "summary": "List podcast feeds",
+        "responses": {"200": {"description": "List of podcast feeds"}}
+      },
+      "post": {
+        "summary": "Add a feed by RSS URL",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "properties": {"url": {"type": "string"}}}}}
+        },
+        "responses": {"201": {"description": "Created feed"}}
+      }
+    },
+    "/api/v1/podcasts/{id}": {
+      "delete": {
+        "summary": "Remove a podcast feed",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"204": {"description": "Feed removed"}}
+      }
+    },
+    "/api/v1/podcasts/{id}/episodes": {
+      "get": {
+        "summary": "List episodes for a feed",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "List of episodes"}}
+      }
+    },
+    "/api/v1/podcasts/{id}/episodes/{epId}/stream": {
+      "get": {
+        "summary": "Stream a podcast episode",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "epId", "in": "path", "required": true, "schema": {"type": "integer"}}
+        ],
+        "responses": {"200": {"description": "Audio stream"}}
       }
     }
   }

@@ -6,42 +6,15 @@ Fixed items are recorded under "Completed this run". Unchecked items below are
 OUTSTANDING — they need a design decision or feature-sized work and were
 deliberately not auto-fixed during the audit.
 
-## Pass 1: Security (outstanding)
-
-- [ ] icecast: source-password encryption-at-rest is incomplete. `decryptOrPlaintext`
-      (src/server/service/icecast/source.go) returns `""` for any `enc:`-prefixed value
-      and is always called with a nil key; there is no encrypt-on-save path and the
-      `enc:` format does not match `crypto.Encrypt` output. IDEA.md + PART 11 require
-      credentials encrypted at rest. Fix = thread `crypto.DeriveKey` through
-      NewManager -> Connect and define the on-disk format; feature-sized, touches public
-      constructors, so flagged rather than half-implemented.
-- [ ] csrf: PART 11 mandates CSRF protection — token layer (double-submit HMAC via
-      `csrf_token_secret`), `SameSite=Strict` cookies, and `Sec-Fetch-*` validation on
-      state-changing requests. None is implemented: no CSRF code exists and session
-      cookies use `SameSiteLaxMode` (src/server/handler/web/web.go). Requires CSRF
-      middleware + secret storage; feature-sized.
-
 ## Pass 5: Spec Compliance (outstanding)
 
-- [ ] config: env-var config overrides are not implemented in the binary. PART 5
-      specifies the binary reads DEBUG, ENABLE_TOR, DOMAIN, CONFIG_DIR, DATA_DIR, PORT,
-      ADDRESS, MODE directly (e.g. `os.Getenv("DEBUG")`, `os.Getenv("ENABLE_TOR")`).
-      Currently these work only via docker/rootfs entrypoint.sh flag-translation, not for
-      a bare binary. docs/configuration.md correctly describes the intended behavior; the
-      Go code is the gap. Config-precedence layer needed (env > flag > file per PART 5/12).
 - [ ] makefile: GO_DOCKER still diverges from PART 26 beyond the fixed items — uses
       `$(REGISTRY):build` image + `/build` workdir + no `--memory`/`--cpus` limits, vs
       spec's `casjaysdev/go:latest` + `/app` + resource limits. Project deliberately uses
       its own build image and CI is green; left as-is pending user decision.
-
-## Pass 4: Documentation (outstanding)
-
-- [ ] docs/cli.md documents CASSONIC_SERVER / CASSONIC_COLOR / CASSONIC_FORMAT env vars
-      that src/client never reads (only CASSONIC_TOKEN is honored). Fix docs or wire vars.
-- [ ] api: the inline OpenAPI spec (`openAPISpec()` in src/server/server.go) covers ~12 of
-      the ~39 native endpoints documented in docs/api.md. Expand the machine-readable spec.
-- [ ] config: exported struct types in src/config/config.go (Config, ServerConfig, etc.)
-      lack doc comments while their fields and funcs are documented (minor).
+- [ ] server: `DOMAIN` env var and the full `{fqdn}` resolution chain (PART 5) are not
+      implemented — logged as its own item in TODO.AI.md (feature-sized: affects email
+      from-address and baseurl generation, not just TLS cert naming).
 
 ## Completed this run
 
@@ -61,5 +34,25 @@ deliberately not auto-fixed during the audit.
   context.Background() (ampache/browse.go x2, subsonic/system.go).
 - BUG ICY metadata overflow: clamped metadata content to 255 16-byte blocks so long titles
   no longer overflow the single length byte (icecast/source.go).
-</content>
-</invoke>
+- SECURITY (HIGH) icecast credential encryption-at-rest: threaded crypto.DeriveKey through
+  NewManager -> Connect; added EncryptSourcePass (matches the existing Subsonic-password
+  AES-256-GCM pattern) and wired encrypt-on-save into the icecast API handlers
+  (src/server/service/icecast/source.go, icecast.go; src/server/handler/api/icecast.go).
+- SECURITY (HIGH) CSRF protection: added double-submit cookie CSRF middleware
+  (src/server/middleware/csrf.go) — SameSite=Strict token cookie, X-CSRF-Token
+  header/form validation, Sec-Fetch-Site cross-site check, Bearer/public/websocket/
+  exempt-path bypasses per PART 16; switched session cookies to SameSite=Strict and
+  added CSRF-cookie regeneration on login/logout to prevent fixation
+  (src/server/handler/web/web.go); wired into the middleware chain (src/server/server.go)
+  and config (src/config/config.go: WebConfig/CSRFConfig).
+- SPEC COMPLIANCE: env-var config precedence — ADDRESS, PORT, MODE, DEBUG, CONFIG_DIR,
+  DATA_DIR now read natively in src/main.go with CLI flag > env var > file > embedded
+  default precedence, matching PART 29's "Configuration precedence" table. Also fixed a
+  `strconv.ParseBool` direct call to use `config.ParseBool` per PART 5's explicit rule.
+  `ENABLE_TOR` intentionally not added — PART 27 states no such flag is needed since Tor
+  auto-enables when the `tor` binary is present (already implemented).
+- DOC: docs/cli.md corrected to describe only the `--json` flag the client actually reads;
+  CASSONIC_FORMAT tracked as a feature request in TODO.AI.md rather than silently dropped.
+- DOC: expanded the inline OpenAPI spec (`openAPISpec()` in src/server/server.go) toward
+  full coverage of docs/api.md's native endpoints.
+- DOC: added missing doc comments to exported types in src/config/config.go.

@@ -14,6 +14,7 @@ const (
 	ctxKeyAuthScheme
 	ctxKeySubsonicClient
 	ctxKeyAmpacheSession
+	ctxKeyCSRFToken
 )
 
 // withValue stores a value under key in ctx, returning the new context.

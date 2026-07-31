@@ -77,7 +77,11 @@ class ApiError extends Error {
 async function api(method, path, body) {
   const token = localStorage.getItem('cassonic_token');
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  } else if (method !== 'GET' && method !== 'HEAD') {
+    headers['X-CSRF-Token'] = getCsrfToken();
+  }
 
   const opts = { method, headers };
   if (body !== undefined) opts.body = JSON.stringify(body);
@@ -666,7 +670,11 @@ function initUploadZone() {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/v1/upload');
     const token = localStorage.getItem('cassonic_token');
-    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    if (token) {
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    } else {
+      xhr.setRequestHeader('X-CSRF-Token', getCsrfToken());
+    }
 
     xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) bar.style.width = ((e.loaded / e.total) * 100).toFixed(1) + '%';
@@ -771,6 +779,14 @@ function initIcecastControls() {
   });
 }
 
+/* ── CSRF ──────────────────────────────────────────────────────────────────── */
+// getCsrfToken reads the double-submit CSRF cookie issued by the server so
+// JS-driven POSTs (logout, upload) can carry it as a form field or header.
+function getCsrfToken() {
+  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 /* ── Logout form ─────────────────────────────────────────────────────────────── */
 function initLogout() {
   document.querySelectorAll('[data-logout]').forEach(el => {
@@ -779,6 +795,11 @@ function initLogout() {
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = '/logout';
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = getCsrfToken();
+      form.appendChild(csrfInput);
       document.body.appendChild(form);
       form.submit();
     });

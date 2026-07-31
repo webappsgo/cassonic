@@ -17,7 +17,10 @@ type Manager struct {
 	db     *store.DB
 	ff     *ffmpeg.Manager
 	logger *log.Logger
-	mu     sync.RWMutex
+	// key is the AES-256 key used to decrypt "enc:"-prefixed source
+	// passwords; nil when encryption has not been configured.
+	key []byte
+	mu  sync.RWMutex
 	// mounts maps mount ID to its active streaming goroutine handle.
 	mounts map[int64]*MountStream
 	// cancelAll stops all mount goroutines during shutdown.
@@ -47,12 +50,16 @@ type MountStatus struct {
 	UptimeSecs  int
 }
 
-// NewManager creates a new Icecast manager.
-func NewManager(db *store.DB, ff *ffmpeg.Manager, logger *log.Logger) *Manager {
+// NewManager creates a new Icecast manager. key is the AES-256 key used to
+// decrypt "enc:"-prefixed source passwords (see EncryptSourcePass); pass nil
+// when encryption has not been configured, in which case only plaintext
+// source passwords will connect successfully.
+func NewManager(db *store.DB, ff *ffmpeg.Manager, logger *log.Logger, key []byte) *Manager {
 	return &Manager{
 		db:     db,
 		ff:     ff,
 		logger: logger,
+		key:    key,
 		mounts: make(map[int64]*MountStream),
 	}
 }

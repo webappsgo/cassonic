@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -162,12 +163,19 @@ func main() {
 		return
 	}
 
+	// Precedence for path overrides (PART 5/PART 6): CLI flag > env var > file
+	// default > built-in default. CONFIG_DIR/DATA_DIR are read here only when
+	// the corresponding flag was not given.
 	overrides := map[string]string{}
 	if *flagConfig != "" {
 		overrides["config"] = *flagConfig
+	} else if v := os.Getenv("CONFIG_DIR"); v != "" {
+		overrides["config"] = v
 	}
 	if *flagData != "" {
 		overrides["data"] = *flagData
+	} else if v := os.Getenv("DATA_DIR"); v != "" {
+		overrides["data"] = v
 	}
 	if *flagCache != "" {
 		overrides["cache"] = *flagCache
@@ -189,6 +197,25 @@ func main() {
 		if saveErr := config.Save(cfg, cfgPath); saveErr != nil {
 			fmt.Fprintf(os.Stderr, "cassonic: warning: could not save default config: %v\n", saveErr)
 		}
+	}
+
+	// Environment variable overrides (PART 5/PART 6): apply before CLI flags
+	// so the precedence is CLI flag > env var > file value > built-in default.
+	if v := os.Getenv("ADDRESS"); v != "" {
+		cfg.Server.Address = v
+	}
+	if v := os.Getenv("PORT"); v != "" {
+		if p, convErr := strconv.Atoi(v); convErr == nil {
+			cfg.Server.Port = p
+		} else {
+			fmt.Fprintf(os.Stderr, "cassonic: warning: ignoring invalid PORT env var %q: %v\n", v, convErr)
+		}
+	}
+	if v := os.Getenv("MODE"); v != "" {
+		cfg.Server.Mode = v
+	}
+	if v := os.Getenv("DEBUG"); v != "" {
+		cfg.Server.Debug = config.ParseBool(v)
 	}
 
 	if *flagAddress != "" {

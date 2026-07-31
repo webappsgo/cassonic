@@ -98,7 +98,7 @@ func (m *Manager) streamMount(ctx context.Context, mount *model.IcecastMount, ha
 			continue
 		}
 
-		conn, err := Connect(server, mount)
+		conn, err := Connect(server, mount, m.key)
 		if err != nil {
 			m.logger.Printf("icecast: mount %d: connect: %v", mount.ID, err)
 			m.updateStatus(mount.ID, model.StatusError, "", err.Error())

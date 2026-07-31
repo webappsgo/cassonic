@@ -26,6 +26,7 @@
     <div class="alert alert-error" role="alert">{{.Error}}</div>
     {{end}}
     <form class="login-form" method="post" action="/login">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
       <div class="form-group">
         <label for="username">{{call .T "login.username"}}</label>
         <input

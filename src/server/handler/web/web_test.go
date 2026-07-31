@@ -208,7 +208,7 @@ func TestLoginPost_Success(t *testing.T) {
 	}
 	found := false
 	for _, c := range w.Result().Cookies() {
-		if c.Name == sessionCookieName && c.Value != "" {
+		if c.Name == SessionCookieName && c.Value != "" {
 			found = true
 		}
 	}
@@ -229,7 +229,7 @@ func TestLoginPost_RememberMeSetsExpiry(t *testing.T) {
 	h.LoginPost(w, r)
 	var cookie *http.Cookie
 	for _, c := range w.Result().Cookies() {
-		if c.Name == sessionCookieName {
+		if c.Name == SessionCookieName {
 			cookie = c
 		}
 	}
@@ -245,7 +245,7 @@ func TestLogout_ClearsSessionAndRedirects(t *testing.T) {
 	db := testDB()
 	h := newTestHandler(db)
 	r := httptest.NewRequest(http.MethodPost, "/logout", nil)
-	r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "sometoken"})
+	r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "sometoken"})
 	w := httptest.NewRecorder()
 	h.Logout(w, r)
 	if w.Code != http.StatusFound {
@@ -288,7 +288,7 @@ func TestSessionAuth_InvalidSession_RedirectsAndClearsCookie(t *testing.T) {
 	db.Users.(*testUserStore).getSessionErr = errStore
 	h := newTestHandler(db)
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "badtoken"})
+	r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "badtoken"})
 	w := httptest.NewRecorder()
 	h.sessionAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).ServeHTTP(w, r)
 	if w.Code != http.StatusFound {
@@ -301,7 +301,7 @@ func TestSessionAuth_ExpiredSession_Redirects(t *testing.T) {
 	db.Users.(*testUserStore).getSessionResult = &store.Session{UserID: 1, ExpiresAt: time.Now().Add(-time.Hour)}
 	h := newTestHandler(db)
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "expiredtoken"})
+	r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "expiredtoken"})
 	w := httptest.NewRecorder()
 	h.sessionAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).ServeHTTP(w, r)
 	if w.Code != http.StatusFound {
@@ -315,7 +315,7 @@ func TestSessionAuth_UserDisabled_Redirects(t *testing.T) {
 	db.Users.(*testUserStore).getUserResult = &model.User{ID: 1, IsEnabled: false}
 	h := newTestHandler(db)
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "tok"})
+	r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "tok"})
 	w := httptest.NewRecorder()
 	h.sessionAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).ServeHTTP(w, r)
 	if w.Code != http.StatusFound {
@@ -334,7 +334,7 @@ func TestSessionAuth_Valid_CallsNextWithUser(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "tok"})
+	r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "tok"})
 	w := httptest.NewRecorder()
 	h.sessionAuth(next).ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
