@@ -14,6 +14,7 @@ that makes cassonic pleasant to use directly without any third-party client.
 project_name:     cassonic
 project_org:      local
 internal_name:    cassonic
+internal_org:     local
 app_name:         cassonic
 official_site:    cassonic.local.us
 maintainer_name:  CasjaysDev

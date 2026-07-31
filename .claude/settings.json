@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Write(.git/COMMIT_MESS)",
+      "Write(CLAUDE.md)",
+      "Write(AI.md)",
+      "Write(SPEC.md)",
+      "Write(IDEA.md)",
+      "Write(TODO.AI.md)",
+      "Write(TODO.md)",
+      "Write(PLAN.AI.md)",
+      "Write(PLAN.md)",
+      "Write(.claude/settings.json)",
+      "Write(.claude/settings.local.json)",
+      "Write(.env)",
+      "Write(app.env)",
+      "Write(default.env)",
+      "Write(.no_push)",
+      "Edit(.git/COMMIT_MESS)",
+      "Edit(CLAUDE.md)",
+      "Edit(AI.md)",
+      "Edit(SPEC.md)",
+      "Edit(IDEA.md)",
+      "Edit(TODO.AI.md)",
+      "Edit(TODO.md)",
+      "Edit(PLAN.AI.md)",
+      "Edit(PLAN.md)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)",
+      "Edit(.env)",
+      "Edit(app.env)",
+      "Edit(default.env)",
+      "Edit(.no_push)"
+    ]
+  }
+}
