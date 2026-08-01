@@ -14,6 +14,7 @@ import (
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/service"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
+	"github.com/local/cassonic/src/server/service/icecast"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/store"
 )
@@ -28,6 +29,7 @@ type Handler struct {
 	nowPlaying  *NowPlayingTracker
 	backupSvc   BackupService
 	subsonicKey []byte
+	icecastMgr  *icecast.Manager
 }
 
 // NowPlayingInfo holds metadata for one active native API stream.
@@ -117,6 +119,13 @@ func (h *Handler) WithBackupService(svc BackupService) *Handler {
 // WithSubsonicKey stores the AES-256 key used to encrypt/decrypt subsonic passwords.
 func (h *Handler) WithSubsonicKey(key []byte) *Handler {
 	h.subsonicKey = key
+	return h
+}
+
+// WithIcecastManager attaches the live Icecast streaming manager so
+// Start/Stop/Status handlers can control and report on real mount goroutines.
+func (h *Handler) WithIcecastManager(mgr *icecast.Manager) *Handler {
+	h.icecastMgr = mgr
 	return h
 }
 

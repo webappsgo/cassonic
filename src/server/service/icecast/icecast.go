@@ -99,6 +99,7 @@ func (m *Manager) Stop() {
 	m.mu.Unlock()
 
 	for _, h := range handles {
+		h.cancel()
 		<-h.doneCh
 	}
 }

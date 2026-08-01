@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"github.com/local/cassonic/src/server/service/crypto"
 	"github.com/local/cassonic/src/server/service/ffmpeg"
 	"github.com/local/cassonic/src/server/service/geoip"
+	"github.com/local/cassonic/src/server/service/icecast"
 	"github.com/local/cassonic/src/server/service/scheduler"
 	"github.com/local/cassonic/src/server/service/tags"
 	"github.com/local/cassonic/src/server/ssl"
@@ -81,6 +83,9 @@ type Server struct {
 
 	// sched is the built-in scheduler; exposed to the admin panel for status display.
 	sched *scheduler.Scheduler
+
+	// icecast manages all active Icecast source-relay mount goroutines.
+	icecast *icecast.Manager
 }
 
 // New creates and fully configures the HTTP server. It does not begin listening.
@@ -101,6 +106,8 @@ func New(
 		tagReader:   tagReader,
 		subsonicKey: crypto.DeriveKey([]byte(cfg.Auth.JWTSecret)),
 	}
+
+	s.icecast = icecast.NewManager(db, ff, log.New(os.Stdout, "[icecast] ", log.LstdFlags), s.subsonicKey)
 
 	s.nativeRL = mw.NewRateLimiter(100, 200)
 	s.subsonicRL = mw.NewRateLimiter(60, 120)
@@ -292,6 +299,10 @@ func (s *Server) Start() error {
 
 	errCh := make(chan error, 1)
 
+	if err := s.icecast.Start(context.Background()); err != nil {
+		fmt.Fprintf(os.Stderr, "cassonic: icecast manager: %v\n", err)
+	}
+
 	if s.sslMgr != nil {
 		tlsCfg := s.sslMgr.TLSConfig()
 		s.http.TLSConfig = tlsCfg
@@ -344,6 +355,8 @@ func (s *Server) Start() error {
 	if err := s.http.Shutdown(ctx); err != nil {
 		return fmt.Errorf("server: shutdown: %w", err)
 	}
+
+	s.icecast.Stop()
 
 	fmt.Println("cassonic: shutdown complete")
 	return nil
@@ -399,6 +412,7 @@ func (s *Server) nativeHandler() *handlerapi.Handler {
 		h.WithBackupService(s.backupSvc)
 	}
 	h.WithSubsonicKey(s.subsonicKey)
+	h.WithIcecastManager(s.icecast)
 	return h
 }
 

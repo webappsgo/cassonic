@@ -17,11 +17,3 @@
   wherever baseurl is computed. `ENABLE_TOR` was deliberately NOT added — PART 27
   explicitly states no such flag is needed; Tor auto-enables when the `tor`
   binary is present (src/main.go already does this).
-- server: `icecast.NewManager` (src/server/service/icecast/icecast.go) is
-  never called anywhere in src/server/server.go or main.go — only in tests.
-  The whole Icecast source-relay Manager (mount streaming, source password
-  encryption/decryption) is implemented but not wired into the live server
-  at startup, so the feature does not actually run. Needs a
-  `icecast.NewManager(db, ffmpegMgr, logger, subsonicKey)` call plus whatever
-  route/lifecycle wiring PART 20 (or wherever Icecast source relay is
-  specified) describes.

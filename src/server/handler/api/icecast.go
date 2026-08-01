@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -401,6 +402,15 @@ func (h *Handler) StartIcecastMount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.icecastMgr != nil {
+		// context.Background() is intentional: the mount goroutine must outlive
+		// this request; Manager.Stop() cancels it independently at shutdown.
+		if err := h.icecastMgr.StartMount(context.Background(), id); err != nil {
+			writeError(w, r, cerr.InternalServerError("start streaming failed"))
+			return
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{"status": "started"})
 }
 
@@ -424,6 +434,10 @@ func (h *Handler) StopIcecastMount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.icecastMgr != nil {
+		h.icecastMgr.StopMount(id)
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{"status": "stopped"})
 }
 
@@ -441,11 +455,21 @@ func (h *Handler) IcecastMountStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"id":           m.ID,
 		"status":       m.Status,
 		"current_song": m.CurrentSong,
 		"last_error":   m.LastError,
 		"enabled":      m.Enabled,
-	})
+	}
+
+	if h.icecastMgr != nil {
+		if st := h.icecastMgr.Status(id); st != nil && st.Streaming {
+			resp["status"] = model.StatusConnected
+			resp["current_song"] = st.CurrentSong
+			resp["uptime_seconds"] = st.UptimeSecs
+		}
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
