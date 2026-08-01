@@ -1,4 +1,4 @@
-PROJECTNAME := $(shell git remote get-url origin 2>/dev/null | sed -E 's|.*/([^/]+)(\.git)?$$|\1|' || basename "$$(pwd)")
+PROJECTNAME := $(shell basename -s .git "$$(git remote get-url origin 2>/dev/null)" 2>/dev/null || basename "$$(pwd)")
 PROJECTORG := $(shell git remote get-url origin 2>/dev/null | sed -E 's|.*/([^/]+)/[^/]+(\.git)?$$|\1|' || basename "$$(dirname "$$(pwd)")")
 
 VERSION := $(shell [ -f release.txt ] && cat release.txt || echo "${VERSION:-0.1.0}")
@@ -8,7 +8,7 @@ COMMIT_ID := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 OFFICIALSITE := $(shell [ -f site.txt ] && cat site.txt || echo "${OFFICIALSITE:-}")
 
-LDFLAGS := -s -w \
+LDFLAGS := -s -w -trimpath \
 	-X 'main.Version=$(VERSION)' \
 	-X 'main.CommitID=$(COMMIT_ID)' \
 	-X 'main.BuildDate=$(BUILD_DATE)' \
@@ -17,23 +17,27 @@ LDFLAGS := -s -w \
 BINDIR := binaries
 RELDIR := releases
 
-GODIR := $(HOME)/.local/share/go
-GOCACHE := $(HOME)/.local/share/go/build
-GOMODCACHE := $(HOME)/.local/share/go/pkg/mod
+# GO_CACHE: module download cache — safe to share across concurrent builds (Go file-locks writes)
+# GO_BUILD: compile cache — scoped per project to prevent corruption when multiple projects build concurrently
+GO_CACHE ?= $(HOME)/go/pkg/mod
+GO_BUILD ?= $(HOME)/.cache/go-build/$(PROJECTNAME)
 
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 freebsd/amd64 freebsd/arm64
+
+DOCKER_MEM ?= 4g
+DOCKER_CPUS ?= 2
 
 REGISTRY ?= ghcr.io/$(PROJECTORG)/$(PROJECTNAME)
 GO_DOCKER := docker run --rm \
 	--name $(PROJECTNAME)-$$(tr -dc 'a-z0-9' </dev/urandom | head -c8) \
-	-v $(PWD):/build \
-	-v $(GOCACHE):/root/.cache/go-build \
-	-v $(GODIR):/go \
-	-v $(GOMODCACHE):/go/pkg/mod \
-	-w /build \
+	--memory=$(DOCKER_MEM) --cpus=$(DOCKER_CPUS) \
+	-v $(PWD):/app \
+	-v $(GO_CACHE):/usr/local/share/go/pkg/mod \
+	-v $(GO_BUILD):/usr/local/share/go/cache \
+	-w /app \
 	-e CGO_ENABLED=0 \
 	-e GOFLAGS=-buildvcs=false \
-	$(REGISTRY):build
+	casjaysdev/go:latest
 
 .PHONY: build local release docker test dev clean
 
@@ -42,13 +46,13 @@ GO_DOCKER := docker run --rm \
 # =============================================================================
 build: clean
 	@mkdir -p $(BINDIR)
-	@mkdir -p $(GOCACHE) $(GODIR) $(GOMODCACHE)
+	@mkdir -p $(GO_CACHE) $(GO_BUILD)
 	@echo "Building version $(VERSION)..."
 	@$(GO_DOCKER) go mod tidy
 	@$(GO_DOCKER) go mod download
 	@echo "Building local binary..."
 	@$(GO_DOCKER) sh -c "GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) \
-		go build -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME) ./src"
+		go build -buildvcs=false -trimpath -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME) ./src"
 	@for platform in $(PLATFORMS); do \
 		OS=$${platform%/*}; \
 		ARCH=$${platform#*/}; \
@@ -56,7 +60,7 @@ build: clean
 		[ "$$OS" = "windows" ] && OUTPUT=$$OUTPUT.exe; \
 		echo "Building server $$OS/$$ARCH..."; \
 		$(GO_DOCKER) sh -c "GOOS=$$OS GOARCH=$$ARCH \
-			go build -ldflags \"$(LDFLAGS)\" \
+			go build -buildvcs=false -trimpath -ldflags \"$(LDFLAGS)\" \
 			-o $$OUTPUT ./src" || exit 1; \
 	done
 	@if [ -d "src/client" ]; then \
@@ -67,7 +71,7 @@ build: clean
 			[ "$$OS" = "windows" ] && OUTPUT=$$OUTPUT.exe; \
 			echo "Building CLI $$OS/$$ARCH..."; \
 			$(GO_DOCKER) sh -c "GOOS=$$OS GOARCH=$$ARCH \
-				go build -ldflags \"$(LDFLAGS)\" \
+				go build -buildvcs=false -trimpath -ldflags \"$(LDFLAGS)\" \
 				-o $$OUTPUT ./src/client" || exit 1; \
 		done; \
 	fi
@@ -78,17 +82,17 @@ build: clean
 # =============================================================================
 local: clean
 	@mkdir -p $(BINDIR)
-	@mkdir -p $(GOCACHE) $(GODIR) $(GOMODCACHE)
+	@mkdir -p $(GO_CACHE) $(GO_BUILD)
 	@echo "Building local binaries version $(VERSION)..."
 	@$(GO_DOCKER) go mod tidy
 	@$(GO_DOCKER) go mod download
 	@echo "Building $(PROJECTNAME)..."
 	@$(GO_DOCKER) sh -c "GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) \
-		go build -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME) ./src"
+		go build -buildvcs=false -trimpath -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME) ./src"
 	@if [ -d "src/client" ]; then \
 		echo "Building $(PROJECTNAME)-cli..."; \
 		$(GO_DOCKER) sh -c "GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) \
-			go build -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME)-cli ./src/client"; \
+			go build -buildvcs=false -trimpath -ldflags \"$(LDFLAGS)\" -o $(BINDIR)/$(PROJECTNAME)-cli ./src/client"; \
 	fi
 	@echo "Local build complete: $(BINDIR)/"
 
@@ -141,26 +145,26 @@ docker:
 # TEST - Run all tests with coverage enforcement (via Docker)
 # =============================================================================
 test:
-	@mkdir -p $(GOCACHE) $(GODIR) $(GOMODCACHE)
+	@mkdir -p $(GO_CACHE) $(GO_BUILD)
 	@echo "Running tests with coverage..."
 	@$(GO_DOCKER) go mod download
 	@$(GO_DOCKER) go vet ./...
-	@$(GO_DOCKER) go test -v -cover -coverprofile=coverage.out ./...
+	@$(GO_DOCKER) go test -buildvcs=false -v -cover -coverprofile=coverage.out ./...
 	@echo "Tests complete"
 
 # =============================================================================
 # DEV - Quick build for local development/testing (to random temp dir)
 # =============================================================================
 dev:
-	@mkdir -p $(GOCACHE) $(GODIR) $(GOMODCACHE)
+	@mkdir -p $(GO_CACHE) $(GO_BUILD)
 	@$(GO_DOCKER) go mod tidy
 	@mkdir -p "$${TMPDIR:-/tmp}/$(PROJECTORG)" && \
 		BUILD_DIR=$$(mktemp -d "$${TMPDIR:-/tmp}/$(PROJECTORG)/$(PROJECTNAME)-XXXXXX") && \
 		echo "Quick dev build to $$BUILD_DIR..." && \
-		$(GO_DOCKER) go build -o $$BUILD_DIR/$(PROJECTNAME) ./src && \
+		$(GO_DOCKER) go build -buildvcs=false -o $$BUILD_DIR/$(PROJECTNAME) ./src && \
 		echo "Built: $$BUILD_DIR/$(PROJECTNAME)" && \
 		if [ -d "src/client" ]; then \
-			$(GO_DOCKER) go build -o $$BUILD_DIR/$(PROJECTNAME)-cli ./src/client && \
+			$(GO_DOCKER) go build -buildvcs=false -o $$BUILD_DIR/$(PROJECTNAME)-cli ./src/client && \
 			echo "Built: $$BUILD_DIR/$(PROJECTNAME)-cli"; \
 		fi && \
 		echo "Test:  docker run --rm -it --name $(PROJECTNAME)-test -v $$BUILD_DIR:/app alpine:latest /app/$(PROJECTNAME) --help"

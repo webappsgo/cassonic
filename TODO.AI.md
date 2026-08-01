@@ -17,19 +17,6 @@
   wherever baseurl is computed. `ENABLE_TOR` was deliberately NOT added — PART 27
   explicitly states no such flag is needed; Tor auto-enables when the `tor`
   binary is present (src/main.go already does this).
-- build: Makefile's `PROJECTNAME` var (`git remote get-url origin | sed -E
-  's|.*/([^/]+)(\.git)?$|\1|'`) resolves to `cassonic.git` instead of
-  `cassonic` — the regex's greedy `[^/]+` swallows `.git` before the optional
-  group can match it, so local `make test`/`make build` look for a
-  `ghcr.io/webappsgo/cassonic.git:build` image that doesn't exist. Does not
-  affect CI: `.github/workflows/docker.yml` hardcodes `PROJECTNAME: cassonic`
-  in its own `env:` block. Fix the regex (e.g. strip `.git$` in a separate
-  step) so local builds work again.
-- build: `docker/Dockerfile.build`'s `go install
-  golang.org/x/tools/cmd/staticcheck@latest` fails — that package path no
-  longer exists in current `golang.org/x/tools`; staticcheck now lives at
-  `honnef.co/go/tools/cmd/staticcheck`. Not currently used by CI (which uses
-  its own build path), only affects anyone building this Dockerfile directly.
 - server: `icecast.NewManager` (src/server/service/icecast/icecast.go) is
   never called anywhere in src/server/server.go or main.go — only in tests.
   The whole Icecast source-relay Manager (mount streaming, source password

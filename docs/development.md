@@ -81,7 +81,7 @@ make docker
 make clean
 ```
 
-All `make` targets build inside a Docker container using the project's `ghcr.io/local/cassonic:build` image (built from `docker/Dockerfile.build`, which extends `golang:alpine` with extra tooling). No Go toolchain needs to be installed on the host.
+All `make` targets build inside a Docker container using the maintained `casjaysdev/go:latest` toolchain image. No Go toolchain needs to be installed on the host.
 
 ## Environment Variables for the Build
 

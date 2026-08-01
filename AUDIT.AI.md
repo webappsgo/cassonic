@@ -8,10 +8,6 @@ deliberately not auto-fixed during the audit.
 
 ## Pass 5: Spec Compliance (outstanding)
 
-- [ ] makefile: GO_DOCKER still diverges from PART 26 beyond the fixed items — uses
-      `$(REGISTRY):build` image + `/build` workdir + no `--memory`/`--cpus` limits, vs
-      spec's `casjaysdev/go:latest` + `/app` + resource limits. Project deliberately uses
-      its own build image and CI is green; left as-is pending user decision.
 - [ ] server: `DOMAIN` env var and the full `{fqdn}` resolution chain (PART 5) are not
       implemented — logged as its own item in TODO.AI.md (feature-sized: affects email
       from-address and baseurl generation, not just TLS cert naming).
