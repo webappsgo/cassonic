@@ -269,18 +269,22 @@ func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request) {
 
 // configFormData carries the editable server settings for the config page.
 type configFormData struct {
-	Port  int
-	Mode  string
-	Debug bool
-	Flash string
+	Port           int
+	Mode           string
+	Debug          bool
+	Domain         string
+	TrustedProxies string
+	Flash          string
 }
 
 // Config renders the server configuration form.
 func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
 	d := configFormData{
-		Port:  h.cfg.Server.Port,
-		Mode:  h.cfg.Server.Mode,
-		Debug: h.cfg.Server.Debug,
+		Port:           h.cfg.Server.Port,
+		Mode:           h.cfg.Server.Mode,
+		Debug:          h.cfg.Server.Debug,
+		Domain:         strings.Join(h.cfg.Server.Domain, ", "),
+		TrustedProxies: strings.Join(h.cfg.Server.TrustedProxies, ", "),
 	}
 	h.render(w, "config.html", "Config — Admin", "config", d)
 }

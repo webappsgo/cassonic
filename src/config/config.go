@@ -7,9 +7,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -54,6 +56,29 @@ type ServerConfig struct {
 	Debug bool `yaml:"debug"`
 	// log_level controls logger verbosity: error, warn, info, debug
 	LogLevel string `yaml:"log_level"`
+	// domain lists explicit {fqdn} values (first is primary); comma-separated
+	// via the DOMAIN env var. Empty means auto-detect (PART 8 resolution order).
+	Domain []string `yaml:"domain"`
+	// trusted_proxies lists additional CIDRs (beyond RFC 1918/loopback/link-local)
+	// whose reverse-proxy headers are honored when resolving {fqdn}/{proto}/{port}.
+	TrustedProxies []string `yaml:"trusted_proxies"`
+	// url_detection controls the smart FQDN learning/live-reload subsystem.
+	URLDetection URLDetectionConfig `yaml:"url_detection"`
+}
+
+// URLDetectionConfig controls the smart FQDN detection/live-reload subsystem
+// described in AI.md PART 8 "Smart FQDN Detection (Live Reload)".
+type URLDetectionConfig struct {
+	// learning enables domain-pattern inference from reverse-proxy headers
+	Learning bool `yaml:"learning"`
+	// min_samples is the minimum observed requests before inferring a wildcard
+	MinSamples int `yaml:"min_samples"`
+	// sample_window is the time window for pattern analysis (Go duration string)
+	SampleWindow string `yaml:"sample_window"`
+	// log_changes logs detected domain/proto changes to the application log
+	LogChanges bool `yaml:"log_changes"`
+	// live_reload allows resolved URL variables to update without a restart
+	LiveReload bool `yaml:"live_reload"`
 }
 
 // DatabaseConfig holds SQLite database file path settings.
@@ -181,12 +206,21 @@ type CSRFConfig struct {
 func Defaults() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Address:  "",
-			Port:     4533,
-			BaseURL:  "",
-			Mode:     "production",
-			Debug:    false,
-			LogLevel: "info",
+			Address:        "",
+			Port:           4533,
+			BaseURL:        "",
+			Mode:           "production",
+			Debug:          false,
+			LogLevel:       "info",
+			Domain:         []string{},
+			TrustedProxies: []string{},
+			URLDetection: URLDetectionConfig{
+				Learning:     true,
+				MinSamples:   3,
+				SampleWindow: "5m",
+				LogChanges:   true,
+				LiveReload:   true,
+			},
 		},
 		Database: DatabaseConfig{
 			Path: "",
@@ -281,6 +315,12 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Server.LogLevel == "" {
 		cfg.Server.LogLevel = d.Server.LogLevel
+	}
+	if cfg.Server.URLDetection.MinSamples == 0 {
+		cfg.Server.URLDetection.MinSamples = d.Server.URLDetection.MinSamples
+	}
+	if cfg.Server.URLDetection.SampleWindow == "" {
+		cfg.Server.URLDetection.SampleWindow = d.Server.URLDetection.SampleWindow
 	}
 	if cfg.Auth.SessionDuration == 0 {
 		cfg.Auth.SessionDuration = d.Auth.SessionDuration
@@ -398,6 +438,16 @@ func (c *Config) Validate() error {
 	case "error", "warn", "info", "debug":
 	default:
 		return fmt.Errorf("config: server.log_level %q is invalid; must be error, warn, info, or debug", c.Server.LogLevel)
+	}
+
+	if _, err := time.ParseDuration(c.Server.URLDetection.SampleWindow); err != nil {
+		return fmt.Errorf("config: server.url_detection.sample_window %q is invalid: %w", c.Server.URLDetection.SampleWindow, err)
+	}
+
+	for _, cidr := range c.Server.TrustedProxies {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return fmt.Errorf("config: server.trusted_proxies entry %q is not a valid CIDR: %w", cidr, err)
+		}
 	}
 
 	if c.Auth.SessionDuration < 1 {

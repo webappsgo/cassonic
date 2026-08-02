@@ -23,6 +23,16 @@
           <option value="true" {{if .Data.Debug}}selected{{end}}>enabled</option>
         </select>
       </div>
+      <div class="form-field">
+        <label for="cfg-domain">Domain(s)</label>
+        <input id="cfg-domain" name="domain" type="text" placeholder="myapp.com, www.myapp.com" value="{{.Data.Domain}}">
+        <small>Comma-separated. First is primary {fqdn}. Leave empty to auto-detect.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-trusted-proxies">Trusted Proxies</label>
+        <input id="cfg-trusted-proxies" name="trusted_proxies" type="text" placeholder="203.0.113.0/24" value="{{.Data.TrustedProxies}}">
+        <small>Comma-separated CIDRs, beyond private/loopback ranges, allowed to set reverse-proxy headers.</small>
+      </div>
     </div>
     <div style="margin-top:16px">
       <button type="submit" class="btn btn-primary">Save Settings</button>

@@ -27,6 +27,7 @@ cassonic --port 4533 --debug --mode development
 | `DEBUG` | Enable debug mode (`true`/`false`/`1`/`0`/`yes`/`no`) | `false` |
 | `PORT` | Listen port | `4533` (host), `80` (container) |
 | `ADDRESS` | Listen address | `0.0.0.0` |
+| `DOMAIN` | Comma-separated `{fqdn}` list (first is primary); skips auto-detection | auto-detected |
 | `TZ` | Timezone | `America/New_York` |
 | `CONFIG_DIR` | Config directory override | platform default |
 | `DATA_DIR` | Data directory override | platform default |
@@ -47,6 +48,12 @@ server:
   debug: false
   # Server timezone (e.g. America/New_York, Europe/London, UTC)
   timezone: America/New_York
+  # Explicit {fqdn} list (first is primary); empty auto-detects via reverse-proxy
+  # headers, then os.Hostname(), then public IP, then localhost. Same as DOMAIN env var.
+  domain: []
+  # Additional CIDRs (beyond private/loopback ranges) trusted to set
+  # reverse-proxy headers (X-Forwarded-Host, X-Forwarded-Proto, etc.)
+  trusted_proxies: []
 
 tls:
   # Enable automatic TLS via Let's Encrypt

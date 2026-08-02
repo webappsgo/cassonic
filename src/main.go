@@ -38,6 +38,7 @@ import (
 	svcupdate "github.com/local/cassonic/src/server/service/update"
 	"github.com/local/cassonic/src/server/ssl"
 	"github.com/local/cassonic/src/server/store"
+	"github.com/local/cassonic/src/server/urlvars"
 )
 
 // Build info — set via -ldflags at build time.
@@ -217,6 +218,15 @@ func main() {
 	if v := os.Getenv("DEBUG"); v != "" {
 		cfg.Server.Debug = config.ParseBool(v)
 	}
+	if v := os.Getenv("DOMAIN"); v != "" {
+		var domains []string
+		for _, d := range strings.Split(v, ",") {
+			if d = strings.TrimSpace(d); d != "" {
+				domains = append(domains, d)
+			}
+		}
+		cfg.Server.Domain = domains
+	}
 
 	if *flagAddress != "" {
 		cfg.Server.Address = *flagAddress
@@ -232,6 +242,15 @@ func main() {
 	}
 	if *flagDebug {
 		cfg.Server.Debug = true
+	}
+
+	// PART 8 "URL & FQDN Detection": resolve {proto}/{fqdn}/{port} from here
+	// on using the finalized server.domain/trusted_proxies/port/mode values.
+	urlvars.Init(cfg)
+
+	// SMTP_FROM_EMAIL default (PART 5 "Environment Variables"): no-reply@{fqdn}.
+	if cfg.Email.Enabled && cfg.Email.From == "" {
+		cfg.Email.From = "no-reply@" + urlvars.ResolvedFQDN()
 	}
 
 	if cfg.Paths.Config == "" {
@@ -407,6 +426,7 @@ func main() {
 			log.Printf("cassonic: warning: Tor hidden service failed to start: %v", torErr)
 		} else {
 			fmt.Printf("cassonic: Tor hidden service: http://%s\n", onionAddr)
+			urlvars.SetOnionAddress(onionAddr)
 		}
 		defer func() {
 			if stopErr := torSvc.Stop(); stopErr != nil {

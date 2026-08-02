@@ -23,6 +23,7 @@ import (
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/store"
+	"github.com/local/cassonic/src/server/urlvars"
 )
 
 // Handler serves the cassonic WebUI.
@@ -938,10 +939,10 @@ func (h *Handler) Help(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintf(w, "cassonic — Help\n\nGetting Started:\n")
 		fmt.Fprintf(w, "  Server runs on port %d by default.\n", port)
-		fmt.Fprintf(w, "  Subsonic API base: http://localhost:%d/rest/\n", port)
-		fmt.Fprintf(w, "  Ampache API base:  http://localhost:%d/ampache/server/xml.server.php\n", port)
-		fmt.Fprintf(w, "  Admin panel:       http://localhost:%d/admin\n", port)
-		fmt.Fprintf(w, "  Health check:      http://localhost:%d/health\n", port)
+		fmt.Fprintf(w, "  Subsonic API base: %s\n", urlvars.BuildURL(r, "/rest/"))
+		fmt.Fprintf(w, "  Ampache API base:  %s\n", urlvars.BuildURL(r, "/ampache/server/xml.server.php"))
+		fmt.Fprintf(w, "  Admin panel:       %s\n", urlvars.BuildURL(r, "/admin"))
+		fmt.Fprintf(w, "  Health check:      %s\n", urlvars.BuildURL(r, "/health"))
 		return
 	}
 
