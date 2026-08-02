@@ -59,3 +59,12 @@ func printError(s string) {
 func newTabWriter() *tabwriter.Writer {
 	return tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 }
+
+// printHeader writes a colorized table header line, skipping it entirely
+// in plain format (no color, no header — one machine-parseable row per record).
+func printHeader(tw *tabwriter.Writer, format, header string) {
+	if format == "plain" {
+		return
+	}
+	fmt.Fprintln(tw, colorize(ansiBoldCyan, header))
+}

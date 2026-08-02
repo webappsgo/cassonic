@@ -20,8 +20,9 @@ type CLIConfig struct {
 		Auto    bool   `yaml:"auto"`
 		Channel string `yaml:"channel"`
 	} `yaml:"update"`
-	Color string `yaml:"color"`
-	Debug bool   `yaml:"debug"`
+	Color  string `yaml:"color"`
+	Format string `yaml:"format"`
+	Debug  bool   `yaml:"debug"`
 }
 
 // defaultConfig returns a CLIConfig populated with sensible defaults.

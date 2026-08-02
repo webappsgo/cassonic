@@ -80,12 +80,12 @@ func cmdLogout(c *Client) error {
 }
 
 // cmdStatus calls GET /api/v1/health and prints server info.
-func cmdStatus(c *Client, wantJSON bool) error {
+func cmdStatus(c *Client, format string) error {
 	data, code, err := c.getRaw("/api/v1/health")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -102,7 +102,7 @@ func cmdStatus(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "SERVER STATUS"))
+	printHeader(tw, format, "SERVER STATUS")
 	fmt.Fprintf(tw, "URL:\t%s\n", c.baseURL)
 	fmt.Fprintf(tw, "Status:\t%s\n", result.Data.Status)
 	fmt.Fprintf(tw, "Version:\t%s\n", result.Data.Version)
@@ -112,7 +112,7 @@ func cmdStatus(c *Client, wantJSON bool) error {
 }
 
 // cmdScan triggers a library scan via POST /api/v1/libraries/{id}/scan.
-func cmdScan(c *Client, libraryID string, full bool, wantJSON bool) error {
+func cmdScan(c *Client, libraryID string, full bool, format string) error {
 	if libraryID == "" {
 		libraryID = "default"
 	}
@@ -121,7 +121,7 @@ func cmdScan(c *Client, libraryID string, full bool, wantJSON bool) error {
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -130,12 +130,12 @@ func cmdScan(c *Client, libraryID string, full bool, wantJSON bool) error {
 }
 
 // cmdScanStatus prints the current scan status from GET /api/v1/scan/status.
-func cmdScanStatus(c *Client, wantJSON bool) error {
+func cmdScanStatus(c *Client, format string) error {
 	data, _, err := c.getRaw("/api/v1/scan/status")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -153,7 +153,7 @@ func cmdScanStatus(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "SCAN STATUS"))
+	printHeader(tw, format, "SCAN STATUS")
 	fmt.Fprintf(tw, "Scanning:\t%v\n", result.Data.Scanning)
 	fmt.Fprintf(tw, "Progress:\t%d / %d\n", result.Data.Progress, result.Data.Total)
 	fmt.Fprintf(tw, "Status:\t%s\n", result.Data.Status)
@@ -162,13 +162,13 @@ func cmdScanStatus(c *Client, wantJSON bool) error {
 }
 
 // cmdArtists lists artists from GET /api/v1/artists.
-func cmdArtists(c *Client, page, limit int, wantJSON bool) error {
+func cmdArtists(c *Client, page, limit int, format string) error {
 	path := fmt.Sprintf("/api/v1/artists?page=%d&limit=%d", page, limit)
 	data, _, err := c.getRaw(path)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -184,7 +184,7 @@ func cmdArtists(c *Client, page, limit int, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tNAME"))
+	printHeader(tw, format, "ID\tNAME")
 	for _, a := range result.Data {
 		fmt.Fprintf(tw, "%s\t%s\n", a.ID, a.Name)
 	}
@@ -193,13 +193,13 @@ func cmdArtists(c *Client, page, limit int, wantJSON bool) error {
 }
 
 // cmdAlbums lists albums from GET /api/v1/albums.
-func cmdAlbums(c *Client, page, limit int, wantJSON bool) error {
+func cmdAlbums(c *Client, page, limit int, format string) error {
 	path := fmt.Sprintf("/api/v1/albums?page=%d&limit=%d", page, limit)
 	data, _, err := c.getRaw(path)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -217,7 +217,7 @@ func cmdAlbums(c *Client, page, limit int, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tTITLE\tARTIST\tYEAR"))
+	printHeader(tw, format, "ID\tTITLE\tARTIST\tYEAR")
 	for _, a := range result.Data {
 		year := ""
 		if a.Year > 0 {
@@ -230,13 +230,13 @@ func cmdAlbums(c *Client, page, limit int, wantJSON bool) error {
 }
 
 // cmdSongs lists songs from GET /api/v1/songs.
-func cmdSongs(c *Client, page, limit int, wantJSON bool) error {
+func cmdSongs(c *Client, page, limit int, format string) error {
 	path := fmt.Sprintf("/api/v1/songs?page=%d&limit=%d", page, limit)
 	data, _, err := c.getRaw(path)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -255,7 +255,7 @@ func cmdSongs(c *Client, page, limit int, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tTRACK\tTITLE\tARTIST\tALBUM"))
+	printHeader(tw, format, "ID\tTRACK\tTITLE\tARTIST\tALBUM")
 	for _, s := range result.Data {
 		fmt.Fprintf(tw, "%s\t%d\t%s\t%s\t%s\n", s.ID, s.Track, s.Title, s.Artist, s.Album)
 	}
@@ -264,12 +264,12 @@ func cmdSongs(c *Client, page, limit int, wantJSON bool) error {
 }
 
 // cmdGenres lists genres from GET /api/v1/genres.
-func cmdGenres(c *Client, wantJSON bool) error {
+func cmdGenres(c *Client, format string) error {
 	data, _, err := c.getRaw("/api/v1/genres")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -285,7 +285,7 @@ func cmdGenres(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tNAME"))
+	printHeader(tw, format, "ID\tNAME")
 	for _, g := range result.Data {
 		fmt.Fprintf(tw, "%s\t%s\n", g.ID, g.Name)
 	}
@@ -294,13 +294,13 @@ func cmdGenres(c *Client, wantJSON bool) error {
 }
 
 // cmdSearch searches all content via GET /api/v1/search.
-func cmdSearch(c *Client, query string, wantJSON bool) error {
+func cmdSearch(c *Client, query string, format string) error {
 	path := "/api/v1/search?q=" + urlQueryEscape(query)
 	data, _, err := c.getRaw(path)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -329,24 +329,34 @@ func cmdSearch(c *Client, query string, wantJSON bool) error {
 	}
 	tw := newTabWriter()
 	if len(result.Data.Artists) > 0 {
-		fmt.Fprintln(tw, colorize(ansiBoldCyan, "ARTISTS"))
-		fmt.Fprintln(tw, colorize(ansiBold, "ID\tNAME"))
+		if format != "plain" {
+			fmt.Fprintln(tw, colorize(ansiBoldCyan, "ARTISTS"))
+			fmt.Fprintln(tw, colorize(ansiBold, "ID\tNAME"))
+		}
 		for _, a := range result.Data.Artists {
 			fmt.Fprintf(tw, "%s\t%s\n", a.ID, a.Name)
 		}
-		fmt.Fprintln(tw)
+		if format != "plain" {
+			fmt.Fprintln(tw)
+		}
 	}
 	if len(result.Data.Albums) > 0 {
-		fmt.Fprintln(tw, colorize(ansiBoldCyan, "ALBUMS"))
-		fmt.Fprintln(tw, colorize(ansiBold, "ID\tTITLE\tARTIST"))
+		if format != "plain" {
+			fmt.Fprintln(tw, colorize(ansiBoldCyan, "ALBUMS"))
+			fmt.Fprintln(tw, colorize(ansiBold, "ID\tTITLE\tARTIST"))
+		}
 		for _, a := range result.Data.Albums {
 			fmt.Fprintf(tw, "%s\t%s\t%s\n", a.ID, a.Title, a.Artist)
 		}
-		fmt.Fprintln(tw)
+		if format != "plain" {
+			fmt.Fprintln(tw)
+		}
 	}
 	if len(result.Data.Songs) > 0 {
-		fmt.Fprintln(tw, colorize(ansiBoldCyan, "SONGS"))
-		fmt.Fprintln(tw, colorize(ansiBold, "ID\tTITLE\tARTIST"))
+		if format != "plain" {
+			fmt.Fprintln(tw, colorize(ansiBoldCyan, "SONGS"))
+			fmt.Fprintln(tw, colorize(ansiBold, "ID\tTITLE\tARTIST"))
+		}
 		for _, s := range result.Data.Songs {
 			fmt.Fprintf(tw, "%s\t%s\t%s\n", s.ID, s.Title, s.Artist)
 		}
@@ -356,12 +366,12 @@ func cmdSearch(c *Client, query string, wantJSON bool) error {
 }
 
 // cmdPlaylists lists playlists from GET /api/v1/playlists.
-func cmdPlaylists(c *Client, wantJSON bool) error {
+func cmdPlaylists(c *Client, format string) error {
 	data, _, err := c.getRaw("/api/v1/playlists")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -378,7 +388,7 @@ func cmdPlaylists(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tNAME\tSONGS"))
+	printHeader(tw, format, "ID\tNAME\tSONGS")
 	for _, p := range result.Data {
 		fmt.Fprintf(tw, "%s\t%s\t%d\n", p.ID, p.Name, p.SongCount)
 	}
@@ -387,12 +397,12 @@ func cmdPlaylists(c *Client, wantJSON bool) error {
 }
 
 // cmdPlaylist shows detail for a single playlist via GET /api/v1/playlists/{id}.
-func cmdPlaylist(c *Client, id string, wantJSON bool) error {
+func cmdPlaylist(c *Client, id string, format string) error {
 	data, _, err := c.getRaw("/api/v1/playlists/" + id)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -414,10 +424,12 @@ func cmdPlaylist(c *Client, id string, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintf(tw, "%s %s\n", colorize(ansiBoldCyan, "Playlist:"), result.Data.Name)
-	fmt.Fprintf(tw, "ID:\t%s\n", result.Data.ID)
-	fmt.Fprintln(tw)
-	fmt.Fprintln(tw, colorize(ansiBold, "SONG ID\tTITLE\tARTIST\tALBUM"))
+	if format != "plain" {
+		fmt.Fprintf(tw, "%s %s\n", colorize(ansiBoldCyan, "Playlist:"), result.Data.Name)
+		fmt.Fprintf(tw, "ID:\t%s\n", result.Data.ID)
+		fmt.Fprintln(tw)
+		fmt.Fprintln(tw, colorize(ansiBold, "SONG ID\tTITLE\tARTIST\tALBUM"))
+	}
 	for _, s := range result.Data.Songs {
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", s.ID, s.Title, s.Artist, s.Album)
 	}
@@ -426,13 +438,13 @@ func cmdPlaylist(c *Client, id string, wantJSON bool) error {
 }
 
 // cmdPlaylistCreate creates a new playlist via POST /api/v1/playlists.
-func cmdPlaylistCreate(c *Client, name string, wantJSON bool) error {
+func cmdPlaylistCreate(c *Client, name string, format string) error {
 	payload := map[string]string{"name": name}
 	data, _, err := c.postRaw("/api/v1/playlists", payload)
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -471,12 +483,12 @@ func cmdPlaylistRemove(c *Client, playlistID, songID string) error {
 }
 
 // cmdTags retrieves tags for a song via GET /api/v1/songs/{id}/tags.
-func cmdTags(c *Client, songID string, wantJSON bool) error {
+func cmdTags(c *Client, songID string, format string) error {
 	data, _, err := c.getRaw("/api/v1/songs/" + songID + "/tags")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -496,7 +508,7 @@ func cmdTags(c *Client, songID string, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "SONG TAGS"))
+	printHeader(tw, format, "SONG TAGS")
 	fmt.Fprintf(tw, "Title:\t%s\n", result.Data.Title)
 	fmt.Fprintf(tw, "Artist:\t%s\n", result.Data.Artist)
 	fmt.Fprintf(tw, "Album:\t%s\n", result.Data.Album)
@@ -518,7 +530,7 @@ type TagSetFields struct {
 }
 
 // cmdTagsSet updates one or more tag fields on a song via PUT /api/v1/songs/{id}/tags.
-func cmdTagsSet(c *Client, songID string, fields TagSetFields, wantJSON bool) error {
+func cmdTagsSet(c *Client, songID string, fields TagSetFields, format string) error {
 	payload := map[string]any{}
 	if fields.Title != "" {
 		payload["title"] = fields.Title
@@ -553,7 +565,7 @@ func cmdTagsSet(c *Client, songID string, fields TagSetFields, wantJSON bool) er
 	if err := c.put("/api/v1/songs/"+songID+"/tags", payload, &out); err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		if data, err := json.MarshalIndent(out, "", "  "); err == nil {
 			fmt.Println(string(data))
 		}
@@ -564,12 +576,12 @@ func cmdTagsSet(c *Client, songID string, fields TagSetFields, wantJSON bool) er
 }
 
 // cmdIcecastList lists Icecast mounts via GET /api/v1/icecast/mounts.
-func cmdIcecastList(c *Client, wantJSON bool) error {
+func cmdIcecastList(c *Client, format string) error {
 	data, _, err := c.getRaw("/api/v1/icecast/mounts")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -586,7 +598,7 @@ func cmdIcecastList(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tMOUNT\tSTATUS"))
+	printHeader(tw, format, "ID\tMOUNT\tSTATUS")
 	for _, m := range result.Data {
 		fmt.Fprintf(tw, "%s\t%s\t%s\n", m.ID, m.Mount, m.Status)
 	}
@@ -613,12 +625,12 @@ func cmdIcecastStop(c *Client, mountID string) error {
 }
 
 // cmdUsersList lists all users via GET /api/v1/admin/users.
-func cmdUsersList(c *Client, wantJSON bool) error {
+func cmdUsersList(c *Client, format string) error {
 	data, _, err := c.getRaw("/api/v1/admin/users")
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}
@@ -636,7 +648,7 @@ func cmdUsersList(c *Client, wantJSON bool) error {
 		return nil
 	}
 	tw := newTabWriter()
-	fmt.Fprintln(tw, colorize(ansiBoldCyan, "ID\tUSERNAME\tEMAIL\tROLE"))
+	printHeader(tw, format, "ID\tUSERNAME\tEMAIL\tROLE")
 	for _, u := range result.Data {
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", u.ID, u.Username, u.Email, u.Role)
 	}
@@ -646,7 +658,7 @@ func cmdUsersList(c *Client, wantJSON bool) error {
 
 // cmdUsersCreate creates a user via POST /api/v1/admin/users.
 // Prompts for a password; admin flag makes the user an admin.
-func cmdUsersCreate(c *Client, username string, admin bool, wantJSON bool) error {
+func cmdUsersCreate(c *Client, username string, admin bool, format string) error {
 	password, err := readPassword("Password for "+username+": ", bufio.NewReader(os.Stdin))
 	if err != nil {
 		return fmt.Errorf("reading password: %w", err)
@@ -664,7 +676,7 @@ func cmdUsersCreate(c *Client, username string, admin bool, wantJSON bool) error
 	if err != nil {
 		return err
 	}
-	if wantJSON {
+	if format == "json" {
 		fmt.Println(string(data))
 		return nil
 	}

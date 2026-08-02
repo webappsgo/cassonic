@@ -133,7 +133,8 @@ cassonic-cli [flags] [command] [args...]
 | `--token {token}` | | API Bearer token (or set `CASSONIC_TOKEN` env var) |
 | `--debug` | | Enable debug output |
 | `--color {auto\|yes\|no}` | | Color output control (or set `CASSONIC_COLOR` env var) |
-| `--json` | | Output JSON instead of the default table format |
+| `--format {table\|json\|plain}` | | Output format (default: `table`, or set `CASSONIC_FORMAT` env var) |
+| `--json` | | Shorthand for `--format json` |
 
 ### Commands
 
@@ -255,10 +256,11 @@ cassonic-cli server status
 
 ### Environment Variables
 
-Precedence for all four: CLI flag > environment variable > `cli.yml` config file > built-in default.
+Precedence for all five: CLI flag > environment variable > `cli.yml` config file > built-in default.
 
 | Variable | Description |
 |----------|-------------|
 | `CASSONIC_SERVER` | Server URL, used when `--server` is not given |
 | `CASSONIC_TOKEN` | API Bearer token, used when `--token` is not given |
 | `CASSONIC_COLOR` | Color mode: `auto`, `yes`, `no`, used when `--color` is not given |
+| `CASSONIC_FORMAT` | Output format: `table`, `json`, `plain`, used when `--format` is not given (the legacy `--json` flag is the final fallback before the compiled default of `table`) |

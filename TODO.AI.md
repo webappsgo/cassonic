@@ -1,12 +1,5 @@
 # TODO
 
-- client: `--format {table|json|plain}` and `CASSONIC_FORMAT` were documented in
-  docs/cli.md but never implemented — the client only has a boolean `--json` flag
-  (`src/client/main.go`, `src/client/commands.go`) with no tri-state format system
-  or `plain` renderer. Feature-sized (touches ~32 call sites in commands.go);
-  docs/cli.md was corrected to describe only what's implemented (`--json`) pending
-  this work. Implement a real `--format` flag + `plain` output mode, or drop the
-  idea permanently, per PART 33.
 - admin: `SaveConfig` (`src/server/handler/admin/admin.go`) is a stub — it
   redirects with `flash=saved` but never parses the POSTed form or persists
   any value back to `server.yml`. This predates the DOMAIN/{fqdn} work; the

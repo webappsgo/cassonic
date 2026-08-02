@@ -31,10 +31,11 @@ func main() {
 		flagDebug     = cfg.Debug
 		flagColor     = cfg.Color
 		flagJSON      = false
+		flagFormat    = ""
 	)
 
 	args := os.Args[1:]
-	args = parseGlobalFlags(args, &flagServer, &flagToken, &flagTokenFile, &flagDebug, &flagColor, &flagJSON)
+	args = parseGlobalFlags(args, &flagServer, &flagToken, &flagTokenFile, &flagDebug, &flagColor, &flagJSON, &flagFormat)
 
 	// Handle --help / --version before anything else.
 	if len(args) == 0 {
@@ -59,6 +60,25 @@ func main() {
 	}
 	initColor(flagColor)
 
+	// Output format precedence: --format flag > CASSONIC_FORMAT env >
+	// cli.yml output.format > legacy --json flag > compiled default (table).
+	format := flagFormat
+	if format == "" {
+		if v := os.Getenv("CASSONIC_FORMAT"); v != "" {
+			format = v
+		} else if cfg.Format != "" {
+			format = cfg.Format
+		} else if flagJSON {
+			format = "json"
+		} else {
+			format = "table"
+		}
+	}
+	if !validFormat(format) {
+		printError(fmt.Sprintf("invalid --format %q; must be one of: table, json, plain", format))
+		os.Exit(1)
+	}
+
 	serverURL := cfg.Server.URL
 	if flagServer != "" {
 		serverURL = flagServer
@@ -75,7 +95,7 @@ func main() {
 	cmd := args[0]
 	rest := args[1:]
 
-	if err := dispatch(client, cfg, cmd, rest, flagJSON); err != nil {
+	if err := dispatch(client, cfg, cmd, rest, format); err != nil {
 		printError(err.Error())
 		os.Exit(1)
 	}
@@ -83,7 +103,7 @@ func main() {
 
 // parseGlobalFlags strips recognized global flags from args and sets the pointed-to values.
 // Returns the remaining args (the command and its arguments).
-func parseGlobalFlags(args []string, server, token, tokenFile *string, debug *bool, color *string, wantJSON *bool) []string {
+func parseGlobalFlags(args []string, server, token, tokenFile *string, debug *bool, color *string, wantJSON *bool, format *string) []string {
 	remaining := args[:0]
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -92,6 +112,11 @@ func parseGlobalFlags(args []string, server, token, tokenFile *string, debug *bo
 			*debug = true
 		case arg == "--json":
 			*wantJSON = true
+		case arg == "--format" && i+1 < len(args):
+			i++
+			*format = args[i]
+		case len(arg) > 9 && arg[:9] == "--format=":
+			*format = arg[9:]
 		case arg == "--server" && i+1 < len(args):
 			i++
 			*server = args[i]
@@ -119,8 +144,18 @@ func parseGlobalFlags(args []string, server, token, tokenFile *string, debug *bo
 	return remaining
 }
 
+// validFormat reports whether f is a recognized --format value.
+func validFormat(f string) bool {
+	switch f {
+	case "table", "json", "plain":
+		return true
+	default:
+		return false
+	}
+}
+
 // dispatch routes the command to the appropriate handler.
-func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool) error {
+func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, format string) error {
 	switch cmd {
 	case "login":
 		return cmdLogin(c, cfg)
@@ -129,7 +164,7 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 		return cmdLogout(c)
 
 	case "status":
-		return cmdStatus(c, wantJSON)
+		return cmdStatus(c, format)
 
 	case "scan":
 		full := false
@@ -142,46 +177,46 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 				libID = args[i]
 			}
 		}
-		return cmdScan(c, libID, full, wantJSON)
+		return cmdScan(c, libID, full, format)
 
 	case "scan-status":
-		return cmdScanStatus(c, wantJSON)
+		return cmdScanStatus(c, format)
 
 	case "artists":
 		page, limit := parsePagination(args)
-		return cmdArtists(c, page, limit, wantJSON)
+		return cmdArtists(c, page, limit, format)
 
 	case "albums":
 		page, limit := parsePagination(args)
-		return cmdAlbums(c, page, limit, wantJSON)
+		return cmdAlbums(c, page, limit, format)
 
 	case "songs":
 		page, limit := parsePagination(args)
-		return cmdSongs(c, page, limit, wantJSON)
+		return cmdSongs(c, page, limit, format)
 
 	case "genres":
-		return cmdGenres(c, wantJSON)
+		return cmdGenres(c, format)
 
 	case "search":
 		if len(args) == 0 {
 			return fmt.Errorf("usage: cassonic-cli search {query}")
 		}
-		return cmdSearch(c, args[0], wantJSON)
+		return cmdSearch(c, args[0], format)
 
 	case "playlists":
-		return cmdPlaylists(c, wantJSON)
+		return cmdPlaylists(c, format)
 
 	case "playlist":
 		if len(args) == 0 {
 			return fmt.Errorf("usage: cassonic-cli playlist {id}")
 		}
-		return cmdPlaylist(c, args[0], wantJSON)
+		return cmdPlaylist(c, args[0], format)
 
 	case "playlist-create":
 		if len(args) == 0 {
 			return fmt.Errorf("usage: cassonic-cli playlist-create {name}")
 		}
-		return cmdPlaylistCreate(c, args[0], wantJSON)
+		return cmdPlaylistCreate(c, args[0], format)
 
 	case "playlist-add":
 		if len(args) < 2 {
@@ -199,7 +234,7 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 		if len(args) == 0 {
 			return fmt.Errorf("usage: cassonic-cli tags {song-id}")
 		}
-		return cmdTags(c, args[0], wantJSON)
+		return cmdTags(c, args[0], format)
 
 	case "tags-set":
 		if len(args) == 0 {
@@ -207,13 +242,13 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 		}
 		songID := args[0]
 		fields := parseTagSetFlags(args[1:])
-		return cmdTagsSet(c, songID, fields, wantJSON)
+		return cmdTagsSet(c, songID, fields, format)
 
 	case "icecast":
-		return dispatchIcecast(c, args, wantJSON)
+		return dispatchIcecast(c, args, format)
 
 	case "users":
-		return dispatchUsers(c, args, wantJSON)
+		return dispatchUsers(c, args, format)
 
 	case "--help", "-h":
 		printHelp()
@@ -229,13 +264,13 @@ func dispatch(c *Client, cfg CLIConfig, cmd string, args []string, wantJSON bool
 }
 
 // dispatchIcecast handles the icecast sub-commands.
-func dispatchIcecast(c *Client, args []string, wantJSON bool) error {
+func dispatchIcecast(c *Client, args []string, format string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage: cassonic-cli icecast {list|start|stop} [mount-id]")
 	}
 	switch args[0] {
 	case "list":
-		return cmdIcecastList(c, wantJSON)
+		return cmdIcecastList(c, format)
 	case "start":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: cassonic-cli icecast start {mount-id}")
@@ -252,13 +287,13 @@ func dispatchIcecast(c *Client, args []string, wantJSON bool) error {
 }
 
 // dispatchUsers handles the users sub-commands.
-func dispatchUsers(c *Client, args []string, wantJSON bool) error {
+func dispatchUsers(c *Client, args []string, format string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage: cassonic-cli users {list|create|delete} [args]")
 	}
 	switch args[0] {
 	case "list":
-		return cmdUsersList(c, wantJSON)
+		return cmdUsersList(c, format)
 	case "create":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: cassonic-cli users create {username} [--admin]")
@@ -270,7 +305,7 @@ func dispatchUsers(c *Client, args []string, wantJSON bool) error {
 				admin = true
 			}
 		}
-		return cmdUsersCreate(c, username, admin, wantJSON)
+		return cmdUsersCreate(c, username, admin, format)
 	case "delete":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: cassonic-cli users delete {username}")
@@ -359,7 +394,8 @@ Global flags:
   --token-file {file}   Read token from file
   --debug               Debug HTTP requests
   --color {auto|yes|no} Color output (default: auto)
-  --json                Output raw JSON response
+  --format {table|json|plain} Output format (default: table)
+  --json                Shorthand for --format json
   --help, -h            Show help
   --version, -v         Show version
 

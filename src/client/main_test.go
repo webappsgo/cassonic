@@ -18,6 +18,7 @@ func TestParseGlobalFlags(t *testing.T) {
 		wantDebug  bool
 		wantColor  string
 		wantJSON   bool
+		wantFormat string
 		wantRest   []string
 	}{
 		{
@@ -50,12 +51,24 @@ func TestParseGlobalFlags(t *testing.T) {
 			args:     []string{"--server"},
 			wantRest: []string{"--server"},
 		},
+		{
+			name:       "space-separated --format",
+			args:       []string{"--format", "plain", "songs"},
+			wantFormat: "plain",
+			wantRest:   []string{"songs"},
+		},
+		{
+			name:       "equals-separated --format",
+			args:       []string{"--format=json", "songs"},
+			wantFormat: "json",
+			wantRest:   []string{"songs"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var server, token, tokenFile, color string
+			var server, token, tokenFile, color, format string
 			var debug, wantJSON bool
-			rest := parseGlobalFlags(tt.args, &server, &token, &tokenFile, &debug, &color, &wantJSON)
+			rest := parseGlobalFlags(tt.args, &server, &token, &tokenFile, &debug, &color, &wantJSON, &format)
 			if server != tt.wantServer {
 				t.Errorf("server = %q, want %q", server, tt.wantServer)
 			}
@@ -73,6 +86,9 @@ func TestParseGlobalFlags(t *testing.T) {
 			}
 			if wantJSON != tt.wantJSON {
 				t.Errorf("wantJSON = %v, want %v", wantJSON, tt.wantJSON)
+			}
+			if format != tt.wantFormat {
+				t.Errorf("format = %q, want %q", format, tt.wantFormat)
 			}
 			if len(rest) != len(tt.wantRest) {
 				t.Fatalf("rest = %v, want %v", rest, tt.wantRest)
@@ -140,7 +156,7 @@ func TestDispatch_UsageErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.cmd, func(t *testing.T) {
-			err := dispatch(c, defaultConfig(), tt.cmd, tt.args, false)
+			err := dispatch(c, defaultConfig(), tt.cmd, tt.args, "table")
 			if err == nil {
 				t.Fatalf("dispatch(%q) expected usage error, got nil", tt.cmd)
 			}
@@ -153,7 +169,7 @@ func TestDispatch_UsageErrors(t *testing.T) {
 
 func TestDispatch_UnknownCommand(t *testing.T) {
 	c := newClient("http://example.invalid", "", false)
-	err := dispatch(c, defaultConfig(), "bogus", nil, false)
+	err := dispatch(c, defaultConfig(), "bogus", nil, "table")
 	if err == nil || !strings.Contains(err.Error(), "unknown command") {
 		t.Errorf("error = %v, want 'unknown command'", err)
 	}
@@ -162,7 +178,7 @@ func TestDispatch_UnknownCommand(t *testing.T) {
 func TestDispatch_HelpAndVersion(t *testing.T) {
 	c := newClient("http://example.invalid", "", false)
 	out := captureStdout(t, func() {
-		if err := dispatch(c, defaultConfig(), "--help", nil, false); err != nil {
+		if err := dispatch(c, defaultConfig(), "--help", nil, "table"); err != nil {
 			t.Fatalf("dispatch(--help) error = %v", err)
 		}
 	})
@@ -171,7 +187,7 @@ func TestDispatch_HelpAndVersion(t *testing.T) {
 	}
 
 	out = captureStdout(t, func() {
-		if err := dispatch(c, defaultConfig(), "-v", nil, false); err != nil {
+		if err := dispatch(c, defaultConfig(), "-v", nil, "table"); err != nil {
 			t.Fatalf("dispatch(-v) error = %v", err)
 		}
 	})
@@ -189,7 +205,7 @@ func TestDispatch_RoutesToRealCommand(t *testing.T) {
 	c := newClient(srv.URL, "", false)
 
 	out := captureStdout(t, func() {
-		if err := dispatch(c, defaultConfig(), "status", nil, false); err != nil {
+		if err := dispatch(c, defaultConfig(), "status", nil, "table"); err != nil {
 			t.Fatalf("dispatch(status) error = %v", err)
 		}
 	})
@@ -213,7 +229,7 @@ func TestDispatch_ScanFlagParsing(t *testing.T) {
 	c := newClient(srv.URL, "", false)
 
 	captureStdout(t, func() {
-		if err := dispatch(c, defaultConfig(), "scan", []string{"--full", "mylib"}, false); err != nil {
+		if err := dispatch(c, defaultConfig(), "scan", []string{"--full", "mylib"}, "table"); err != nil {
 			t.Fatalf("dispatch(scan) error = %v", err)
 		}
 	})
@@ -239,7 +255,7 @@ func TestDispatchIcecast(t *testing.T) {
 	c := newClient("http://example.invalid", "", false)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := dispatchIcecast(c, tt.args, false)
+			err := dispatchIcecast(c, tt.args, "table")
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("error = %v, want to contain %q", err, tt.wantErr)
 			}
@@ -255,7 +271,7 @@ func TestDispatchIcecast_List(t *testing.T) {
 	defer srv.Close()
 	c := newClient(srv.URL, "", false)
 	captureStdout(t, func() {
-		if err := dispatchIcecast(c, []string{"list"}, false); err != nil {
+		if err := dispatchIcecast(c, []string{"list"}, "table"); err != nil {
 			t.Fatalf("dispatchIcecast(list) error = %v", err)
 		}
 	})
@@ -275,7 +291,7 @@ func TestDispatchUsers(t *testing.T) {
 	c := newClient("http://example.invalid", "", false)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := dispatchUsers(c, tt.args, false)
+			err := dispatchUsers(c, tt.args, "table")
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("error = %v, want to contain %q", err, tt.wantErr)
 			}
@@ -298,7 +314,7 @@ func TestDispatchUsers_CreateAdminFlag(t *testing.T) {
 
 	withStdin(t, "pw123\n", func() {
 		captureStdout(t, func() {
-			if err := dispatchUsers(c, []string{"create", "bob", "--admin"}, false); err != nil {
+			if err := dispatchUsers(c, []string{"create", "bob", "--admin"}, "table"); err != nil {
 				t.Fatalf("dispatchUsers(create) error = %v", err)
 			}
 		})

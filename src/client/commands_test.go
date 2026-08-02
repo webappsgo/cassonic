@@ -67,15 +67,15 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) (*Client, func()) {
 func TestCmdStatus(t *testing.T) {
 	tests := []struct {
 		name     string
-		wantJSON bool
+		format   string
 		respBody string
 		respCode int
 		wantOut  string
 	}{
-		{"json passthrough", true, `{"ok":true}`, 200, `{"ok":true}`},
-		{"table output", false, `{"ok":true,"data":{"status":"up","version":"1.2.3","uptime":"5m"}}`, 200, "SERVER STATUS"},
-		{"bad json falls back to raw", false, `not json`, 200, "HTTP 200"},
-		{"error status falls back to raw", false, `{}`, 500, "HTTP 500"},
+		{"json passthrough", "json", `{"ok":true}`, 200, `{"ok":true}`},
+		{"table output", "table", `{"ok":true,"data":{"status":"up","version":"1.2.3","uptime":"5m"}}`, 200, "SERVER STATUS"},
+		{"bad json falls back to raw", "table", `not json`, 200, "HTTP 200"},
+		{"error status falls back to raw", "table", `{}`, 500, "HTTP 500"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestCmdStatus(t *testing.T) {
 			})
 			defer closeSrv()
 			out := captureStdout(t, func() {
-				if err := cmdStatus(c, tt.wantJSON); err != nil {
+				if err := cmdStatus(c, tt.format); err != nil {
 					t.Fatalf("cmdStatus() error = %v", err)
 				}
 			})
@@ -98,7 +98,7 @@ func TestCmdStatus(t *testing.T) {
 
 func TestCmdStatus_RequestError(t *testing.T) {
 	c := newClient("http://127.0.0.1:1", "", false)
-	if err := cmdStatus(c, false); err == nil {
+	if err := cmdStatus(c, "table"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -113,7 +113,7 @@ func TestCmdScan(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdScan(c, "", false, false); err != nil {
+		if err := cmdScan(c, "", false, "table"); err != nil {
 			t.Fatalf("cmdScan() error = %v", err)
 		}
 	})
@@ -135,7 +135,7 @@ func TestCmdScan_CustomLibraryAndJSON(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdScan(c, "mylib", true, true); err != nil {
+		if err := cmdScan(c, "mylib", true, "json"); err != nil {
 			t.Fatalf("cmdScan() error = %v", err)
 		}
 	})
@@ -155,7 +155,7 @@ func TestCmdScanStatus(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdScanStatus(c, false); err != nil {
+		if err := cmdScanStatus(c, "table"); err != nil {
 			t.Fatalf("cmdScanStatus() error = %v", err)
 		}
 	})
@@ -174,7 +174,7 @@ func TestCmdArtists(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdArtists(c, 2, 25, false); err != nil {
+		if err := cmdArtists(c, 2, 25, "table"); err != nil {
 			t.Fatalf("cmdArtists() error = %v", err)
 		}
 	})
@@ -186,6 +186,44 @@ func TestCmdArtists(t *testing.T) {
 	}
 }
 
+func TestCmdArtists_PlainFormatHasNoHeader(t *testing.T) {
+	c, closeSrv := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte(`{"ok":true,"data":[{"id":"1","name":"Artist One"}]}`))
+	})
+	defer closeSrv()
+
+	out := captureStdout(t, func() {
+		if err := cmdArtists(c, 1, 50, "plain"); err != nil {
+			t.Fatalf("cmdArtists() error = %v", err)
+		}
+	})
+	if strings.Contains(out, "ID") && strings.Contains(out, "NAME") {
+		t.Errorf("plain output should omit the header row, got %q", out)
+	}
+	if !strings.Contains(out, "1") || !strings.Contains(out, "Artist One") {
+		t.Errorf("output = %q, want data row", out)
+	}
+}
+
+func TestValidFormat(t *testing.T) {
+	tests := []struct {
+		format string
+		want   bool
+	}{
+		{"table", true},
+		{"json", true},
+		{"plain", true},
+		{"yaml", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		if got := validFormat(tt.format); got != tt.want {
+			t.Errorf("validFormat(%q) = %v, want %v", tt.format, got, tt.want)
+		}
+	}
+}
+
 func TestCmdAlbums(t *testing.T) {
 	c, closeSrv := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -194,7 +232,7 @@ func TestCmdAlbums(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdAlbums(c, 1, 50, false); err != nil {
+		if err := cmdAlbums(c, 1, 50, "table"); err != nil {
 			t.Fatalf("cmdAlbums() error = %v", err)
 		}
 	})
@@ -211,7 +249,7 @@ func TestCmdSongs(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdSongs(c, 1, 50, false); err != nil {
+		if err := cmdSongs(c, 1, 50, "table"); err != nil {
 			t.Fatalf("cmdSongs() error = %v", err)
 		}
 	})
@@ -228,7 +266,7 @@ func TestCmdGenres(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdGenres(c, false); err != nil {
+		if err := cmdGenres(c, "table"); err != nil {
 			t.Fatalf("cmdGenres() error = %v", err)
 		}
 	})
@@ -245,7 +283,7 @@ func TestCmdGenres_BadJSONFallsBackToRaw(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdGenres(c, false); err != nil {
+		if err := cmdGenres(c, "table"); err != nil {
 			t.Fatalf("cmdGenres() error = %v", err)
 		}
 	})
@@ -264,7 +302,7 @@ func TestCmdSearch(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdSearch(c, "foo bar", false); err != nil {
+		if err := cmdSearch(c, "foo bar", "table"); err != nil {
 			t.Fatalf("cmdSearch() error = %v", err)
 		}
 	})
@@ -284,7 +322,7 @@ func TestCmdSearch_EmptyResultSections(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdSearch(c, "x", false); err != nil {
+		if err := cmdSearch(c, "x", "table"); err != nil {
 			t.Fatalf("cmdSearch() error = %v", err)
 		}
 	})
@@ -301,7 +339,7 @@ func TestCmdPlaylists(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdPlaylists(c, false); err != nil {
+		if err := cmdPlaylists(c, "table"); err != nil {
 			t.Fatalf("cmdPlaylists() error = %v", err)
 		}
 	})
@@ -320,7 +358,7 @@ func TestCmdPlaylist(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdPlaylist(c, "1", false); err != nil {
+		if err := cmdPlaylist(c, "1", "table"); err != nil {
 			t.Fatalf("cmdPlaylist() error = %v", err)
 		}
 	})
@@ -340,7 +378,7 @@ func TestCmdPlaylistCreate(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdPlaylistCreate(c, "New", false); err != nil {
+		if err := cmdPlaylistCreate(c, "New", "table"); err != nil {
 			t.Fatalf("cmdPlaylistCreate() error = %v", err)
 		}
 	})
@@ -399,7 +437,7 @@ func TestCmdTags(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdTags(c, "s1", false); err != nil {
+		if err := cmdTags(c, "s1", "table"); err != nil {
 			t.Fatalf("cmdTags() error = %v", err)
 		}
 	})
@@ -429,7 +467,7 @@ func TestCmdTagsSet(t *testing.T) {
 			defer closeSrv()
 
 			out := captureStdout(t, func() {
-				err := cmdTagsSet(c, "s1", tt.fields, false)
+				err := cmdTagsSet(c, "s1", tt.fields, "table")
 				if tt.wantErr {
 					if err == nil {
 						t.Fatal("expected error, got nil")
@@ -458,7 +496,7 @@ func TestCmdTagsSet_JSONOutput(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdTagsSet(c, "s1", TagSetFields{Title: "T"}, true); err != nil {
+		if err := cmdTagsSet(c, "s1", TagSetFields{Title: "T"}, "json"); err != nil {
 			t.Fatalf("cmdTagsSet() error = %v", err)
 		}
 	})
@@ -475,7 +513,7 @@ func TestCmdIcecastList(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdIcecastList(c, false); err != nil {
+		if err := cmdIcecastList(c, "table"); err != nil {
 			t.Fatalf("cmdIcecastList() error = %v", err)
 		}
 	})
@@ -517,7 +555,7 @@ func TestCmdUsersList(t *testing.T) {
 	defer closeSrv()
 
 	out := captureStdout(t, func() {
-		if err := cmdUsersList(c, false); err != nil {
+		if err := cmdUsersList(c, "table"); err != nil {
 			t.Fatalf("cmdUsersList() error = %v", err)
 		}
 	})
@@ -558,7 +596,7 @@ func TestCmdUsersCreate(t *testing.T) {
 	var out string
 	withStdin(t, "hunter2\n", func() {
 		out = captureStdout(t, func() {
-			if err := cmdUsersCreate(c, "newuser", true, false); err != nil {
+			if err := cmdUsersCreate(c, "newuser", true, "table"); err != nil {
 				t.Fatalf("cmdUsersCreate() error = %v", err)
 			}
 		})
