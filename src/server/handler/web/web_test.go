@@ -241,6 +241,151 @@ func TestLoginPost_RememberMeSetsExpiry(t *testing.T) {
 	}
 }
 
+// --- Admin login (AI.md PART 17 "Scoped Login Redirect") ---
+
+func mustHashAdminPassword(t *testing.T, password string) string {
+	t.Helper()
+	hash, err := store.HashPassword(password)
+	if err != nil {
+		t.Fatalf("store.HashPassword: %v", err)
+	}
+	return hash
+}
+
+func TestLoginPost_AdminSuccess(t *testing.T) {
+	db := testDB()
+	hash := mustHashAdminPassword(t, "correct")
+	db.Admin.(*testAdminStore).getAdminByUsernameResult = &model.Admin{ID: 1, Username: "root", Enabled: true, PasswordHash: hash}
+	h := newTestHandler(db)
+	form := url.Values{"username": {"root"}, "password": {"correct"}}
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.LoginPost(w, r)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	wantLoc := "/server/" + h.cfg.AdminPath()
+	if w.Header().Get("Location") != wantLoc {
+		t.Errorf("expected redirect to %q, got %q", wantLoc, w.Header().Get("Location"))
+	}
+	found := false
+	for _, c := range w.Result().Cookies() {
+		if c.Name == mw.AdminSessionCookieName && c.Value != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected admin session cookie to be set")
+	}
+}
+
+func TestLoginPost_AdminWrongPassword_Rejected(t *testing.T) {
+	db := testDB()
+	hash := mustHashAdminPassword(t, "correct")
+	db.Admin.(*testAdminStore).getAdminByUsernameResult = &model.Admin{ID: 1, Username: "root", Enabled: true, PasswordHash: hash}
+	h := newTestHandler(db)
+	form := url.Values{"username": {"root"}, "password": {"wrong"}}
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.LoginPost(w, r)
+	if !strings.Contains(w.Header().Get("Location"), "invalid+credentials") {
+		t.Errorf("expected invalid credentials redirect, got %q", w.Header().Get("Location"))
+	}
+	for _, c := range w.Result().Cookies() {
+		if c.Name == mw.AdminSessionCookieName && c.Value != "" {
+			t.Error("expected no admin session cookie on wrong password")
+		}
+	}
+}
+
+func TestLoginPost_AdminDisabled_Rejected(t *testing.T) {
+	db := testDB()
+	hash := mustHashAdminPassword(t, "correct")
+	db.Admin.(*testAdminStore).getAdminByUsernameResult = &model.Admin{ID: 1, Username: "root", Enabled: false, PasswordHash: hash}
+	h := newTestHandler(db)
+	form := url.Values{"username": {"root"}, "password": {"correct"}}
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.LoginPost(w, r)
+	if !strings.Contains(w.Header().Get("Location"), "invalid+credentials") {
+		t.Errorf("expected invalid credentials redirect, got %q", w.Header().Get("Location"))
+	}
+}
+
+func TestLoginPost_AdminWrongPassword_LocksAfterMaxAttempts(t *testing.T) {
+	db := testDB()
+	hash := mustHashAdminPassword(t, "correct")
+	admin := &model.Admin{ID: 1, Username: "root", Enabled: true, PasswordHash: hash, FailedAttempts: 4}
+	db.Admin.(*testAdminStore).getAdminByUsernameResult = admin
+	// The handler re-fetches the admin after incrementing to check the
+	// updated FailedAttempts count; return one attempt past the threshold.
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "root", Enabled: true, PasswordHash: hash, FailedAttempts: 5}
+	h := newTestHandler(db)
+	form := url.Values{"username": {"root"}, "password": {"wrong"}}
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.LoginPost(w, r)
+	if !strings.Contains(w.Header().Get("Location"), "invalid+credentials") {
+		t.Errorf("expected invalid credentials redirect, got %q", w.Header().Get("Location"))
+	}
+	if db.Admin.(*testAdminStore).setAdminLockedUntilErr != nil {
+		t.Fatalf("unexpected stub error: %v", db.Admin.(*testAdminStore).setAdminLockedUntilErr)
+	}
+}
+
+func TestLoginPost_AdminUsername_NeverFallsThroughToUserTable(t *testing.T) {
+	db := testDB()
+	hash := mustHashAdminPassword(t, "correct")
+	db.Admin.(*testAdminStore).getAdminByUsernameResult = &model.Admin{ID: 1, Username: "shared", Enabled: true, PasswordHash: hash}
+	// A regular user with the same username also exists; the admin match
+	// must take priority and never fall through to this record, even on a
+	// wrong admin password (AI.md PART 17 "Scoped Login Redirect").
+	userHash := mustHashPassword(t, "userpass")
+	db.Users.(*testUserStore).getUserByUsernameResult = &model.User{ID: 2, Username: "shared", IsEnabled: true, PasswordHash: userHash}
+	h := newTestHandler(db)
+	form := url.Values{"username": {"shared"}, "password": {"userpass"}}
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.LoginPost(w, r)
+	if !strings.Contains(w.Header().Get("Location"), "invalid+credentials") {
+		t.Errorf("expected invalid credentials redirect (admin-exclusive path), got %q", w.Header().Get("Location"))
+	}
+	for _, c := range w.Result().Cookies() {
+		if c.Name == SessionCookieName && c.Value != "" {
+			t.Error("expected no regular-user session cookie; admin match must never fall through")
+		}
+	}
+}
+
+func TestLogout_ClearsAdminSessionAndRedirects(t *testing.T) {
+	db := testDB()
+	h := newTestHandler(db)
+	r := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	r.AddCookie(&http.Cookie{Name: mw.AdminSessionCookieName, Value: "sometoken"})
+	w := httptest.NewRecorder()
+	h.Logout(w, r)
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	if w.Header().Get("Location") != "/login" {
+		t.Errorf("expected redirect to /login, got %q", w.Header().Get("Location"))
+	}
+	found := false
+	for _, c := range w.Result().Cookies() {
+		if c.Name == mw.AdminSessionCookieName && c.MaxAge < 0 {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected admin session cookie to be cleared")
+	}
+}
+
 func TestLogout_ClearsSessionAndRedirects(t *testing.T) {
 	db := testDB()
 	h := newTestHandler(db)

@@ -14,6 +14,20 @@
   documented deviation) before the admin panel can be called PART 17
   compliant.
 
+- auth: AI.md's unified "Auth Routes" / "Scoped Login Redirect" section
+  (~line 16060) specifies all auth routes live under `/server/auth/*`
+  (e.g. `/server/auth/login`, `/server/auth/logout`), but the codebase
+  mounts them at root (`r.Get("/login", h.Login)` etc. in
+  `src/server/handler/web/web.go`'s `Routes()`). Discovered while
+  implementing PART 17 admin auth (P2): the admin login flow was wired
+  into the existing shared `/login` route rather than doing an
+  unplanned site-wide route-path rename, since this deviation predates
+  and is broader than the PART 17 admin-panel scope that triggered this
+  work. Needs either a full `/login`→`/server/auth/login` (and
+  `/logout`→`/server/auth/logout`) migration across routes, templates,
+  and redirects, or a written decision that the root-level paths are an
+  intentional, documented deviation.
+
 - store: `sqliteUserStore.GetAPITokenByHash` (`expires_at > datetime('now')`,
   `user_store.go:321`) and `PurgeExpiredSessions`
   (`expires_at < datetime('now')`, `user_store.go:447`) compare a

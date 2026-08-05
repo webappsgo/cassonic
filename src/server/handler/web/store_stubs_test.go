@@ -243,6 +243,82 @@ func (s *testUserStore) UpdateRadioStation(ctx context.Context, st *model.Intern
 }
 func (s *testUserStore) DeleteRadioStation(ctx context.Context, id int64) error { return nil }
 
+// testAdminStore is a configurable stub implementing store.AdminStore for handler tests.
+// Only GetAdminByUsername and IncrementAdminLoginAttempts/SetAdminLockedUntil are
+// exercised by web.LoginPost's tryAdminLogin path.
+type testAdminStore struct {
+	getAdminByUsernameResult *model.Admin
+	getAdminByUsernameErr    error
+
+	getAdminResult *model.Admin
+	getAdminErr    error
+
+	createAdminSessionErr error
+
+	incrementAdminLoginAttemptsErr error
+	resetAdminLoginAttemptsErr     error
+	setAdminLockedUntilErr         error
+	updateAdminLastLoginErr        error
+
+	appendAuditEntryErr error
+
+	deleteAdminSessionErr error
+}
+
+func (s *testAdminStore) CreateAdmin(ctx context.Context, a *model.Admin) (int64, error) {
+	return 0, nil
+}
+func (s *testAdminStore) GetAdmin(ctx context.Context, id int64) (*model.Admin, error) {
+	return s.getAdminResult, s.getAdminErr
+}
+func (s *testAdminStore) GetAdminByUsername(ctx context.Context, username string) (*model.Admin, error) {
+	return s.getAdminByUsernameResult, s.getAdminByUsernameErr
+}
+func (s *testAdminStore) GetAdminByExternalID(ctx context.Context, source, externalID string) (*model.Admin, error) {
+	return nil, nil
+}
+func (s *testAdminStore) UpdateAdmin(ctx context.Context, a *model.Admin) error { return nil }
+func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error      { return nil }
+func (s *testAdminStore) ListAdmins(ctx context.Context) ([]*model.Admin, error) {
+	return nil, nil
+}
+func (s *testAdminStore) CountAdmins(ctx context.Context) (int, error) { return 0, nil }
+func (s *testAdminStore) IncrementAdminLoginAttempts(ctx context.Context, id int64) error {
+	return s.incrementAdminLoginAttemptsErr
+}
+func (s *testAdminStore) ResetAdminLoginAttempts(ctx context.Context, id int64) error {
+	return s.resetAdminLoginAttemptsErr
+}
+func (s *testAdminStore) SetAdminLockedUntil(ctx context.Context, id int64, until time.Time) error {
+	return s.setAdminLockedUntilErr
+}
+func (s *testAdminStore) UpdateAdminLastLogin(ctx context.Context, id int64) error {
+	return s.updateAdminLastLoginErr
+}
+func (s *testAdminStore) GetAdminPreferences(ctx context.Context, adminID int64) (*model.AdminPreferences, error) {
+	return nil, nil
+}
+func (s *testAdminStore) UpdateAdminPreferences(ctx context.Context, p *model.AdminPreferences) error {
+	return nil
+}
+func (s *testAdminStore) CreateAdminSession(ctx context.Context, sess *model.AdminSession) error {
+	return s.createAdminSessionErr
+}
+func (s *testAdminStore) GetAdminSessionByHash(ctx context.Context, tokenHash string) (*model.AdminSession, error) {
+	return nil, nil
+}
+func (s *testAdminStore) DeleteAdminSession(ctx context.Context, tokenHash string) error {
+	return s.deleteAdminSessionErr
+}
+func (s *testAdminStore) DeleteAdminSessions(ctx context.Context, adminID int64) error { return nil }
+func (s *testAdminStore) PurgeExpiredAdminSessions(ctx context.Context) error          { return nil }
+func (s *testAdminStore) AppendAuditEntry(ctx context.Context, e *model.AuditEntry) error {
+	return s.appendAuditEntryErr
+}
+func (s *testAdminStore) ListAuditEntries(ctx context.Context, limit int) ([]*model.AuditEntry, error) {
+	return nil, nil
+}
+
 // testPlaylistStore is a configurable stub implementing store.PlaylistStore for handler tests.
 type testPlaylistStore struct {
 	listPlaylistsResult []*model.Playlist
@@ -399,6 +475,7 @@ func testDB() *store.DB {
 	return &store.DB{
 		Music:     &testMusicStore{},
 		Users:     &testUserStore{},
+		Admin:     &testAdminStore{},
 		Activity:  &testActivityStore{},
 		Playlists: &testPlaylistStore{},
 		Icecast:   &testIcecastStore{},

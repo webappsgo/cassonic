@@ -17,12 +17,11 @@ import (
 	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
-	"github.com/local/cassonic/src/server/store"
 )
 
-// withAuthUser injects an authenticated user into the request context.
-func withAuthUser(r *http.Request, id int64, username string, isAdmin bool) *http.Request {
-	return r.WithContext(mw.WithUser(r.Context(), &mw.AuthUser{ID: id, Username: username, IsAdmin: isAdmin}))
+// withAdminUser injects an authenticated Server Admin into the request context.
+func withAdminUser(r *http.Request, id int64, username, role string) *http.Request {
+	return r.WithContext(mw.WithAdmin(r.Context(), &mw.AdminUser{ID: id, Username: username, Role: role}))
 }
 
 // withChiParam injects a chi route URL parameter into the request context.
@@ -39,7 +38,7 @@ func TestRequireAdmin_ContextAdmin_PassesThrough(t *testing.T) {
 	called := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true; w.WriteHeader(http.StatusOK) })
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = withAuthUser(r, 1, "admin", true)
+	r = withAdminUser(r, 1, "admin", "superadmin")
 	w := httptest.NewRecorder()
 	h.requireAdmin(next).ServeHTTP(w, r)
 	if !called {
@@ -47,18 +46,6 @@ func TestRequireAdmin_ContextAdmin_PassesThrough(t *testing.T) {
 	}
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
-	}
-}
-
-func TestRequireAdmin_ContextNonAdmin_FallsThroughToCookieCheck(t *testing.T) {
-	h := newTestHandler(testDB(), testConfig(t.TempDir()))
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r = withAuthUser(r, 1, "notadmin", false)
-	w := httptest.NewRecorder()
-	h.requireAdmin(next).ServeHTTP(w, r)
-	if w.Code != http.StatusSeeOther {
-		t.Fatalf("expected 303 redirect (no cookie), got %d", w.Code)
 	}
 }
 
@@ -79,11 +66,11 @@ func TestRequireAdmin_NoCookie_Redirects(t *testing.T) {
 
 func TestRequireAdmin_InvalidSession_Redirects(t *testing.T) {
 	db := testDB()
-	db.Users.(*testUserStore).getSessionByHashErr = errStore
+	db.Admin.(*testAdminStore).getAdminSessionByHashErr = errStore
 	h := newTestHandler(db, testConfig(t.TempDir()))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: "cassonic_session", Value: "badtoken"})
+	r.AddCookie(&http.Cookie{Name: mw.AdminSessionCookieName, Value: "badtoken"})
 	w := httptest.NewRecorder()
 	h.requireAdmin(next).ServeHTTP(w, r)
 	if w.Code != http.StatusSeeOther {
@@ -93,11 +80,11 @@ func TestRequireAdmin_InvalidSession_Redirects(t *testing.T) {
 
 func TestRequireAdmin_ExpiredSession_Redirects(t *testing.T) {
 	db := testDB()
-	db.Users.(*testUserStore).getSessionByHashResult = &store.Session{UserID: 1, ExpiresAt: time.Now().Add(-time.Hour)}
+	db.Admin.(*testAdminStore).getAdminSessionByHashResult = &model.AdminSession{AdminID: 1, ExpiresAt: time.Now().Add(-time.Hour)}
 	h := newTestHandler(db, testConfig(t.TempDir()))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: "cassonic_session", Value: "tok"})
+	r.AddCookie(&http.Cookie{Name: mw.AdminSessionCookieName, Value: "tok"})
 	w := httptest.NewRecorder()
 	h.requireAdmin(next).ServeHTTP(w, r)
 	if w.Code != http.StatusSeeOther {
@@ -105,29 +92,14 @@ func TestRequireAdmin_ExpiredSession_Redirects(t *testing.T) {
 	}
 }
 
-func TestRequireAdmin_SessionUserNotAdmin_Forbidden(t *testing.T) {
+func TestRequireAdmin_SessionAdminDisabled_Forbidden(t *testing.T) {
 	db := testDB()
-	db.Users.(*testUserStore).getSessionByHashResult = &store.Session{UserID: 1, ExpiresAt: time.Now().Add(time.Hour)}
-	db.Users.(*testUserStore).getUserResult = &model.User{ID: 1, IsAdmin: false, IsEnabled: true}
+	db.Admin.(*testAdminStore).getAdminSessionByHashResult = &model.AdminSession{AdminID: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Enabled: false}
 	h := newTestHandler(db, testConfig(t.TempDir()))
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: "cassonic_session", Value: "tok"})
-	w := httptest.NewRecorder()
-	h.requireAdmin(next).ServeHTTP(w, r)
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
-	}
-}
-
-func TestRequireAdmin_SessionUserDisabled_Forbidden(t *testing.T) {
-	db := testDB()
-	db.Users.(*testUserStore).getSessionByHashResult = &store.Session{UserID: 1, ExpiresAt: time.Now().Add(time.Hour)}
-	db.Users.(*testUserStore).getUserResult = &model.User{ID: 1, IsAdmin: true, IsEnabled: false}
-	h := newTestHandler(db, testConfig(t.TempDir()))
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: "cassonic_session", Value: "tok"})
+	r.AddCookie(&http.Cookie{Name: mw.AdminSessionCookieName, Value: "tok"})
 	w := httptest.NewRecorder()
 	h.requireAdmin(next).ServeHTTP(w, r)
 	if w.Code != http.StatusForbidden {
@@ -137,13 +109,13 @@ func TestRequireAdmin_SessionUserDisabled_Forbidden(t *testing.T) {
 
 func TestRequireAdmin_ValidAdminSession_PassesThrough(t *testing.T) {
 	db := testDB()
-	db.Users.(*testUserStore).getSessionByHashResult = &store.Session{UserID: 1, ExpiresAt: time.Now().Add(time.Hour)}
-	db.Users.(*testUserStore).getUserResult = &model.User{ID: 1, IsAdmin: true, IsEnabled: true}
+	db.Admin.(*testAdminStore).getAdminSessionByHashResult = &model.AdminSession{AdminID: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin", Role: "superadmin", Enabled: true}
 	h := newTestHandler(db, testConfig(t.TempDir()))
 	called := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true; w.WriteHeader(http.StatusOK) })
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.AddCookie(&http.Cookie{Name: "cassonic_session", Value: "tok"})
+	r.AddCookie(&http.Cookie{Name: mw.AdminSessionCookieName, Value: "tok"})
 	w := httptest.NewRecorder()
 	h.requireAdmin(next).ServeHTTP(w, r)
 	if !called {

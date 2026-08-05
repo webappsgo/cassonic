@@ -147,20 +147,22 @@ func (h *Handler) Routes() http.Handler {
 	return r
 }
 
-// requireAdmin verifies the requesting user is an authenticated server admin.
-// Checks the cassonic_session cookie (SHA-256 hash → UserStore.GetSessionByHash).
-// Non-admin requests are redirected to /login?next={path}.
+// requireAdmin verifies the requesting user is an authenticated Server Admin
+// (AI.md PART 17 "Admin Panel Isolation"). Checks the admin_session cookie
+// (SHA-256 hash → AdminStore.GetAdminSessionByHash) against the dedicated
+// admins table — deliberately never users.IsAdmin, which is an unrelated
+// Subsonic/Ampache privileged-user flag on a completely separate account
+// type. Non-admin requests are redirected to /login?next={path}.
 func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check context first (set by NativeAuth middleware upstream).
-		u := mw.UserFromContext(r.Context())
-		if u != nil && u.IsAdmin {
+		// Check context first (set by an earlier requireAdmin call, e.g. in
+		// tests that pre-seed the context).
+		if a := mw.AdminFromContext(r.Context()); a != nil {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Fall back to session cookie lookup.
-		cookie, err := r.Cookie("cassonic_session")
+		cookie, err := r.Cookie(mw.AdminSessionCookieName)
 		if err != nil || cookie.Value == "" {
 			http.Redirect(w, r, "/login?next="+r.URL.RequestURI(), http.StatusSeeOther)
 			return
@@ -170,19 +172,24 @@ func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 		hashHex := hex.EncodeToString(raw[:])
 
 		ctx := r.Context()
-		session, err := h.db.Users.GetSessionByHash(ctx, hashHex)
+		session, err := h.db.Admin.GetAdminSessionByHash(ctx, hashHex)
 		if err != nil || session == nil || session.IsExpired() {
 			http.Redirect(w, r, "/login?next="+r.URL.RequestURI(), http.StatusSeeOther)
 			return
 		}
 
-		user, err := h.db.Users.GetUser(ctx, session.UserID)
-		if err != nil || user == nil || !user.IsAdmin || !user.IsEnabled {
+		admin, err := h.db.Admin.GetAdmin(ctx, session.AdminID)
+		if err != nil || admin == nil || !admin.Enabled {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctx = mw.WithAdmin(ctx, &mw.AdminUser{
+			ID:       admin.ID,
+			Username: admin.Username,
+			Role:     admin.Role,
+		})
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

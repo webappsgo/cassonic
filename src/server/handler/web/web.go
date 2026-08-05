@@ -398,6 +398,14 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Server Admins are checked first and exclusively: AI.md PART 17
+	// "Scoped Login Redirect" — a username that matches the admins table
+	// authenticates ONLY against that table and never falls through to the
+	// regular users table, even on a wrong password.
+	if h.tryAdminLogin(w, r, username, password, remember) {
+		return
+	}
+
 	user, err := h.db.Users.GetUserByUsername(r.Context(), username)
 	if err != nil || user == nil || !user.IsEnabled || user.IsLocked() {
 		http.Redirect(w, r, "/login?error=invalid+credentials", http.StatusFound)
@@ -449,23 +457,126 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// Logout clears the session cookie and destroys the server-side session.
+// tryAdminLogin attempts to authenticate username/password against the
+// admins table (AI.md PART 17). It returns true once it has fully handled
+// the request — writing either an error redirect or the success
+// redirect+cookie — because a username that matches an admin account must
+// never fall through to the regular-user login path (see call site).
+func (h *Handler) tryAdminLogin(w http.ResponseWriter, r *http.Request, username, password string, remember bool) bool {
+	ctx := r.Context()
+	admin, err := h.db.Admin.GetAdminByUsername(ctx, username)
+	if err != nil || admin == nil {
+		return false
+	}
+
+	if !admin.Enabled || admin.IsLocked() {
+		http.Redirect(w, r, "/login?error=invalid+credentials", http.StatusFound)
+		return true
+	}
+
+	ok, err := store.VerifyPassword(admin.PasswordHash, password)
+	if err != nil || !ok {
+		_ = h.db.Admin.IncrementAdminLoginAttempts(ctx, admin.ID)
+		if h.cfg.Auth.MaxLoginAttempts > 0 {
+			if updated, gerr := h.db.Admin.GetAdmin(ctx, admin.ID); gerr == nil && updated != nil &&
+				updated.FailedAttempts >= h.cfg.Auth.MaxLoginAttempts {
+				until := time.Now().UTC().Add(time.Duration(h.cfg.Auth.LockoutMinutes) * time.Minute)
+				_ = h.db.Admin.SetAdminLockedUntil(ctx, admin.ID, until)
+			}
+		}
+		http.Redirect(w, r, "/login?error=invalid+credentials", http.StatusFound)
+		return true
+	}
+
+	raw, tokenHash, err := generateSessionToken()
+	if err != nil {
+		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
+		return true
+	}
+
+	duration := time.Duration(h.cfg.Auth.SessionDuration) * time.Hour
+	if remember {
+		duration = 30 * 24 * time.Hour
+	}
+	expiresAt := time.Now().UTC().Add(duration)
+
+	sess := &model.AdminSession{
+		TokenHash: tokenHash,
+		AdminID:   admin.ID,
+		IP:        r.RemoteAddr,
+		UserAgent: r.UserAgent(),
+		ExpiresAt: expiresAt,
+	}
+	if err := h.db.Admin.CreateAdminSession(ctx, sess); err != nil {
+		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
+		return true
+	}
+
+	_ = h.db.Admin.ResetAdminLoginAttempts(ctx, admin.ID)
+	_ = h.db.Admin.UpdateAdminLastLogin(ctx, admin.ID)
+	_ = h.db.Admin.AppendAuditEntry(ctx, &model.AuditEntry{
+		Level:      "info",
+		Category:   "auth",
+		Action:     "login",
+		ActorType:  "admin",
+		ActorID:    strconv.FormatInt(admin.ID, 10),
+		ActorIP:    r.RemoteAddr,
+		TargetType: "admin",
+		TargetID:   strconv.FormatInt(admin.ID, 10),
+		Success:    true,
+	})
+
+	cookie := &http.Cookie{
+		Name:     mw.AdminSessionCookieName,
+		Value:    raw,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	if remember {
+		cookie.Expires = expiresAt
+		cookie.MaxAge = int(duration.Seconds())
+	}
+	http.SetCookie(w, cookie)
+	// Regenerate the CSRF token on login to prevent fixation (PART 16 ->
+	// "CSRF Protection" -> "Implementation Rules").
+	mw.ResetCSRFCookie(w, r.TLS != nil)
+	http.Redirect(w, r, "/server/"+h.cfg.AdminPath(), http.StatusFound)
+	return true
+}
+
+// Logout clears the session cookie(s) and destroys the server-side session.
+// Checks both the regular-user and Server Admin cookies (AI.md PART 17
+// "Separate session") since either — but never both — may be present.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie(SessionCookieName)
-	if err == nil && cookie.Value != "" {
+	if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
 		sum := sha256.Sum256([]byte(cookie.Value))
 		tokenHash := hex.EncodeToString(sum[:])
 		_ = h.db.Users.DeleteSession(r.Context(), tokenHash)
+		http.SetCookie(w, &http.Cookie{
+			Name:     SessionCookieName,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	if cookie, err := r.Cookie(mw.AdminSessionCookieName); err == nil && cookie.Value != "" {
+		sum := sha256.Sum256([]byte(cookie.Value))
+		tokenHash := hex.EncodeToString(sum[:])
+		_ = h.db.Admin.DeleteAdminSession(r.Context(), tokenHash)
+		http.SetCookie(w, &http.Cookie{
+			Name:     mw.AdminSessionCookieName,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
+	}
+
 	// Regenerate the CSRF token on logout to prevent fixation (PART 16 ->
 	// "CSRF Protection" -> "Implementation Rules").
 	mw.ResetCSRFCookie(w, r.TLS != nil)

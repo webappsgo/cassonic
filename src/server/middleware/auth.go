@@ -15,6 +15,7 @@ const (
 	ctxKeySubsonicClient
 	ctxKeyAmpacheSession
 	ctxKeyCSRFToken
+	ctxKeyAdmin
 )
 
 // withValue stores a value under key in ctx, returning the new context.
@@ -38,6 +39,34 @@ type AuthUser struct {
 	Username string
 	IsAdmin  bool
 	Scheme   AuthScheme
+}
+
+// AdminSessionCookieName is the cookie used for Server Admin sessions
+// (AI.md PART 17 "Admin Panel Isolation" -> "Separate session"). It is kept
+// entirely separate from the regular-user session cookie so a Server Admin
+// and a Subsonic/Ampache/regular-user identity can never be conflated.
+const AdminSessionCookieName = "admin_session"
+
+// AdminUser holds the resolved identity for an authenticated Server Admin
+// (AI.md PART 17). Deliberately its own type, not AuthUser — server admins
+// are a completely separate account type from regular users.
+type AdminUser struct {
+	ID       int64
+	Username string
+	// Role is one of "superadmin", "admin", "readonly".
+	Role string
+}
+
+// AdminFromContext retrieves the authenticated server admin stored in ctx.
+// Returns nil when the request has not been authenticated as an admin.
+func AdminFromContext(ctx context.Context) *AdminUser {
+	a, _ := ctx.Value(ctxKeyAdmin).(*AdminUser)
+	return a
+}
+
+// WithAdmin returns a new context that carries a.
+func WithAdmin(ctx context.Context, a *AdminUser) context.Context {
+	return withValue(ctx, ctxKeyAdmin, a)
 }
 
 // UserFromContext retrieves the authenticated user stored in ctx.
