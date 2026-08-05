@@ -1,18 +1,31 @@
 # TODO
 
-- admin: the admin panel's route hierarchy
-  (`src/server/handler/admin/admin.go` `Routes()`) is flat —
-  `/`, `/system`, `/library`, `/scheduler`, `/config`, `/logs`, `/backup` —
-  but AI.md PART 17 (ADMIN PANEL) specifies a much deeper nested hierarchy
-  under `/server/{admin_path}/config/...`, including
-  `/config/settings`, `/config/security/auth/{oidc,ldap,saml}`,
-  `/config/users/`, `/config/orgs/`, and `/config/cluster/`. Discovered while
-  implementing the `SaveConfig` form-persist feature; out of scope for that
-  change since it only covers `server.yml` persistence, not route
-  restructuring. Needs a full PART 17 re-read and a route-hierarchy rework
-  (or a written decision that the flat structure is an intentional,
-  documented deviation) before the admin panel can be called PART 17
-  compliant.
+- admin: RESOLVED — the admin panel's route hierarchy
+  (`src/server/handler/admin/admin.go` `Routes()`) now follows AI.md
+  PART 17's nested structure: `/` (dashboard), `/config/*` (settings,
+  library, scheduler, logs, backup, system info), and
+  `/{admin_username}/*` (profile, preferences) with
+  `validateAdminRoute`/`enforceAdminRouteHierarchy` rejecting anything
+  outside that shape. Self-account handlers (`self.go`: `SelfRoot`,
+  `Profile`, `SaveProfile`, `Preferences`, `SavePreferences`) and
+  templates (`profile.html`, `preferences.html`) were added; nav updated
+  in `base.html`/`dashboard.html`; tests added in `admin_test.go`. Org/
+  cluster/multi-provider-auth sub-routes (`/config/security/auth/*`,
+  `/config/users/`, `/config/orgs/`, `/config/cluster/`) remain
+  intentionally absent per PART 34-36 (optional PARTs not activated in
+  SPEC.md) — not a gap.
+
+- admin: the admin panel currently has no JSON API mirror
+  (`/api/{version}/server/{admin_path}/...`) for any of its routes —
+  AI.md PART 14 requires every web route to have a matching JSON API
+  route and vice versa. Discovered while implementing PART 17 (P3); out
+  of scope for the route-hierarchy/self-account work since it's a
+  separate, large new-feature undertaking (a full parallel JSON handler
+  set plus RFC 7807 error envelopes per PART 13/14) rather than a fix to
+  the existing web routes. Needs a dedicated implementation pass adding
+  `/api/{api_version}/server/{admin_path}/...` counterparts for
+  dashboard, config, library, scheduler, logs, backup, and the
+  profile/preferences self-account routes.
 
 - auth: AI.md's unified "Auth Routes" / "Scoped Login Redirect" section
   (~line 16060) specifies all auth routes live under `/server/auth/*`

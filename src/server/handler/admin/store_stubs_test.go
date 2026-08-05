@@ -188,6 +188,13 @@ type testAdminStore struct {
 
 	getAdminResult *model.Admin
 	getAdminErr    error
+
+	updateAdminErr error
+
+	getAdminPreferencesResult *model.AdminPreferences
+	getAdminPreferencesErr    error
+	updateAdminPreferencesErr error
+	lastUpdatedPreferences    *model.AdminPreferences
 }
 
 func (s *testAdminStore) CreateAdmin(ctx context.Context, a *model.Admin) (int64, error) {
@@ -202,8 +209,10 @@ func (s *testAdminStore) GetAdminByUsername(ctx context.Context, username string
 func (s *testAdminStore) GetAdminByExternalID(ctx context.Context, source, externalID string) (*model.Admin, error) {
 	return nil, nil
 }
-func (s *testAdminStore) UpdateAdmin(ctx context.Context, a *model.Admin) error { return nil }
-func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error      { return nil }
+func (s *testAdminStore) UpdateAdmin(ctx context.Context, a *model.Admin) error {
+	return s.updateAdminErr
+}
+func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error { return nil }
 func (s *testAdminStore) ListAdmins(ctx context.Context) ([]*model.Admin, error) {
 	return nil, nil
 }
@@ -217,10 +226,14 @@ func (s *testAdminStore) SetAdminLockedUntil(ctx context.Context, id int64, unti
 }
 func (s *testAdminStore) UpdateAdminLastLogin(ctx context.Context, id int64) error { return nil }
 func (s *testAdminStore) GetAdminPreferences(ctx context.Context, adminID int64) (*model.AdminPreferences, error) {
-	return nil, nil
+	if s.getAdminPreferencesResult != nil || s.getAdminPreferencesErr != nil {
+		return s.getAdminPreferencesResult, s.getAdminPreferencesErr
+	}
+	return &model.AdminPreferences{AdminID: adminID, Theme: "auto", FontSize: "medium", DateFormat: "YYYY-MM-DD", TimeFormat: "24h", EmailSecurity: true}, nil
 }
 func (s *testAdminStore) UpdateAdminPreferences(ctx context.Context, p *model.AdminPreferences) error {
-	return nil
+	s.lastUpdatedPreferences = p
+	return s.updateAdminPreferencesErr
 }
 func (s *testAdminStore) CreateAdminSession(ctx context.Context, sess *model.AdminSession) error {
 	return nil

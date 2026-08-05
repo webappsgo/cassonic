@@ -17,6 +17,7 @@ import (
 	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
+	"github.com/local/cassonic/src/server/store"
 )
 
 // withAdminUser injects an authenticated Server Admin into the request context.
@@ -182,7 +183,7 @@ func TestTriggerScan_Redirects(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", w.Code)
 	}
-	if !strings.Contains(w.Header().Get("Location"), "/server/admin/library") {
+	if !strings.Contains(w.Header().Get("Location"), "/server/admin/config/library") {
 		t.Errorf("unexpected redirect location: %q", w.Header().Get("Location"))
 	}
 }
@@ -208,7 +209,7 @@ func TestRunJob_Redirects(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", w.Code)
 	}
-	if !strings.Contains(w.Header().Get("Location"), "/server/admin/scheduler") {
+	if !strings.Contains(w.Header().Get("Location"), "/server/admin/config/scheduler") {
 		t.Errorf("unexpected redirect location: %q", w.Header().Get("Location"))
 	}
 }
@@ -526,7 +527,7 @@ func TestBackupNow_Redirects(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", w.Code)
 	}
-	if !strings.Contains(w.Header().Get("Location"), "/server/admin/backup") {
+	if !strings.Contains(w.Header().Get("Location"), "/server/admin/config/backup") {
 		t.Errorf("unexpected redirect location: %q", w.Header().Get("Location"))
 	}
 }
@@ -591,5 +592,207 @@ func TestRoutes_UnauthenticatedRedirectsToLogin(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusSeeOther {
 		t.Errorf("expected 303, got %d", resp.StatusCode)
+	}
+}
+
+// --- validateAdminRoute / enforceAdminRouteHierarchy (AI.md PART 17 "Route Conflict Prevention") ---
+
+func TestValidateAdminRoute_ConfigRoot_Valid(t *testing.T) {
+	if err := validateAdminRoute("/config/settings", "admin"); err != nil {
+		t.Errorf("expected /config/* to be valid, got %v", err)
+	}
+}
+
+func TestValidateAdminRoute_OwnUsername_Valid(t *testing.T) {
+	if err := validateAdminRoute("/admin/profile", "admin"); err != nil {
+		t.Errorf("expected own-username route to be valid, got %v", err)
+	}
+}
+
+func TestValidateAdminRoute_DashboardRoot_Valid(t *testing.T) {
+	if err := validateAdminRoute("/", "admin"); err != nil {
+		t.Errorf("expected dashboard root to be valid, got %v", err)
+	}
+}
+
+func TestValidateAdminRoute_UnknownSegment_Invalid(t *testing.T) {
+	if err := validateAdminRoute("/settings", "admin"); err == nil {
+		t.Error("expected /settings (flat, non-nested) to be rejected")
+	}
+}
+
+func TestValidateAdminRoute_OtherAdminUsername_Invalid(t *testing.T) {
+	if err := validateAdminRoute("/otheradmin/profile", "admin"); err == nil {
+		t.Error("expected another admin's username segment to be rejected")
+	}
+}
+
+func TestEnforceAdminRouteHierarchy_ValidSegment_PassesThrough(t *testing.T) {
+	h := newTestHandler(testDB(), testConfig(t.TempDir()))
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true; w.WriteHeader(http.StatusOK) })
+	r := httptest.NewRequest(http.MethodGet, "/config/settings", nil)
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	w := httptest.NewRecorder()
+	h.enforceAdminRouteHierarchy(next).ServeHTTP(w, r)
+	if !called {
+		t.Fatal("expected next handler to be called")
+	}
+}
+
+func TestEnforceAdminRouteHierarchy_InvalidSegment_404s(t *testing.T) {
+	h := newTestHandler(testDB(), testConfig(t.TempDir()))
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	r := httptest.NewRequest(http.MethodGet, "/settings", nil)
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	w := httptest.NewRecorder()
+	h.enforceAdminRouteHierarchy(next).ServeHTTP(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for flat /settings, got %d", w.Code)
+	}
+}
+
+// --- SelfRoot / Profile / SaveProfile ---
+
+func TestSelfRoot_RedirectsToProfile(t *testing.T) {
+	h := newTestHandler(testDB(), testConfig(t.TempDir()))
+	r := httptest.NewRequest(http.MethodGet, "/admin/", nil)
+	r = withChiParam(r, "admin_username", "admin")
+	w := httptest.NewRecorder()
+	h.SelfRoot(w, r)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d", w.Code)
+	}
+	if loc := w.Header().Get("Location"); !strings.Contains(loc, "/admin/profile") {
+		t.Errorf("expected redirect to .../admin/profile, got %q", loc)
+	}
+}
+
+func TestProfile_Renders(t *testing.T) {
+	db := testDB()
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin", Email: "admin@example.com", Role: "superadmin", Source: "local"}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	r := httptest.NewRequest(http.MethodGet, "/admin/profile", nil)
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	w := httptest.NewRecorder()
+	h.Profile(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSaveProfile_UpdatesEmail(t *testing.T) {
+	db := testDB()
+	hash, err := store.HashPassword("correct-horse")
+	if err != nil {
+		t.Fatalf("store.HashPassword: %v", err)
+	}
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin", Email: "old@example.com", Source: "local", PasswordHash: hash}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	vals := url.Values{"email": {"new@example.com"}}
+	r := httptest.NewRequest(http.MethodPost, "/admin/profile", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	r = withChiParam(r, "admin_username", "admin")
+	w := httptest.NewRecorder()
+	h.SaveProfile(w, r)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+	if loc := w.Header().Get("Location"); strings.Contains(loc, "error=") {
+		t.Errorf("expected no error, got %q", loc)
+	}
+	if db.Admin.(*testAdminStore).getAdminResult.Email != "new@example.com" {
+		t.Errorf("expected email updated, got %q", db.Admin.(*testAdminStore).getAdminResult.Email)
+	}
+}
+
+func TestSaveProfile_WrongCurrentPassword_Rejected(t *testing.T) {
+	db := testDB()
+	hash, err := store.HashPassword("correct-horse")
+	if err != nil {
+		t.Fatalf("store.HashPassword: %v", err)
+	}
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin", Source: "local", PasswordHash: hash}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	vals := url.Values{"current_password": {"wrong"}, "new_password": {"new-pass"}, "confirm_password": {"new-pass"}}
+	r := httptest.NewRequest(http.MethodPost, "/admin/profile", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	r = withChiParam(r, "admin_username", "admin")
+	w := httptest.NewRecorder()
+	h.SaveProfile(w, r)
+	if loc := w.Header().Get("Location"); !strings.Contains(loc, "error=") {
+		t.Errorf("expected error flash for wrong current password, got %q", loc)
+	}
+	if db.Admin.(*testAdminStore).getAdminResult.PasswordHash != hash {
+		t.Error("expected password hash unchanged after rejected attempt")
+	}
+}
+
+func TestSaveProfile_ExternalSource_PasswordChangeRejected(t *testing.T) {
+	db := testDB()
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin", Source: "oidc:example"}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	vals := url.Values{"current_password": {"anything"}, "new_password": {"new-pass"}, "confirm_password": {"new-pass"}}
+	r := httptest.NewRequest(http.MethodPost, "/admin/profile", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	r = withChiParam(r, "admin_username", "admin")
+	w := httptest.NewRecorder()
+	h.SaveProfile(w, r)
+	if loc := w.Header().Get("Location"); !strings.Contains(loc, "error=") {
+		t.Errorf("expected error flash for external-source password change, got %q", loc)
+	}
+}
+
+// --- Preferences / SavePreferences ---
+
+func TestPreferences_Renders(t *testing.T) {
+	db := testDB()
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin"}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	r := httptest.NewRequest(http.MethodGet, "/admin/preferences", nil)
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	w := httptest.NewRecorder()
+	h.Preferences(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSavePreferences_ForcesEmailSecurityTrue(t *testing.T) {
+	db := testDB()
+	db.Admin.(*testAdminStore).getAdminResult = &model.Admin{ID: 1, Username: "admin"}
+	h := newTestHandler(db, testConfig(t.TempDir()))
+	vals := url.Values{
+		"theme":          {"dark"},
+		"font_size":      {"large"},
+		"date_format":    {"DD-MM-YYYY"},
+		"time_format":    {"12h"},
+		"email_security": {"false"},
+		"email_server":   {"true"},
+	}
+	r := httptest.NewRequest(http.MethodPost, "/admin/preferences", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r = withAdminUser(r, 1, "admin", "superadmin")
+	r = withChiParam(r, "admin_username", "admin")
+	w := httptest.NewRecorder()
+	h.SavePreferences(w, r)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+	if loc := w.Header().Get("Location"); strings.Contains(loc, "error=") {
+		t.Errorf("expected no error, got %q", loc)
+	}
+	saved := db.Admin.(*testAdminStore).lastUpdatedPreferences
+	if saved == nil {
+		t.Fatal("expected UpdateAdminPreferences to have been called")
+	}
+	if !saved.EmailSecurity {
+		t.Error("expected EmailSecurity to be forced true regardless of submitted value")
+	}
+	if saved.Theme != "dark" || saved.FontSize != "large" {
+		t.Errorf("expected submitted fields persisted, got %+v", saved)
 	}
 }

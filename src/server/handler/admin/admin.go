@@ -128,21 +128,74 @@ func (h *Handler) basePath() string {
 	return "/server/" + h.cfg.AdminPath()
 }
 
+// validAdminRootPaths lists every first path segment allowed directly under
+// /server/{admin_path}/ (AI.md PART 17 "Route Conflict Prevention"). Only
+// "config" (server management) and the current admin's own username (self
+// account routes) may ever appear there — chi's router already refuses any
+// other segment by returning 404, but validateAdminRoute is kept as an
+// explicit, documented guard matching AI.md's literal specification.
+var validAdminRootPaths = map[string]bool{
+	"config": true,
+}
+
+// validateAdminRoute reports an error if path's first segment is neither a
+// registered server-management root ("config") nor currentAdminUsername.
+func validateAdminRoute(path, currentAdminUsername string) error {
+	parts := strings.SplitN(strings.Trim(path, "/"), "/", 2)
+	firstSegment := parts[0]
+	if firstSegment == "" || validAdminRootPaths[firstSegment] || firstSegment == currentAdminUsername {
+		return nil
+	}
+	msg := "invalid admin route: /%s/* - use /server/{admin_path}/{admin_username}/* for " +
+		"admin self routes or /server/{admin_path}/config/* for server management"
+	return fmt.Errorf(msg, firstSegment)
+}
+
+// enforceAdminRouteHierarchy rejects any request whose first path segment is
+// neither "config" nor the authenticated admin's own username, per AI.md
+// PART 17 "Admin Route Hierarchy". Runs after requireAdmin, so an AdminUser
+// is always present in context.
+func (h *Handler) enforceAdminRouteHierarchy(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		admin := mw.AdminFromContext(r.Context())
+		username := ""
+		if admin != nil {
+			username = admin.Username
+		}
+		if err := validateAdminRoute(r.URL.Path, username); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(h.requireAdmin)
+	r.Use(h.requireAdmin, h.enforceAdminRouteHierarchy)
 
 	r.Get("/", h.Dashboard)
-	r.Get("/system", h.System)
-	r.Get("/library", h.Library)
-	r.Post("/library/scan", h.TriggerScan)
-	r.Get("/scheduler", h.SchedulerPanel)
-	r.Post("/scheduler/{job}/run", h.RunJob)
-	r.Get("/config", h.Config)
-	r.Post("/config", h.SaveConfig)
-	r.Get("/logs", h.Logs)
-	r.Get("/backup", h.Backup)
-	r.Post("/backup/now", h.BackupNow)
+
+	r.Route("/config", func(cr chi.Router) {
+		cr.Get("/info", h.System)
+		cr.Get("/library", h.Library)
+		cr.Post("/library/scan", h.TriggerScan)
+		cr.Get("/scheduler", h.SchedulerPanel)
+		cr.Post("/scheduler/{job}/run", h.RunJob)
+		cr.Get("/settings", h.Config)
+		cr.Post("/settings", h.SaveConfig)
+		cr.Get("/logs", h.Logs)
+		cr.Get("/backup", h.Backup)
+		cr.Post("/backup/now", h.BackupNow)
+	})
+
+	r.Route("/{admin_username}", func(ur chi.Router) {
+		ur.Get("/", h.SelfRoot)
+		ur.Get("/profile", h.Profile)
+		ur.Post("/profile", h.SaveProfile)
+		ur.Get("/preferences", h.Preferences)
+		ur.Post("/preferences", h.SavePreferences)
+	})
 
 	return r
 }
@@ -199,17 +252,28 @@ type adminPageData struct {
 	Version  string
 	Active   string
 	BasePath string
-	Data     any
+	// AdminUsername is the authenticated admin's own username, used by
+	// base.html to link to the /{admin_username}/* self-account routes
+	// (AI.md PART 17 "Admin Route Hierarchy").
+	AdminUsername string
+	Data          any
 }
 
-// render executes the named template with the provided page data.
-func (h *Handler) render(w http.ResponseWriter, name, title, active string, data any) {
+// render executes the named template with the provided page data. r supplies
+// the authenticated admin's identity (set by requireAdmin) for the self-route
+// links in the sidebar.
+func (h *Handler) render(w http.ResponseWriter, r *http.Request, name, title, active string, data any) {
+	username := ""
+	if a := mw.AdminFromContext(r.Context()); a != nil {
+		username = a.Username
+	}
 	pd := adminPageData{
-		Title:    title,
-		Version:  h.version,
-		Active:   active,
-		BasePath: h.basePath(),
-		Data:     data,
+		Title:         title,
+		Version:       h.version,
+		Active:        active,
+		BasePath:      h.basePath(),
+		AdminUsername: username,
+		Data:          data,
 	}
 	tmpl, ok := h.tmpls[name]
 	if !ok {
@@ -237,7 +301,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		Uptime:  uptime.String(),
 		Version: h.version,
 	}
-	h.render(w, "dashboard.html", "Dashboard — Admin", "dashboard", d)
+	h.render(w, r, "dashboard.html", "Dashboard — Admin", "dashboard", d)
 }
 
 // systemData holds OS and runtime information for the system page.
@@ -256,7 +320,7 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 		GoVersion:  runtime.Version(),
 		Goroutines: runtime.NumGoroutine(),
 	}
-	h.render(w, "system.html", "System — Admin", "system", d)
+	h.render(w, r, "system.html", "System — Admin", "system", d)
 }
 
 // Library renders the library management page.
@@ -266,12 +330,12 @@ func (h *Handler) Library(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to list libraries: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.render(w, "library.html", "Library — Admin", "library", libs)
+	h.render(w, r, "library.html", "Library — Admin", "library", libs)
 }
 
 // TriggerScan fires an immediate library scan (incremental) in the background.
 func (h *Handler) TriggerScan(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, h.basePath()+"/library?flash=scan+started", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config/library?flash=scan+started", http.StatusSeeOther)
 }
 
 // SchedulerPanel renders the scheduler status page showing all registered jobs.
@@ -280,12 +344,12 @@ func (h *Handler) SchedulerPanel(w http.ResponseWriter, r *http.Request) {
 	if h.sched != nil {
 		statuses = h.sched.Status()
 	}
-	h.render(w, "scheduler.html", "Scheduler — Admin", "scheduler", statuses)
+	h.render(w, r, "scheduler.html", "Scheduler — Admin", "scheduler", statuses)
 }
 
 // RunJob triggers an immediate run of the named job via the scheduler.
 func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, h.basePath()+"/scheduler?flash=job+queued", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config/scheduler?flash=job+queued", http.StatusSeeOther)
 }
 
 // configFormData carries every editable server.yml setting for the config
@@ -436,7 +500,7 @@ func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
 		d.Flash = flashErr
 		d.FlashError = true
 	}
-	h.render(w, "config.html", "Config — Admin", "config", d)
+	h.render(w, r, "config.html", "Config — Admin", "config", d)
 }
 
 // splitCSV splits a comma-separated form value into a trimmed, non-empty
@@ -456,7 +520,7 @@ func splitCSV(s string) []string {
 
 // saveConfigError redirects back to the config page with an error flash.
 func (h *Handler) saveConfigError(w http.ResponseWriter, r *http.Request, msg string) {
-	http.Redirect(w, r, h.basePath()+"/config?error="+url.QueryEscape(msg), http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config/settings?error="+url.QueryEscape(msg), http.StatusSeeOther)
 }
 
 // SaveConfig parses the POSTed configuration form, validates it, persists it
@@ -599,7 +663,7 @@ func (h *Handler) SaveConfig(w http.ResponseWriter, r *http.Request) {
 		next.Paths.Log != origPathsLog || next.Paths.Cache != origPathsCache {
 		flash = "saved — address, port, database path, and process directory changes require a restart to take effect"
 	}
-	http.Redirect(w, r, h.basePath()+"/config?flash="+url.QueryEscape(flash), http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config/settings?flash="+url.QueryEscape(flash), http.StatusSeeOther)
 }
 
 // logLines is the number of lines to display from the log file.
@@ -612,7 +676,7 @@ func (h *Handler) Logs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		lines = []string{"(log file not available: " + err.Error() + ")"}
 	}
-	h.render(w, "logs.html", "Logs — Admin", "logs", lines)
+	h.render(w, r, "logs.html", "Logs — Admin", "logs", lines)
 }
 
 // tailFile reads the last n lines from path.
@@ -659,7 +723,7 @@ func (h *Handler) Backup(w http.ResponseWriter, r *http.Request) {
 		Retention: 7,
 		Flash:     r.URL.Query().Get("flash"),
 	}
-	h.render(w, "backup.html", "Backup — Admin", "backup", d)
+	h.render(w, r, "backup.html", "Backup — Admin", "backup", d)
 }
 
 // listBackupFiles returns backup archive info from backupDir.
@@ -696,5 +760,5 @@ func listBackupFiles(backupDir string) ([]backupFile, error) {
 
 // BackupNow triggers an immediate backup and redirects back to the backup page.
 func (h *Handler) BackupNow(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, h.basePath()+"/backup?flash=backup+started", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config/backup?flash=backup+started", http.StatusSeeOther)
 }

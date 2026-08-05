@@ -90,12 +90,18 @@
   <nav aria-label="Admin navigation">
     <ul>
       <li><a href="{{.BasePath}}/" class="{{if eq .Active "dashboard"}}active{{end}}" aria-current="{{if eq .Active "dashboard"}}page{{end}}">Dashboard</a></li>
-      <li><a href="{{.BasePath}}/library" class="{{if eq .Active "library"}}active{{end}}" aria-current="{{if eq .Active "library"}}page{{end}}">Library</a></li>
-      <li><a href="{{.BasePath}}/scheduler" class="{{if eq .Active "scheduler"}}active{{end}}" aria-current="{{if eq .Active "scheduler"}}page{{end}}">Scheduler</a></li>
-      <li><a href="{{.BasePath}}/config" class="{{if eq .Active "config"}}active{{end}}" aria-current="{{if eq .Active "config"}}page{{end}}">Config</a></li>
-      <li><a href="{{.BasePath}}/system" class="{{if eq .Active "system"}}active{{end}}" aria-current="{{if eq .Active "system"}}page{{end}}">System</a></li>
-      <li><a href="{{.BasePath}}/logs" class="{{if eq .Active "logs"}}active{{end}}" aria-current="{{if eq .Active "logs"}}page{{end}}">Logs</a></li>
-      <li><a href="{{.BasePath}}/backup" class="{{if eq .Active "backup"}}active{{end}}" aria-current="{{if eq .Active "backup"}}page{{end}}">Backup</a></li>
+      <li><a href="{{.BasePath}}/config/library" class="{{if eq .Active "library"}}active{{end}}" aria-current="{{if eq .Active "library"}}page{{end}}">Library</a></li>
+      <li><a href="{{.BasePath}}/config/scheduler" class="{{if eq .Active "scheduler"}}active{{end}}" aria-current="{{if eq .Active "scheduler"}}page{{end}}">Scheduler</a></li>
+      <li><a href="{{.BasePath}}/config/settings" class="{{if eq .Active "config"}}active{{end}}" aria-current="{{if eq .Active "config"}}page{{end}}">Config</a></li>
+      <li><a href="{{.BasePath}}/config/info" class="{{if eq .Active "system"}}active{{end}}" aria-current="{{if eq .Active "system"}}page{{end}}">System</a></li>
+      <li><a href="{{.BasePath}}/config/logs" class="{{if eq .Active "logs"}}active{{end}}" aria-current="{{if eq .Active "logs"}}page{{end}}">Logs</a></li>
+      <li><a href="{{.BasePath}}/config/backup" class="{{if eq .Active "backup"}}active{{end}}" aria-current="{{if eq .Active "backup"}}page{{end}}">Backup</a></li>
+    </ul>
+  </nav>
+  <nav aria-label="Admin account navigation" style="margin-top:auto;border-top:1px solid var(--border)">
+    <ul>
+      <li><a href="{{.BasePath}}/{{.AdminUsername}}/profile" class="{{if eq .Active "profile"}}active{{end}}" aria-current="{{if eq .Active "profile"}}page{{end}}">Profile</a></li>
+      <li><a href="{{.BasePath}}/{{.AdminUsername}}/preferences" class="{{if eq .Active "preferences"}}active{{end}}" aria-current="{{if eq .Active "preferences"}}page{{end}}">Preferences</a></li>
     </ul>
   </nav>
 </aside>

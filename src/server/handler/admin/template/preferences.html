@@ -1,0 +1,82 @@
+{{define "preferences.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+{{if .Data.Flash}}<div class="flash {{if .Data.FlashError}}flash-error{{end}}" role="status">{{.Data.Flash}}</div>{{end}}
+<div class="card">
+  <h3>WebUI Preferences</h3>
+  <form method="post" action="{{.BasePath}}/{{.AdminUsername}}/preferences">
+    <div class="form-section">
+      <h4>Appearance</h4>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="pref-theme">Theme</label>
+          <select id="pref-theme" name="theme">
+            <option value="auto" {{if eq .Data.Theme "auto"}}selected{{end}}>auto</option>
+            <option value="dark" {{if eq .Data.Theme "dark"}}selected{{end}}>dark</option>
+            <option value="light" {{if eq .Data.Theme "light"}}selected{{end}}>light</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="pref-font-size">Font Size</label>
+          <select id="pref-font-size" name="font_size">
+            <option value="small" {{if eq .Data.FontSize "small"}}selected{{end}}>small</option>
+            <option value="medium" {{if eq .Data.FontSize "medium"}}selected{{end}}>medium</option>
+            <option value="large" {{if eq .Data.FontSize "large"}}selected{{end}}>large</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="pref-reduce-motion">Reduce Motion</label>
+          <select id="pref-reduce-motion" name="reduce_motion">
+            <option value="false" {{if not .Data.ReduceMotion}}selected{{end}}>disabled</option>
+            <option value="true" {{if .Data.ReduceMotion}}selected{{end}}>enabled</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Display Format</h4>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="pref-date-format">Date Format</label>
+          <input id="pref-date-format" name="date_format" type="text" value="{{.Data.DateFormat}}" placeholder="YYYY-MM-DD">
+        </div>
+        <div class="form-field">
+          <label for="pref-time-format">Time Format</label>
+          <input id="pref-time-format" name="time_format" type="text" value="{{.Data.TimeFormat}}" placeholder="24h">
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <h4>Email Notifications</h4>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="pref-email-security">Security Alerts</label>
+          <input id="pref-email-security" type="text" value="always enabled" disabled>
+          <small>Security notifications cannot be disabled by policy.</small>
+        </div>
+        <div class="form-field">
+          <label for="pref-email-server">Server Events</label>
+          <select id="pref-email-server" name="email_server">
+            <option value="false" {{if not .Data.EmailServer}}selected{{end}}>disabled</option>
+            <option value="true" {{if .Data.EmailServer}}selected{{end}}>enabled</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="pref-email-backups">Backup Events</label>
+          <select id="pref-email-backups" name="email_backups">
+            <option value="false" {{if not .Data.EmailBackups}}selected{{end}}>disabled</option>
+            <option value="true" {{if .Data.EmailBackups}}selected{{end}}>enabled</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="pref-email-users">User Events</label>
+          <select id="pref-email-users" name="email_users">
+            <option value="false" {{if not .Data.EmailUsers}}selected{{end}}>disabled</option>
+            <option value="true" {{if .Data.EmailUsers}}selected{{end}}>enabled</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Preferences</button>
+  </form>
+</div>
+{{end}}
