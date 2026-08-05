@@ -28,177 +28,146 @@ cassonic --port 4533 --debug --mode development
 | `PORT` | Listen port | `4533` (host), `80` (container) |
 | `ADDRESS` | Listen address | `0.0.0.0` |
 | `DOMAIN` | Comma-separated `{fqdn}` list (first is primary); skips auto-detection | auto-detected |
-| `TZ` | Timezone | `America/New_York` |
 | `CONFIG_DIR` | Config directory override | platform default |
 | `DATA_DIR` | Data directory override | platform default |
+
+TLS/Let's Encrypt (`--tls`, `--tls-domain`, `--tls-email`, `--tls-cert`, `--tls-key`) and the backup archive location (`--backup`) are CLI-flag-only settings — they are not persisted to `server.yml`.
 
 ## Full `server.yml` Reference
 
 ```yaml
 server:
-  # Bind address for the HTTP listener
-  address: 0.0.0.0
+  # Bind address for the HTTP listener; empty means all interfaces
+  address: ""
   # Listen port (default 4533; container default 80)
   port: 4533
-  # Base URL path when running behind a reverse proxy
-  baseurl: /
+  # URL path prefix when running behind a reverse proxy (e.g. /cassonic)
+  base_url: ""
   # Application mode: production or development
   mode: production
-  # Enable debug logging (temporary; use for diagnostics only)
+  # Enable verbose request logging and debug endpoints
   debug: false
-  # Server timezone (e.g. America/New_York, Europe/London, UTC)
-  timezone: America/New_York
+  # Logger verbosity: error, warn, info, debug
+  log_level: info
   # Explicit {fqdn} list (first is primary); empty auto-detects via reverse-proxy
   # headers, then os.Hostname(), then public IP, then localhost. Same as DOMAIN env var.
   domain: []
-  # Additional CIDRs (beyond private/loopback ranges) trusted to set
+  # Additional CIDRs (beyond private/loopback/link-local ranges) trusted to set
   # reverse-proxy headers (X-Forwarded-Host, X-Forwarded-Proto, etc.)
   trusted_proxies: []
-
-tls:
-  # Enable automatic TLS via Let's Encrypt
-  enabled: false
-  # Domain name for ACME certificate
-  domain: ""
-  # Email address for ACME registration and renewal alerts
-  email: ""
-  # Directory to store certificates (relative to config_dir when not absolute)
-  cert_dir: ssl/letsencrypt
-  # Path to a manually supplied cert file (overrides ACME)
-  cert_file: ""
-  # Path to a manually supplied key file (overrides ACME)
-  key_file: ""
-
-library:
-  # List of paths to scan for music files
-  paths:
-    - /music
-  # Scan interval (scheduler; use scheduler section to override)
-  scan_interval: 1h
-  # Follow symlinks during library scan
-  follow_symlinks: false
-  # File extensions to include (lowercase, without dot)
-  extensions:
-    - mp3
-    - flac
-    - ogg
-    - opus
-    - m4a
-    - aac
-    - wav
-    - wv
-    - ape
-    - mpc
+  # Smart FQDN detection/live-reload subsystem (AI.md PART 8)
+  url_detection:
+    # Infer domain patterns from reverse-proxy headers
+    learning: true
+    # Minimum observed requests before inferring a wildcard pattern
+    min_samples: 3
+    # Time window for pattern analysis (Go duration string)
+    sample_window: 5m
+    # Log detected domain/proto changes to the application log
+    log_changes: true
+    # Allow resolved URL variables to update without a restart
+    live_reload: true
 
 database:
-  # Directory for SQLite databases (server.db and users.db)
-  dir: ""
-  # Valkey/Redis URL for caching and clustering (optional)
-  # Format: redis://[:password@]host[:port][/db]
-  valkey_url: ""
+  # Path to the SQLite database file; resolved relative to the data dir when empty
+  path: ""
 
-smtp:
-  # SMTP host; leave empty to disable email features
-  host: ""
-  port: 587
-  username: ""
-  # Password stored securely; do not set here — use the admin panel
-  password: ""
-  from: ""
-  # true = STARTTLS, false = plain (TLS is auto-detected from port 465/587)
-  tls: true
+paths:
+  # Directory for server.yml and other config files
+  config: ""
+  # Directory for databases, cover art, and other persistent data
+  data: ""
+  # Directory for application log files
+  log: ""
+  # Root directories for the music library
+  music: []
+  # Directory for ephemeral cached files
+  cache: ""
 
-metrics:
-  # Prometheus metrics endpoint path
-  path: /metrics
-  # Bearer token required to access /metrics; empty = no auth
-  token: ""
+auth:
+  # HMAC secret for signing session tokens; auto-generated on first run if empty
+  jwt_secret: ""
+  # Hours a session token remains valid
+  session_duration: 168
+  # Failed login attempts before the account is locked
+  max_login_attempts: 5
+  # Minutes a locked account remains inaccessible
+  lockout_minutes: 15
 
-geoip:
-  # Two-letter ISO 3166-1 alpha-2 country codes to deny
-  deny_countries: []
-  # Two-letter ISO 3166-1 alpha-2 country codes to allow (takes precedence over deny)
-  allow_countries: []
-
-blocklist:
-  # IP addresses, CIDR ranges, or hostnames to block
-  blocked_ips: []
-  # IP addresses or CIDR ranges that bypass all IP and country blocks
-  allowlisted_ips: []
-
-rate_limit:
-  # Request limit per window for the native API
-  native_rps: 100
-  # Request limit per window for the Subsonic API
-  subsonic_rps: 60
-  # Request limit per window for the Ampache API
-  ampache_rps: 60
-  # Request limit per window for login endpoints
-  login_rps: 5
-
-scrobbling:
-  lastfm:
-    enabled: false
-    api_key: ""
-    api_secret: ""
-  librefm:
-    enabled: false
-  listenbrainz:
-    enabled: false
-    token: ""
-  maloja:
-    enabled: false
-    url: ""
-    api_key: ""
-  funkwhale:
-    enabled: false
-    url: ""
-    token: ""
+scanner:
+  # Enable periodic rescanning of music directories
+  auto_scan: true
+  # Seconds between automatic scans
+  scan_interval: 3600
+  # Allow the scanner to traverse symbolic links
+  follow_symlinks: true
+  # Glob patterns; matching paths are skipped during scanning
+  exclude_patterns: []
 
 icecast:
-  # Enable the Icecast relay source
+  # Activate the built-in Icecast-compatible relay listener
   enabled: false
-  host: ""
-  port: 8000
-  mount: /cassonic
-  source_password: ""
-  # Format: mp3 or ogg
-  format: mp3
-  # Bitrate in kbps
-  bitrate: 128
+  # Maximum number of concurrent mount points
+  max_mounts: 10
 
-podcasts:
-  # Enable podcast support
+scrobble:
+  # Activate play-history/scrobble recording
   enabled: true
-  # Directory to store downloaded episodes (defaults to data_dir/podcasts)
-  download_dir: ""
-  # Maximum age of episodes to keep; 0 = keep forever
-  max_age_days: 90
+  # Seconds to wait before recording a scrobble
+  delay: 30
 
-backup:
-  # Directory to write backup archives
-  dir: ""
-  # Include SSL certificates in backups
-  include_ssl: false
-  # Include the data directory (covers art, uploads) in backups
-  include_data: false
+ffmpeg:
+  # Absolute path to the ffmpeg binary; auto-detected when empty
+  path: ""
+  # Allow cassonic to download ffmpeg automatically if not found on the system
+  download_auto: true
 
-tor:
-  # true = always enable; false = disable; auto = enable when tor binary found
-  mode: auto
-  # Path to tor binary (auto-detected when empty)
-  tor_binary: ""
+email:
+  # Activate SMTP email delivery; all email features are hidden when false
+  enabled: false
+  # SMTP server hostname
+  host: ""
+  # SMTP server port
+  port: 587
+  # SMTP authentication username
+  username: ""
+  # SMTP authentication password; set via the admin panel, not this file
+  password: ""
+  # Sender address used in outgoing mail
+  from: ""
+  # Enable STARTTLS or implicit TLS depending on port
+  tls: true
 
-update:
-  # Release channel: stable, beta, or daily
-  channel: stable
-  # Check for updates automatically (never installs without --update yes)
-  auto_check: true
+features:
+  # Enable podcast directory and subscription management
+  podcasts: true
+  # Enable unauthenticated access to shared resources
+  public_shares: true
+  # Enable self-registration for new users
+  user_signup: false
+  # Enable country-based access control via built-in GeoIP
+  geo_ip: false
+  # Enable the Tor hidden service when the tor binary is present
+  tor: false
+  # Enable on-the-fly audio transcoding via FFmpeg
+  transcoding: true
+  # Enable automatic metadata enrichment from MusicBrainz
+  music_brainz: true
+
+web:
+  # Double-submit cookie CSRF protection (PART 16 "CSRF Protection")
+  csrf:
+    # Activate CSRF validation; set false only for API-only deployments
+    # with no browser forms at all
+    enabled: true
+    # Glob patterns exempt from CSRF validation, e.g. OAuth callbacks
+    # and webhook receivers
+    exempt_paths: []
 ```
 
 ## Boolean Values
 
-Cassonic accepts all of the following as `true`: `yes`, `true`, `1`, `on`, `enable`, `enabled`, `allow`, `allow`, and their uppercase variants. Anything else is `false`. This applies to both `server.yml` and environment variables.
+Cassonic accepts all of the following as `true`: `yes`, `true`, `1`, `on`, `enable`, `enabled`, `allow`, and their uppercase variants. Anything else is `false`. This applies to both `server.yml` and environment variables.
 
 ## Data Directory Layout
 
@@ -207,13 +176,11 @@ Cassonic accepts all of the following as `true`: `yes`, `true`, `1`, `on`, `enab
 /var/lib/local/cassonic/            # Linux root
 /data/cassonic/                     # Container
 
-├── db/
-│   ├── server.db                   # Main database
-│   └── users.db                    # User accounts
-├── covers/                         # Cached cover art
-├── geoip/                          # GeoIP databases
-├── podcasts/                       # Downloaded podcast episodes
-├── uploads/                        # Uploaded music files
-├── backup/                         # Local backup archives
-└── tor/                            # Tor hidden service keys
+├── server.db                       # Main database
+├── users.db                        # User accounts
+├── security/geoip/                 # GeoIP databases
+├── podcasts/{channel_id}/          # Downloaded podcast episodes
+└── tor/hidden_service.key          # Tor hidden service key (when enabled)
 ```
+
+Cover art thumbnails are cached under the cache directory (`{cache}/thumbs/`), not the data directory. Backup archives are written to the directory given by `--backup {dir}` — there is no default location.

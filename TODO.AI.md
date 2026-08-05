@@ -11,11 +11,3 @@
   exposed in the admin panel at all. Needs a real form-parse-and-persist
   implementation (write via `config.Save`, live-reload in-memory `cfg`)
   covering every section, per PART 12/PART 17.
-- docs: `docs/configuration.md`'s "Full server.yml Reference" block has
-  drifted from `src/config/config.go` — it documents `baseurl` (actual key:
-  `base_url`), `timezone` (no such field exists), `library.paths`/
-  `library.extensions` (actual: `paths.music`, no extensions field),
-  `database.dir`/`database.valkey_url` (actual: `database.path`, no Valkey
-  support), and a top-level `smtp:` section (actual: `email:`). Predates the
-  DOMAIN/{fqdn} work. Needs a full pass reconciling the doc against the real
-  `Config` struct, per testing-rules.md "keep docs/ in sync with the app".
