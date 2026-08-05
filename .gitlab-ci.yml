@@ -19,8 +19,8 @@ build:
       COMMIT_ID=$(git rev-parse --short HEAD)
       BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
       LDFLAGS="-s -w -X 'main.Version=$VERSION' -X 'main.CommitID=$COMMIT_ID' -X 'main.BuildDate=$BUILD_DATE'"
-      go build -ldflags "$LDFLAGS" -o /dev/null ./src
-      go build -ldflags "$LDFLAGS" -o /dev/null ./src/client
+      go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o /dev/null ./src
+      go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o /dev/null ./src/client
 
 lint:
   stage: test
@@ -79,9 +79,9 @@ release:
         ARCH=${platform#*/}
         OUTPUT="binaries/${CI_PROJECT_NAME}-${OS}-${ARCH}"
         [ "$OS" = "windows" ] && OUTPUT="${OUTPUT}.exe"
-        GOOS=$OS GOARCH=$ARCH go build -ldflags "$LDFLAGS" -o "$OUTPUT" ./src
+        GOOS=$OS GOARCH=$ARCH go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o "$OUTPUT" ./src
         OUTPUT_CLI="binaries/${CI_PROJECT_NAME}-cli-${OS}-${ARCH}"
         [ "$OS" = "windows" ] && OUTPUT_CLI="${OUTPUT_CLI}.exe"
-        GOOS=$OS GOARCH=$ARCH go build -ldflags "$LDFLAGS" -o "$OUTPUT_CLI" ./src/client
+        GOOS=$OS GOARCH=$ARCH go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o "$OUTPUT_CLI" ./src/client
       done
       cd binaries && sha256sum * > SHA256SUMS.txt

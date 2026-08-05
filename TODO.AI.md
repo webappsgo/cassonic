@@ -25,12 +25,3 @@
   support), and a top-level `smtp:` section (actual: `email:`). Predates the
   DOMAIN/{fqdn} work. Needs a full pass reconciling the doc against the real
   `Config` struct, per testing-rules.md "keep docs/ in sync with the app".
-- build: pre-existing go-lint violations, unrelated to the DOMAIN/{fqdn} work
-  (neither file was touched by it): `docker/Dockerfile` uses `golang:alpine`
-  instead of `casjaysdev/go:latest`, and its two `go build` calls (lines 20,
-  24) are missing inline `-buildvcs=false` and `-trimpath` (also missing
-  from LDFLAGS on lines 21/25); `.gitlab-ci.yml` has four `go build` calls
-  (lines 22, 23, 82, 85) missing inline `-buildvcs=false` and two LDFLAGS
-  blocks (lines 21, 75) missing `-trimpath`. Fix Dockerfile/CI build
-  commands to match the Makefile's `GO_DOCKER`/`LDFLAGS` pattern, per
-  docker-rules.md/go_conventions.md.

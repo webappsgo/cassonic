@@ -1,7 +1,7 @@
 # =============================================================================
 # Build Stage - Compile Go binary
 # =============================================================================
-FROM golang:alpine AS builder
+FROM casjaysdev/go:latest AS builder
 
 RUN apk add --no-cache git bash
 
@@ -17,11 +17,11 @@ COPY go.mod ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -buildvcs=false -trimpath \
     -ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.CommitID=${COMMIT_ID}' -X 'main.BuildDate=${BUILD_DATE}' -X 'main.OfficialSite=${OFFICIAL_SITE}'" \
     -o /build/binary/cassonic ./src
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -buildvcs=false -trimpath \
     -ldflags "-s -w -X 'main.Version=${VERSION}' -X 'main.CommitID=${COMMIT_ID}' -X 'main.BuildDate=${BUILD_DATE}' -X 'main.OfficialSite=${OFFICIAL_SITE}'" \
     -o /build/binary/cassonic-cli ./src/client
 
