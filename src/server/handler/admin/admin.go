@@ -11,9 +11,11 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,17 +34,20 @@ var assets embed.FS
 type Handler struct {
 	db        *store.DB
 	cfg       *config.Config
+	cfgPath   string
 	version   string
 	sched     *scheduler.Scheduler
 	tmpls     map[string]*template.Template
 	startTime time.Time
 }
 
-// New creates a fully configured admin Handler.
-func New(db *store.DB, cfg *config.Config, version string, sched *scheduler.Scheduler) *Handler {
+// New creates a fully configured admin Handler. cfgPath is the absolute path
+// to server.yml that SaveConfig persists changes to.
+func New(db *store.DB, cfg *config.Config, cfgPath, version string, sched *scheduler.Scheduler) *Handler {
 	h := &Handler{
 		db:        db,
 		cfg:       cfg,
+		cfgPath:   cfgPath,
 		version:   version,
 		sched:     sched,
 		startTime: time.Now(),
@@ -267,32 +272,318 @@ func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/server/admin/scheduler?flash=job+queued", http.StatusSeeOther)
 }
 
-// configFormData carries the editable server settings for the config page.
+// configFormData carries every editable server.yml setting for the config
+// page, grouped to match the Config struct sections in src/config/config.go.
+// Per config-rules.md every server.yml setting must be admin-UI editable —
+// the only field intentionally omitted is auth.jwt_secret (an auto-generated
+// signing secret; exposing or letting it be freely retyped would violate the
+// "never expose sensitive information" rule and could silently invalidate
+// every active session) and email.password is write-only (never echoed back).
 type configFormData struct {
+	// server
+	Address        string
 	Port           int
+	BaseURL        string
 	Mode           string
 	Debug          bool
+	LogLevel       string
 	Domain         string
 	TrustedProxies string
-	Flash          string
+	// server.url_detection
+	Learning     bool
+	MinSamples   int
+	SampleWindow string
+	LogChanges   bool
+	LiveReload   bool
+	// database
+	DatabasePath string
+	// paths (Config/Data/Log/Cache are process bootstrap paths — same
+	// restart-required class as a database driver change, PART 12 "Live
+	// Reload"; Music is the one path setting that is safe to hot-apply)
+	PathsConfig string
+	PathsData   string
+	PathsLog    string
+	PathsCache  string
+	Music       string
+	// auth (jwt_secret intentionally not exposed; see type doc)
+	SessionDuration  int
+	MaxLoginAttempts int
+	LockoutMinutes   int
+	// scanner
+	AutoScan        bool
+	ScanInterval    int
+	FollowSymlinks  bool
+	ExcludePatterns string
+	// icecast
+	IcecastEnabled bool
+	MaxMounts      int
+	// scrobble
+	ScrobbleEnabled bool
+	ScrobbleDelay   int
+	// ffmpeg
+	FFmpegPath   string
+	DownloadAuto bool
+	// email (Password is write-only; never rendered back)
+	EmailEnabled bool
+	EmailHost    string
+	EmailPort    int
+	EmailUser    string
+	EmailFrom    string
+	EmailTLS     bool
+	// features
+	FeaturePodcasts     bool
+	FeaturePublicShares bool
+	FeatureUserSignup   bool
+	FeatureGeoIP        bool
+	FeatureTor          bool
+	FeatureTranscoding  bool
+	FeatureMusicBrainz  bool
+	// web.csrf
+	CSRFEnabled     bool
+	CSRFExemptPaths string
+
+	Flash      string
+	FlashError bool
+}
+
+// configFormFromConfig builds the config page view model from cfg.
+func configFormFromConfig(cfg *config.Config) configFormData {
+	return configFormData{
+		Address:        cfg.Server.Address,
+		Port:           cfg.Server.Port,
+		BaseURL:        cfg.Server.BaseURL,
+		Mode:           cfg.Server.Mode,
+		Debug:          cfg.Server.Debug,
+		LogLevel:       cfg.Server.LogLevel,
+		Domain:         strings.Join(cfg.Server.Domain, ", "),
+		TrustedProxies: strings.Join(cfg.Server.TrustedProxies, ", "),
+
+		Learning:     cfg.Server.URLDetection.Learning,
+		MinSamples:   cfg.Server.URLDetection.MinSamples,
+		SampleWindow: cfg.Server.URLDetection.SampleWindow,
+		LogChanges:   cfg.Server.URLDetection.LogChanges,
+		LiveReload:   cfg.Server.URLDetection.LiveReload,
+
+		DatabasePath: cfg.Database.Path,
+
+		PathsConfig: cfg.Paths.Config,
+		PathsData:   cfg.Paths.Data,
+		PathsLog:    cfg.Paths.Log,
+		PathsCache:  cfg.Paths.Cache,
+		Music:       strings.Join(cfg.Paths.Music, ", "),
+
+		SessionDuration:  cfg.Auth.SessionDuration,
+		MaxLoginAttempts: cfg.Auth.MaxLoginAttempts,
+		LockoutMinutes:   cfg.Auth.LockoutMinutes,
+
+		AutoScan:        cfg.Scanner.AutoScan,
+		ScanInterval:    cfg.Scanner.ScanInterval,
+		FollowSymlinks:  cfg.Scanner.FollowSymlinks,
+		ExcludePatterns: strings.Join(cfg.Scanner.ExcludePatterns, ", "),
+
+		IcecastEnabled: cfg.Icecast.Enabled,
+		MaxMounts:      cfg.Icecast.MaxMounts,
+
+		ScrobbleEnabled: cfg.Scrobble.Enabled,
+		ScrobbleDelay:   cfg.Scrobble.Delay,
+
+		FFmpegPath:   cfg.FFmpeg.Path,
+		DownloadAuto: cfg.FFmpeg.DownloadAuto,
+
+		EmailEnabled: cfg.Email.Enabled,
+		EmailHost:    cfg.Email.Host,
+		EmailPort:    cfg.Email.Port,
+		EmailUser:    cfg.Email.Username,
+		EmailFrom:    cfg.Email.From,
+		EmailTLS:     cfg.Email.TLS,
+
+		FeaturePodcasts:     cfg.Features.Podcasts,
+		FeaturePublicShares: cfg.Features.PublicShares,
+		FeatureUserSignup:   cfg.Features.UserSignup,
+		FeatureGeoIP:        cfg.Features.GeoIP,
+		FeatureTor:          cfg.Features.Tor,
+		FeatureTranscoding:  cfg.Features.Transcoding,
+		FeatureMusicBrainz:  cfg.Features.MusicBrainz,
+
+		CSRFEnabled:     cfg.Web.CSRF.Enabled,
+		CSRFExemptPaths: strings.Join(cfg.Web.CSRF.ExemptPaths, ", "),
+	}
 }
 
 // Config renders the server configuration form.
 func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
-	d := configFormData{
-		Port:           h.cfg.Server.Port,
-		Mode:           h.cfg.Server.Mode,
-		Debug:          h.cfg.Server.Debug,
-		Domain:         strings.Join(h.cfg.Server.Domain, ", "),
-		TrustedProxies: strings.Join(h.cfg.Server.TrustedProxies, ", "),
+	d := configFormFromConfig(h.cfg)
+	if flash := r.URL.Query().Get("flash"); flash != "" {
+		d.Flash = flash
+	}
+	if flashErr := r.URL.Query().Get("error"); flashErr != "" {
+		d.Flash = flashErr
+		d.FlashError = true
 	}
 	h.render(w, "config.html", "Config — Admin", "config", d)
 }
 
-// SaveConfig handles the config form POST and updates in-memory settings.
-// Persistent writes require a server restart; this validates and acknowledges.
+// splitCSV splits a comma-separated form value into a trimmed, non-empty
+// string slice. An empty or whitespace-only input yields an empty slice
+// rather than a slice containing one empty string.
+func splitCSV(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// saveConfigError redirects back to the config page with an error flash.
+func (h *Handler) saveConfigError(w http.ResponseWriter, r *http.Request, msg string) {
+	http.Redirect(w, r, "/server/admin/config?error="+url.QueryEscape(msg), http.StatusSeeOther)
+}
+
+// SaveConfig parses the POSTed configuration form, validates it, persists it
+// to server.yml, and applies it to the in-memory config so changes take
+// effect immediately for every request that reads *config.Config from here
+// on — per AI.md PART 12 "Live Reload", no restart is required except for
+// server.address, server.port, database.path, and the paths.{config,data,
+// log,cache} bootstrap directories (the same class of setting as a database
+// driver change, all fixed at process startup).
 func (h *Handler) SaveConfig(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/server/admin/config?flash=saved", http.StatusSeeOther)
+	if err := r.ParseForm(); err != nil {
+		h.saveConfigError(w, r, "invalid form submission")
+		return
+	}
+
+	// next starts as a copy of the current config so any field not present
+	// in the submitted form (there should be none from the real form, but
+	// defends against partial/empty POSTs) keeps its current value.
+	next := *h.cfg
+	origAddress, origPort := h.cfg.Server.Address, h.cfg.Server.Port
+	origDBPath := h.cfg.Database.Path
+	origPathsConfig, origPathsData := h.cfg.Paths.Config, h.cfg.Paths.Data
+	origPathsLog, origPathsCache := h.cfg.Paths.Log, h.cfg.Paths.Cache
+
+	form := r.PostForm
+	var parseErr error
+	atoi := func(key string, dst *int) {
+		if parseErr != nil || !form.Has(key) {
+			return
+		}
+		v, err := strconv.Atoi(strings.TrimSpace(form.Get(key)))
+		if err != nil {
+			parseErr = fmt.Errorf("%s: must be a number", key)
+			return
+		}
+		*dst = v
+	}
+	str := func(key string, dst *string) {
+		if form.Has(key) {
+			*dst = strings.TrimSpace(form.Get(key))
+		}
+	}
+	boolean := func(key string, dst *bool) {
+		if form.Has(key) {
+			*dst = config.ParseBool(form.Get(key))
+		}
+	}
+	csv := func(key string, dst *[]string) {
+		if form.Has(key) {
+			*dst = splitCSV(form.Get(key))
+		}
+	}
+
+	str("address", &next.Server.Address)
+	atoi("port", &next.Server.Port)
+	str("base_url", &next.Server.BaseURL)
+	str("mode", &next.Server.Mode)
+	boolean("debug", &next.Server.Debug)
+	str("log_level", &next.Server.LogLevel)
+	csv("domain", &next.Server.Domain)
+	csv("trusted_proxies", &next.Server.TrustedProxies)
+
+	boolean("learning", &next.Server.URLDetection.Learning)
+	atoi("min_samples", &next.Server.URLDetection.MinSamples)
+	str("sample_window", &next.Server.URLDetection.SampleWindow)
+	boolean("log_changes", &next.Server.URLDetection.LogChanges)
+	boolean("live_reload", &next.Server.URLDetection.LiveReload)
+
+	str("database_path", &next.Database.Path)
+
+	str("paths_config", &next.Paths.Config)
+	str("paths_data", &next.Paths.Data)
+	str("paths_log", &next.Paths.Log)
+	str("paths_cache", &next.Paths.Cache)
+	csv("music", &next.Paths.Music)
+
+	atoi("session_duration", &next.Auth.SessionDuration)
+	atoi("max_login_attempts", &next.Auth.MaxLoginAttempts)
+	atoi("lockout_minutes", &next.Auth.LockoutMinutes)
+
+	boolean("auto_scan", &next.Scanner.AutoScan)
+	atoi("scan_interval", &next.Scanner.ScanInterval)
+	boolean("follow_symlinks", &next.Scanner.FollowSymlinks)
+	csv("exclude_patterns", &next.Scanner.ExcludePatterns)
+
+	boolean("icecast_enabled", &next.Icecast.Enabled)
+	atoi("max_mounts", &next.Icecast.MaxMounts)
+
+	boolean("scrobble_enabled", &next.Scrobble.Enabled)
+	atoi("scrobble_delay", &next.Scrobble.Delay)
+
+	str("ffmpeg_path", &next.FFmpeg.Path)
+	boolean("download_auto", &next.FFmpeg.DownloadAuto)
+
+	boolean("email_enabled", &next.Email.Enabled)
+	str("email_host", &next.Email.Host)
+	atoi("email_port", &next.Email.Port)
+	str("email_username", &next.Email.Username)
+	str("email_from", &next.Email.From)
+	boolean("email_tls", &next.Email.TLS)
+	// email_password is write-only: only overwrite when a new value was
+	// actually typed, so a blank field never wipes out the stored password.
+	if v := strings.TrimSpace(form.Get("email_password")); v != "" {
+		next.Email.Password = v
+	}
+
+	boolean("feature_podcasts", &next.Features.Podcasts)
+	boolean("feature_public_shares", &next.Features.PublicShares)
+	boolean("feature_user_signup", &next.Features.UserSignup)
+	boolean("feature_geo_ip", &next.Features.GeoIP)
+	boolean("feature_tor", &next.Features.Tor)
+	boolean("feature_transcoding", &next.Features.Transcoding)
+	boolean("feature_music_brainz", &next.Features.MusicBrainz)
+
+	boolean("csrf_enabled", &next.Web.CSRF.Enabled)
+	csv("csrf_exempt_paths", &next.Web.CSRF.ExemptPaths)
+
+	if parseErr != nil {
+		h.saveConfigError(w, r, parseErr.Error())
+		return
+	}
+
+	if err := next.Validate(); err != nil {
+		h.saveConfigError(w, r, err.Error())
+		return
+	}
+
+	if err := config.Save(&next, h.cfgPath); err != nil {
+		h.saveConfigError(w, r, "failed to write server.yml: "+err.Error())
+		return
+	}
+
+	// Apply to the live, shared *config.Config so every in-flight and future
+	// request sees the new values immediately without a restart.
+	*h.cfg = next
+
+	flash := "saved"
+	if next.Server.Address != origAddress || next.Server.Port != origPort || next.Database.Path != origDBPath ||
+		next.Paths.Config != origPathsConfig || next.Paths.Data != origPathsData ||
+		next.Paths.Log != origPathsLog || next.Paths.Cache != origPathsCache {
+		flash = "saved — address, port, database path, and process directory changes require a restart to take effect"
+	}
+	http.Redirect(w, r, "/server/admin/config?flash="+url.QueryEscape(flash), http.StatusSeeOther)
 }
 
 // logLines is the number of lines to display from the log file.

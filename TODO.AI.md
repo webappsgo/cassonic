@@ -1,13 +1,15 @@
 # TODO
 
-- admin: `SaveConfig` (`src/server/handler/admin/admin.go`) is a stub — it
-  redirects with `flash=saved` but never parses the POSTed form or persists
-  any value back to `server.yml`. This predates the DOMAIN/{fqdn} work; the
-  new `domain`/`trusted_proxies` fields were added to `config.html` for
-  visibility only (matching the existing Port/Mode/Debug display-only
-  pattern) and are not yet actually saveable. Per config-rules.md every
-  server.yml setting must be live-reloadable and admin-UI editable — almost
-  none of Auth/Scanner/Icecast/Scrobble/FFmpeg/Email/Features/Web/Paths is
-  exposed in the admin panel at all. Needs a real form-parse-and-persist
-  implementation (write via `config.Save`, live-reload in-memory `cfg`)
-  covering every section, per PART 12/PART 17.
+- admin: the admin panel's route hierarchy
+  (`src/server/handler/admin/admin.go` `Routes()`) is flat —
+  `/`, `/system`, `/library`, `/scheduler`, `/config`, `/logs`, `/backup` —
+  but AI.md PART 17 (ADMIN PANEL) specifies a much deeper nested hierarchy
+  under `/server/{admin_path}/config/...`, including
+  `/config/settings`, `/config/security/auth/{oidc,ldap,saml}`,
+  `/config/users/`, `/config/orgs/`, and `/config/cluster/`. Discovered while
+  implementing the `SaveConfig` form-persist feature; out of scope for that
+  change since it only covers `server.yml` persistence, not route
+  restructuring. Needs a full PART 17 re-read and a route-hierarchy rework
+  (or a written decision that the flat structure is an intentional,
+  documented deviation) before the admin panel can be called PART 17
+  compliant.

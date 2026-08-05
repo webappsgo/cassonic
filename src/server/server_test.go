@@ -52,7 +52,7 @@ func newTestServer(t *testing.T) *Server {
 	scanner := service.NewScanner(music, tags.New(), logger)
 	coverArt := service.NewCoverArtService(music, t.TempDir())
 
-	return New(cfg, db, scanner, coverArt, nil, tags.New())
+	return New(cfg, t.TempDir()+"/server.yml", db, scanner, coverArt, nil, tags.New())
 }
 
 func TestNew_ReturnsConfiguredServer(t *testing.T) {

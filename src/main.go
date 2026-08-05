@@ -385,7 +385,7 @@ func main() {
 	sched.Register(scheduler.ClusterHeartbeatJob(db, schedLogger))
 	sched.Start(ctx)
 
-	srv := server.New(cfg, db, scanner, coverArt, ff, tagReader)
+	srv := server.New(cfg, cfgPath, db, scanner, coverArt, ff, tagReader)
 
 	geoipDB, _ := geoip.OpenOptional(filepath.Join(detectedPaths.Data, "security", "geoip", "country.mmdb"))
 	if geoipDB != nil {

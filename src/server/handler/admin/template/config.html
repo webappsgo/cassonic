@@ -1,13 +1,27 @@
 {{define "config.html"}}{{template "base" .}}{{end}}
 {{define "content"}}
-{{if .Data.Flash}}<div class="flash" role="status">{{.Data.Flash}}</div>{{end}}
+{{if .Data.Flash}}<div class="flash {{if .Data.FlashError}}flash-error{{end}}" role="status">{{.Data.Flash}}</div>{{end}}
+<form method="post" action="/server/admin/config">
+
 <div class="card">
   <h3>Server Settings</h3>
-  <form method="post" action="/server/admin/config">
+  <div class="form-section">
+    <h4>Network &amp; Runtime</h4>
     <div class="form-grid">
       <div class="form-field">
-        <label for="cfg-port">Port</label>
+        <label for="cfg-address">Bind Address <span class="restart-note">(restart)</span></label>
+        <input id="cfg-address" name="address" type="text" placeholder="0.0.0.0" value="{{.Data.Address}}">
+        <small>Address the HTTP listener binds to; empty means all interfaces. Requires a restart to take effect.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-port">Port <span class="restart-note">(restart)</span></label>
         <input id="cfg-port" name="port" type="number" min="1" max="65535" value="{{.Data.Port}}">
+        <small>Listen port. Requires a restart to take effect.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-base-url">Base URL Path</label>
+        <input id="cfg-base-url" name="base_url" type="text" placeholder="/cassonic" value="{{.Data.BaseURL}}">
+        <small>URL path prefix when running behind a reverse proxy.</small>
       </div>
       <div class="form-field">
         <label for="cfg-mode">Mode</label>
@@ -22,6 +36,16 @@
           <option value="false" {{if not .Data.Debug}}selected{{end}}>disabled</option>
           <option value="true" {{if .Data.Debug}}selected{{end}}>enabled</option>
         </select>
+        <small>Enable verbose request logging and debug endpoints.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-log-level">Log Level</label>
+        <select id="cfg-log-level" name="log_level">
+          <option value="error" {{if eq .Data.LogLevel "error"}}selected{{end}}>error</option>
+          <option value="warn" {{if eq .Data.LogLevel "warn"}}selected{{end}}>warn</option>
+          <option value="info" {{if eq .Data.LogLevel "info"}}selected{{end}}>info</option>
+          <option value="debug" {{if eq .Data.LogLevel "debug"}}selected{{end}}>debug</option>
+        </select>
       </div>
       <div class="form-field">
         <label for="cfg-domain">Domain(s)</label>
@@ -34,9 +58,295 @@
         <small>Comma-separated CIDRs, beyond private/loopback ranges, allowed to set reverse-proxy headers.</small>
       </div>
     </div>
-    <div style="margin-top:16px">
-      <button type="submit" class="btn btn-primary">Save Settings</button>
+  </div>
+
+  <div class="form-section">
+    <h4>Smart FQDN Detection</h4>
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="cfg-learning">Learning</label>
+        <select id="cfg-learning" name="learning">
+          <option value="false" {{if not .Data.Learning}}selected{{end}}>disabled</option>
+          <option value="true" {{if .Data.Learning}}selected{{end}}>enabled</option>
+        </select>
+        <small>Infer domain patterns from reverse-proxy headers.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-min-samples">Minimum Samples</label>
+        <input id="cfg-min-samples" name="min_samples" type="number" min="1" value="{{.Data.MinSamples}}">
+      </div>
+      <div class="form-field">
+        <label for="cfg-sample-window">Sample Window</label>
+        <input id="cfg-sample-window" name="sample_window" type="text" placeholder="5m" value="{{.Data.SampleWindow}}">
+        <small>Go duration string, e.g. 5m, 1h.</small>
+      </div>
+      <div class="form-field">
+        <label for="cfg-log-changes">Log Changes</label>
+        <select id="cfg-log-changes" name="log_changes">
+          <option value="false" {{if not .Data.LogChanges}}selected{{end}}>disabled</option>
+          <option value="true" {{if .Data.LogChanges}}selected{{end}}>enabled</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="cfg-live-reload">Live Reload</label>
+        <select id="cfg-live-reload" name="live_reload">
+          <option value="false" {{if not .Data.LiveReload}}selected{{end}}>disabled</option>
+          <option value="true" {{if .Data.LiveReload}}selected{{end}}>enabled</option>
+        </select>
+        <small>Allow resolved URL variables to update without a restart.</small>
+      </div>
     </div>
-  </form>
+  </div>
 </div>
+
+<div class="card">
+  <h3>Database &amp; Paths</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-database-path">Database Path <span class="restart-note">(restart)</span></label>
+      <input id="cfg-database-path" name="database_path" type="text" value="{{.Data.DatabasePath}}">
+      <small>SQLite database file path; empty resolves relative to the data dir. Requires a restart.</small>
+    </div>
+    <div class="form-field">
+      <label for="cfg-music">Music Library Paths</label>
+      <input id="cfg-music" name="music" type="text" placeholder="/music" value="{{.Data.Music}}">
+      <small>Comma-separated root directories scanned for music files.</small>
+    </div>
+    <div class="form-field">
+      <label for="cfg-paths-config">Config Directory <span class="restart-note">(restart)</span></label>
+      <input id="cfg-paths-config" name="paths_config" type="text" value="{{.Data.PathsConfig}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-paths-data">Data Directory <span class="restart-note">(restart)</span></label>
+      <input id="cfg-paths-data" name="paths_data" type="text" value="{{.Data.PathsData}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-paths-log">Log Directory <span class="restart-note">(restart)</span></label>
+      <input id="cfg-paths-log" name="paths_log" type="text" value="{{.Data.PathsLog}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-paths-cache">Cache Directory <span class="restart-note">(restart)</span></label>
+      <input id="cfg-paths-cache" name="paths_cache" type="text" value="{{.Data.PathsCache}}">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Authentication</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-session-duration">Session Duration (hours)</label>
+      <input id="cfg-session-duration" name="session_duration" type="number" min="1" value="{{.Data.SessionDuration}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-max-login-attempts">Max Login Attempts</label>
+      <input id="cfg-max-login-attempts" name="max_login_attempts" type="number" min="1" value="{{.Data.MaxLoginAttempts}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-lockout-minutes">Lockout Minutes</label>
+      <input id="cfg-lockout-minutes" name="lockout_minutes" type="number" min="1" value="{{.Data.LockoutMinutes}}">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Scanner</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-auto-scan">Auto Scan</label>
+      <select id="cfg-auto-scan" name="auto_scan">
+        <option value="false" {{if not .Data.AutoScan}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.AutoScan}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-scan-interval">Scan Interval (seconds)</label>
+      <input id="cfg-scan-interval" name="scan_interval" type="number" min="1" value="{{.Data.ScanInterval}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-follow-symlinks">Follow Symlinks</label>
+      <select id="cfg-follow-symlinks" name="follow_symlinks">
+        <option value="false" {{if not .Data.FollowSymlinks}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FollowSymlinks}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-exclude-patterns">Exclude Patterns</label>
+      <input id="cfg-exclude-patterns" name="exclude_patterns" type="text" placeholder="**/.trash/**" value="{{.Data.ExcludePatterns}}">
+      <small>Comma-separated glob patterns; matching paths are skipped.</small>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Icecast</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-icecast-enabled">Enabled</label>
+      <select id="cfg-icecast-enabled" name="icecast_enabled">
+        <option value="false" {{if not .Data.IcecastEnabled}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.IcecastEnabled}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-max-mounts">Max Mounts</label>
+      <input id="cfg-max-mounts" name="max_mounts" type="number" min="1" value="{{.Data.MaxMounts}}">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Scrobble</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-scrobble-enabled">Enabled</label>
+      <select id="cfg-scrobble-enabled" name="scrobble_enabled">
+        <option value="false" {{if not .Data.ScrobbleEnabled}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.ScrobbleEnabled}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-scrobble-delay">Delay (seconds)</label>
+      <input id="cfg-scrobble-delay" name="scrobble_delay" type="number" min="0" value="{{.Data.ScrobbleDelay}}">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>FFmpeg</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-ffmpeg-path">Binary Path</label>
+      <input id="cfg-ffmpeg-path" name="ffmpeg_path" type="text" placeholder="auto-detected" value="{{.Data.FFmpegPath}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-download-auto">Download Automatically</label>
+      <select id="cfg-download-auto" name="download_auto">
+        <option value="false" {{if not .Data.DownloadAuto}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.DownloadAuto}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Email</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-email-enabled">Enabled</label>
+      <select id="cfg-email-enabled" name="email_enabled">
+        <option value="false" {{if not .Data.EmailEnabled}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.EmailEnabled}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-host">SMTP Host</label>
+      <input id="cfg-email-host" name="email_host" type="text" value="{{.Data.EmailHost}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-port">SMTP Port</label>
+      <input id="cfg-email-port" name="email_port" type="number" min="1" max="65535" value="{{.Data.EmailPort}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-username">SMTP Username</label>
+      <input id="cfg-email-username" name="email_username" type="text" value="{{.Data.EmailUser}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-password">SMTP Password</label>
+      <input id="cfg-email-password" name="email_password" type="password" autocomplete="new-password" placeholder="leave blank to keep unchanged">
+      <small>Never shown. Leave blank to keep the currently stored password.</small>
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-from">From Address</label>
+      <input id="cfg-email-from" name="email_from" type="email" value="{{.Data.EmailFrom}}">
+    </div>
+    <div class="form-field">
+      <label for="cfg-email-tls">TLS</label>
+      <select id="cfg-email-tls" name="email_tls">
+        <option value="false" {{if not .Data.EmailTLS}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.EmailTLS}}selected{{end}}>enabled</option>
+      </select>
+      <small>STARTTLS or implicit TLS depending on port.</small>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Features</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-feature-podcasts">Podcasts</label>
+      <select id="cfg-feature-podcasts" name="feature_podcasts">
+        <option value="false" {{if not .Data.FeaturePodcasts}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeaturePodcasts}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-public-shares">Public Shares</label>
+      <select id="cfg-feature-public-shares" name="feature_public_shares">
+        <option value="false" {{if not .Data.FeaturePublicShares}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeaturePublicShares}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-user-signup">User Signup</label>
+      <select id="cfg-feature-user-signup" name="feature_user_signup">
+        <option value="false" {{if not .Data.FeatureUserSignup}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeatureUserSignup}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-geo-ip">GeoIP</label>
+      <select id="cfg-feature-geo-ip" name="feature_geo_ip">
+        <option value="false" {{if not .Data.FeatureGeoIP}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeatureGeoIP}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-tor">Tor Hidden Service</label>
+      <select id="cfg-feature-tor" name="feature_tor">
+        <option value="false" {{if not .Data.FeatureTor}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeatureTor}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-transcoding">Transcoding</label>
+      <select id="cfg-feature-transcoding" name="feature_transcoding">
+        <option value="false" {{if not .Data.FeatureTranscoding}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeatureTranscoding}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="cfg-feature-music-brainz">MusicBrainz Enrichment</label>
+      <select id="cfg-feature-music-brainz" name="feature_music_brainz">
+        <option value="false" {{if not .Data.FeatureMusicBrainz}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.FeatureMusicBrainz}}selected{{end}}>enabled</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Web / CSRF</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="cfg-csrf-enabled">CSRF Protection</label>
+      <select id="cfg-csrf-enabled" name="csrf_enabled">
+        <option value="false" {{if not .Data.CSRFEnabled}}selected{{end}}>disabled</option>
+        <option value="true" {{if .Data.CSRFEnabled}}selected{{end}}>enabled</option>
+      </select>
+      <small>Set disabled only for API-only deployments with no browser forms at all.</small>
+    </div>
+    <div class="form-field">
+      <label for="cfg-csrf-exempt-paths">Exempt Paths</label>
+      <input id="cfg-csrf-exempt-paths" name="csrf_exempt_paths" type="text" placeholder="/oauth/callback/*" value="{{.Data.CSRFExemptPaths}}">
+      <small>Comma-separated glob patterns, e.g. OAuth callbacks and webhook receivers.</small>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px">
+  <button type="submit" class="btn btn-primary">Save Settings</button>
+</div>
+</form>
 {{end}}

@@ -51,6 +51,7 @@ var (
 // Server is the cassonic HTTP server.
 type Server struct {
 	cfg         *config.Config
+	cfgPath     string
 	db          *store.DB
 	scanner     *service.Scanner
 	coverArt    *service.CoverArtService
@@ -88,9 +89,12 @@ type Server struct {
 	icecast *icecast.Manager
 }
 
-// New creates and fully configures the HTTP server. It does not begin listening.
+// New creates and fully configures the HTTP server. It does not begin
+// listening. cfgPath is the absolute path to server.yml, used by the admin
+// panel to persist configuration changes.
 func New(
 	cfg *config.Config,
+	cfgPath string,
 	db *store.DB,
 	scanner *service.Scanner,
 	coverArt *service.CoverArtService,
@@ -99,6 +103,7 @@ func New(
 ) *Server {
 	s := &Server{
 		cfg:         cfg,
+		cfgPath:     cfgPath,
 		db:          db,
 		scanner:     scanner,
 		coverArt:    coverArt,
@@ -433,7 +438,7 @@ func (s *Server) webHandler() *web.Handler {
 
 // adminHandler constructs the admin panel handler.
 func (s *Server) adminHandler() *handleradmin.Handler {
-	return handleradmin.New(s.db, s.cfg, Version, s.sched)
+	return handleradmin.New(s.db, s.cfg, s.cfgPath, Version, s.sched)
 }
 
 // graphqlHandler returns a minimal GraphQL endpoint. Full query execution is a

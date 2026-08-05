@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"time"
 
 	"github.com/local/cassonic/src/config"
@@ -196,5 +197,5 @@ func testConfig(dir string) *config.Config {
 
 // newTestHandler builds an admin Handler with real templates, the given db and cfg, and no scheduler.
 func newTestHandler(db *store.DB, cfg *config.Config) *Handler {
-	return New(db, cfg, "test-version", nil)
+	return New(db, cfg, filepath.Join(cfg.Paths.Data, "server.yml"), "test-version", nil)
 }

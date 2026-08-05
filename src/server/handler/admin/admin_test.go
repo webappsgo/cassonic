@@ -4,14 +4,17 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
 	"github.com/local/cassonic/src/server/store"
@@ -260,6 +263,189 @@ func TestSaveConfig_Redirects(t *testing.T) {
 	}
 	if !strings.Contains(w.Header().Get("Location"), "/server/admin/config") {
 		t.Errorf("unexpected redirect location: %q", w.Header().Get("Location"))
+	}
+}
+
+// postConfigForm posts vals to h.SaveConfig as a application/x-www-form-urlencoded body.
+func postConfigForm(t *testing.T, h *Handler, vals url.Values) *httptest.ResponseRecorder {
+	t.Helper()
+	r := httptest.NewRequest(http.MethodPost, "/config", strings.NewReader(vals.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	h.SaveConfig(w, r)
+	return w
+}
+
+func TestSaveConfig_PersistsAllSectionsAndReturnsSavedFlash(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	h := newTestHandler(testDB(), cfg)
+
+	vals := url.Values{
+		"address":               {cfg.Server.Address},
+		"port":                  {strconv.Itoa(cfg.Server.Port)},
+		"base_url":              {"/cassonic"},
+		"mode":                  {cfg.Server.Mode},
+		"debug":                 {"false"},
+		"log_level":             {"debug"},
+		"domain":                {"example.com"},
+		"trusted_proxies":       {"10.0.0.0/8"},
+		"learning":              {"true"},
+		"min_samples":           {"10"},
+		"sample_window":         {"5m"},
+		"log_changes":           {"true"},
+		"live_reload":           {"true"},
+		"database_path":         {cfg.Database.Path},
+		"paths_config":          {cfg.Paths.Config},
+		"paths_data":            {cfg.Paths.Data},
+		"paths_log":             {cfg.Paths.Log},
+		"paths_cache":           {cfg.Paths.Cache},
+		"music":                 {"/music"},
+		"session_duration":      {"24"},
+		"max_login_attempts":    {"5"},
+		"lockout_minutes":       {"15"},
+		"auto_scan":             {"true"},
+		"scan_interval":         {"3600"},
+		"follow_symlinks":       {"false"},
+		"exclude_patterns":      {"**/.trash/**"},
+		"icecast_enabled":       {"true"},
+		"max_mounts":            {"10"},
+		"scrobble_enabled":      {"true"},
+		"scrobble_delay":        {"30"},
+		"ffmpeg_path":           {"/usr/bin/ffmpeg"},
+		"download_auto":         {"true"},
+		"email_enabled":         {"false"},
+		"email_host":            {"smtp.example.com"},
+		"email_port":            {"587"},
+		"email_username":        {"user@example.com"},
+		"email_from":            {"noreply@example.com"},
+		"email_tls":             {"true"},
+		"feature_podcasts":      {"true"},
+		"feature_public_shares": {"true"},
+		"feature_user_signup":   {"false"},
+		"feature_geo_ip":        {"false"},
+		"feature_tor":           {"false"},
+		"feature_transcoding":   {"true"},
+		"feature_music_brainz":  {"true"},
+		"csrf_enabled":          {"true"},
+		"csrf_exempt_paths":     {"/webhook/*"},
+	}
+	w := postConfigForm(t, h, vals)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "flash=saved") {
+		t.Errorf("expected 'saved' flash, got %q", loc)
+	}
+
+	if cfg.Server.BaseURL != "/cassonic" {
+		t.Errorf("expected live-reloaded BaseURL /cassonic, got %q", cfg.Server.BaseURL)
+	}
+	if cfg.Server.LogLevel != "debug" {
+		t.Errorf("expected live-reloaded LogLevel debug, got %q", cfg.Server.LogLevel)
+	}
+	if !cfg.Icecast.Enabled || cfg.Icecast.MaxMounts != 10 {
+		t.Errorf("expected icecast enabled with 10 max mounts, got %+v", cfg.Icecast)
+	}
+
+	onDisk, err := config.Load(filepath.Join(dir, "server.yml"))
+	if err != nil {
+		t.Fatalf("failed to load persisted config: %v", err)
+	}
+	if onDisk.Server.BaseURL != "/cassonic" || onDisk.Server.LogLevel != "debug" {
+		t.Errorf("persisted config missing expected values: %+v", onDisk.Server)
+	}
+}
+
+func TestSaveConfig_InvalidPort_ReturnsErrorFlashAndLeavesConfigUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	origPort := cfg.Server.Port
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"port": {"999999"}})
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "error=") {
+		t.Errorf("expected error flash, got %q", loc)
+	}
+	if cfg.Server.Port != origPort {
+		t.Errorf("expected config unchanged on validation error, port changed to %d", cfg.Server.Port)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "server.yml")); !os.IsNotExist(err) {
+		t.Errorf("expected server.yml not to be written on validation error")
+	}
+}
+
+func TestSaveConfig_BlankEmailPassword_PreservesStoredPassword(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	cfg.Email.Password = "existing-secret"
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"email_host": {"smtp.example.com"}, "email_password": {""}})
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+	if cfg.Email.Password != "existing-secret" {
+		t.Errorf("expected stored email password preserved, got %q", cfg.Email.Password)
+	}
+}
+
+func TestSaveConfig_NonEmptyEmailPassword_Overwrites(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	cfg.Email.Password = "old-secret"
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"email_password": {"new-secret"}})
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+	if cfg.Email.Password != "new-secret" {
+		t.Errorf("expected email password overwritten, got %q", cfg.Email.Password)
+	}
+}
+
+func TestSaveConfig_AddressChange_TriggersRestartWarning(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"address": {"127.0.0.1"}})
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "restart") {
+		t.Errorf("expected restart warning in flash for address change, got %q", loc)
+	}
+}
+
+func TestSaveConfig_PortChange_TriggersRestartWarning(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"port": {strconv.Itoa(cfg.Server.Port + 1)}})
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "restart") {
+		t.Errorf("expected restart warning in flash for port change, got %q", loc)
+	}
+}
+
+func TestSaveConfig_NonRestartField_NoRestartWarning(t *testing.T) {
+	dir := t.TempDir()
+	cfg := testConfig(dir)
+	h := newTestHandler(testDB(), cfg)
+
+	w := postConfigForm(t, h, url.Values{"log_level": {"debug"}})
+	loc := w.Header().Get("Location")
+	if strings.Contains(loc, "restart") {
+		t.Errorf("expected no restart warning for a non-restart-sensitive change, got %q", loc)
+	}
+	if !strings.Contains(loc, "flash=saved") {
+		t.Errorf("expected plain 'saved' flash, got %q", loc)
 	}
 }
 
