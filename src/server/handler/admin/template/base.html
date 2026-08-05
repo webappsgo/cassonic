@@ -89,13 +89,13 @@
   </div>
   <nav aria-label="Admin navigation">
     <ul>
-      <li><a href="/server/admin/" class="{{if eq .Active "dashboard"}}active{{end}}" aria-current="{{if eq .Active "dashboard"}}page{{end}}">Dashboard</a></li>
-      <li><a href="/server/admin/library" class="{{if eq .Active "library"}}active{{end}}" aria-current="{{if eq .Active "library"}}page{{end}}">Library</a></li>
-      <li><a href="/server/admin/scheduler" class="{{if eq .Active "scheduler"}}active{{end}}" aria-current="{{if eq .Active "scheduler"}}page{{end}}">Scheduler</a></li>
-      <li><a href="/server/admin/config" class="{{if eq .Active "config"}}active{{end}}" aria-current="{{if eq .Active "config"}}page{{end}}">Config</a></li>
-      <li><a href="/server/admin/system" class="{{if eq .Active "system"}}active{{end}}" aria-current="{{if eq .Active "system"}}page{{end}}">System</a></li>
-      <li><a href="/server/admin/logs" class="{{if eq .Active "logs"}}active{{end}}" aria-current="{{if eq .Active "logs"}}page{{end}}">Logs</a></li>
-      <li><a href="/server/admin/backup" class="{{if eq .Active "backup"}}active{{end}}" aria-current="{{if eq .Active "backup"}}page{{end}}">Backup</a></li>
+      <li><a href="{{.BasePath}}/" class="{{if eq .Active "dashboard"}}active{{end}}" aria-current="{{if eq .Active "dashboard"}}page{{end}}">Dashboard</a></li>
+      <li><a href="{{.BasePath}}/library" class="{{if eq .Active "library"}}active{{end}}" aria-current="{{if eq .Active "library"}}page{{end}}">Library</a></li>
+      <li><a href="{{.BasePath}}/scheduler" class="{{if eq .Active "scheduler"}}active{{end}}" aria-current="{{if eq .Active "scheduler"}}page{{end}}">Scheduler</a></li>
+      <li><a href="{{.BasePath}}/config" class="{{if eq .Active "config"}}active{{end}}" aria-current="{{if eq .Active "config"}}page{{end}}">Config</a></li>
+      <li><a href="{{.BasePath}}/system" class="{{if eq .Active "system"}}active{{end}}" aria-current="{{if eq .Active "system"}}page{{end}}">System</a></li>
+      <li><a href="{{.BasePath}}/logs" class="{{if eq .Active "logs"}}active{{end}}" aria-current="{{if eq .Active "logs"}}page{{end}}">Logs</a></li>
+      <li><a href="{{.BasePath}}/backup" class="{{if eq .Active "backup"}}active{{end}}" aria-current="{{if eq .Active "backup"}}page{{end}}">Backup</a></li>
     </ul>
   </nav>
 </aside>

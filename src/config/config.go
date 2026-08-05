@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -64,6 +65,10 @@ type ServerConfig struct {
 	TrustedProxies []string `yaml:"trusted_proxies"`
 	// url_detection controls the smart FQDN learning/live-reload subsystem.
 	URLDetection URLDetectionConfig `yaml:"url_detection"`
+	// admin_path is the URL path segment for the admin panel (no leading slash)
+	AdminPath string `yaml:"admin_path"`
+	// api_version is the prefix used in /api/{api_version}/ routes
+	APIVersion string `yaml:"api_version"`
 }
 
 // URLDetectionConfig controls the smart FQDN detection/live-reload subsystem
@@ -221,6 +226,8 @@ func Defaults() *Config {
 				LogChanges:   true,
 				LiveReload:   true,
 			},
+			AdminPath:  "admin",
+			APIVersion: "v1",
 		},
 		Database: DatabaseConfig{
 			Path: "",
@@ -321,6 +328,12 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Server.URLDetection.SampleWindow == "" {
 		cfg.Server.URLDetection.SampleWindow = d.Server.URLDetection.SampleWindow
+	}
+	if cfg.Server.AdminPath == "" {
+		cfg.Server.AdminPath = d.Server.AdminPath
+	}
+	if cfg.Server.APIVersion == "" {
+		cfg.Server.APIVersion = d.Server.APIVersion
 	}
 	if cfg.Auth.SessionDuration == 0 {
 		cfg.Auth.SessionDuration = d.Auth.SessionDuration
@@ -423,9 +436,38 @@ func SafePath(base, rel string) (string, error) {
 
 // Validate checks that the Config contains coherent, usable values and returns
 // a descriptive error for the first violation found.
+// adminPathPattern matches the PART 17 admin_path charset: lowercase letters,
+// digits, and hyphens, with no leading or trailing hyphen.
+var adminPathPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// reservedAdminPaths lists path segments that server.admin_path may never use,
+// per AI.md PART 17 "Configurable Admin Path" → Validation Rules.
+var reservedAdminPaths = []string{
+	"api", "health", "healthz", "metrics", "version", ".well-known",
+	"about", "privacy", "contact", "help", "terms",
+	"docs", "auth", "security",
+	"static", "assets",
+}
+
 func (c *Config) Validate() error {
 	if c.Server.Port < 1 || c.Server.Port > 65535 {
 		return errors.New("config: server.port must be between 1 and 65535")
+	}
+
+	if len(c.Server.AdminPath) < 2 || len(c.Server.AdminPath) > 32 {
+		return errors.New("config: server.admin_path must be 2-32 characters")
+	}
+	if !adminPathPattern.MatchString(c.Server.AdminPath) {
+		return errors.New("config: server.admin_path must contain only lowercase letters, numbers, and hyphens, with no leading or trailing hyphen")
+	}
+	for _, r := range reservedAdminPaths {
+		if c.Server.AdminPath == r {
+			return fmt.Errorf("config: server.admin_path %q is a reserved path", c.Server.AdminPath)
+		}
+	}
+
+	if c.Server.APIVersion == "" {
+		return errors.New("config: server.api_version must not be empty")
 	}
 
 	switch c.Server.Mode {
@@ -487,4 +529,20 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// AdminPath returns the configured admin panel URL path segment (no leading
+// or trailing slash), e.g. "admin". See AI.md PART 17 "Configurable Admin Path".
+func (c *Config) AdminPath() string {
+	return c.Server.AdminPath
+}
+
+// APIVersion returns the configured API version prefix, e.g. "v1".
+func (c *Config) APIVersion() string {
+	return c.Server.APIVersion
+}
+
+// APIBasePath returns the API base path, e.g. "/api/v1".
+func (c *Config) APIBasePath() string {
+	return "/api/" + c.Server.APIVersion
 }

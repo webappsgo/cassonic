@@ -1,7 +1,7 @@
 {{define "config.html"}}{{template "base" .}}{{end}}
 {{define "content"}}
 {{if .Data.Flash}}<div class="flash {{if .Data.FlashError}}flash-error{{end}}" role="status">{{.Data.Flash}}</div>{{end}}
-<form method="post" action="/server/admin/config">
+<form method="post" action="{{.BasePath}}/config">
 
 <div class="card">
   <h3>Server Settings</h3>

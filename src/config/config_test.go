@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -337,6 +338,61 @@ func TestValidate(t *testing.T) {
 			mutate:  func(c *Config) { c.Email.Enabled = false },
 			wantErr: false,
 		},
+		{
+			name:    "admin_path default valid",
+			mutate:  func(c *Config) {},
+			wantErr: false,
+		},
+		{
+			name:    "admin_path too short invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "a" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path too long invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = strings.Repeat("a", 33) },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path uppercase invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "Admin" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path leading hyphen invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "-admin" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path trailing hyphen invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "admin-" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path hyphenated valid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "my-admin" },
+			wantErr: false,
+		},
+		{
+			name:    "admin_path reserved 'api' invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "api" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path reserved 'static' invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "static" },
+			wantErr: true,
+		},
+		{
+			name:    "admin_path reserved 'security' invalid",
+			mutate:  func(c *Config) { c.Server.AdminPath = "security" },
+			wantErr: true,
+		},
+		{
+			name:    "api_version empty invalid",
+			mutate:  func(c *Config) { c.Server.APIVersion = "" },
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -351,6 +407,28 @@ func TestValidate(t *testing.T) {
 				t.Errorf("Validate(): unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestAdminPathAccessors(t *testing.T) {
+	cfg := Defaults()
+	if got := cfg.AdminPath(); got != "admin" {
+		t.Errorf("AdminPath() = %q, want %q", got, "admin")
+	}
+	if got := cfg.APIVersion(); got != "v1" {
+		t.Errorf("APIVersion() = %q, want %q", got, "v1")
+	}
+	if got := cfg.APIBasePath(); got != "/api/v1" {
+		t.Errorf("APIBasePath() = %q, want %q", got, "/api/v1")
+	}
+
+	cfg.Server.AdminPath = "control"
+	cfg.Server.APIVersion = "v2"
+	if got := cfg.AdminPath(); got != "control" {
+		t.Errorf("AdminPath() = %q, want %q", got, "control")
+	}
+	if got := cfg.APIBasePath(); got != "/api/v2" {
+		t.Errorf("APIBasePath() = %q, want %q", got, "/api/v2")
 	}
 }
 

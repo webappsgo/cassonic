@@ -121,6 +121,13 @@ func (h *Handler) parseTemplates() map[string]*template.Template {
 
 // Routes assembles the chi router for the admin panel.
 // All routes are wrapped in requireAdmin middleware.
+// basePath returns the mounted admin panel root, e.g. "/server/admin", built
+// from the configured server.admin_path (AI.md PART 17 "Configurable Admin
+// Path") so internal redirects never hardcode the default segment.
+func (h *Handler) basePath() string {
+	return "/server/" + h.cfg.AdminPath()
+}
+
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(h.requireAdmin)
@@ -181,19 +188,21 @@ func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 
 // adminPageData carries data common to every admin template.
 type adminPageData struct {
-	Title   string
-	Version string
-	Active  string
-	Data    any
+	Title    string
+	Version  string
+	Active   string
+	BasePath string
+	Data     any
 }
 
 // render executes the named template with the provided page data.
 func (h *Handler) render(w http.ResponseWriter, name, title, active string, data any) {
 	pd := adminPageData{
-		Title:   title,
-		Version: h.version,
-		Active:  active,
-		Data:    data,
+		Title:    title,
+		Version:  h.version,
+		Active:   active,
+		BasePath: h.basePath(),
+		Data:     data,
 	}
 	tmpl, ok := h.tmpls[name]
 	if !ok {
@@ -255,7 +264,7 @@ func (h *Handler) Library(w http.ResponseWriter, r *http.Request) {
 
 // TriggerScan fires an immediate library scan (incremental) in the background.
 func (h *Handler) TriggerScan(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/server/admin/library?flash=scan+started", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/library?flash=scan+started", http.StatusSeeOther)
 }
 
 // SchedulerPanel renders the scheduler status page showing all registered jobs.
@@ -269,7 +278,7 @@ func (h *Handler) SchedulerPanel(w http.ResponseWriter, r *http.Request) {
 
 // RunJob triggers an immediate run of the named job via the scheduler.
 func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/server/admin/scheduler?flash=job+queued", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/scheduler?flash=job+queued", http.StatusSeeOther)
 }
 
 // configFormData carries every editable server.yml setting for the config
@@ -440,7 +449,7 @@ func splitCSV(s string) []string {
 
 // saveConfigError redirects back to the config page with an error flash.
 func (h *Handler) saveConfigError(w http.ResponseWriter, r *http.Request, msg string) {
-	http.Redirect(w, r, "/server/admin/config?error="+url.QueryEscape(msg), http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config?error="+url.QueryEscape(msg), http.StatusSeeOther)
 }
 
 // SaveConfig parses the POSTed configuration form, validates it, persists it
@@ -583,7 +592,7 @@ func (h *Handler) SaveConfig(w http.ResponseWriter, r *http.Request) {
 		next.Paths.Log != origPathsLog || next.Paths.Cache != origPathsCache {
 		flash = "saved — address, port, database path, and process directory changes require a restart to take effect"
 	}
-	http.Redirect(w, r, "/server/admin/config?flash="+url.QueryEscape(flash), http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/config?flash="+url.QueryEscape(flash), http.StatusSeeOther)
 }
 
 // logLines is the number of lines to display from the log file.
@@ -680,5 +689,5 @@ func listBackupFiles(backupDir string) ([]backupFile, error) {
 
 // BackupNow triggers an immediate backup and redirects back to the backup page.
 func (h *Handler) BackupNow(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/server/admin/backup?flash=backup+started", http.StatusSeeOther)
+	http.Redirect(w, r, h.basePath()+"/backup?flash=backup+started", http.StatusSeeOther)
 }

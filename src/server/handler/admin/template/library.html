@@ -19,7 +19,7 @@
         <td style="font-family:monospace;font-size:12px;word-break:break-all">{{.Path}}</td>
         <td>{{if .Enabled}}<span class="badge badge-ok">Yes</span>{{else}}<span class="badge badge-err">No</span>{{end}}</td>
         <td>
-          <form method="post" action="/server/admin/library/scan" style="display:inline">
+          <form method="post" action="{{$.BasePath}}/library/scan" style="display:inline">
             <button type="submit" class="btn btn-primary btn-sm" aria-label="Scan library {{.Name}}">Scan Now</button>
           </form>
         </td>
@@ -33,7 +33,7 @@
 </div>
 <div class="card">
   <h3>Add Library</h3>
-  <form method="post" action="/server/admin/library/scan">
+  <form method="post" action="{{.BasePath}}/library/scan">
     <div class="form-grid">
       <div class="form-field">
         <label for="lib-path">Path</label>

@@ -241,10 +241,14 @@ func (s *Server) buildRouter() http.Handler {
 	// matches it before the "/*" fallback dispatcher below is ever reached.
 	r.With(s.loginRL.Middleware("login")).Post("/api/v1/auth/login", nativeH.Login)
 
-	// Admin panel — mounted before WebUI catch-all. This is a distinct
-	// literal prefix, so it does not conflict with the "/*" dispatch below,
-	// and chi's radix tree matches it ahead of the "/*" wildcard regardless.
-	r.Mount("/server/admin", s.adminHandler().Routes())
+	// Admin panel — mounted before WebUI catch-all at the configured
+	// server.admin_path (default "admin", AI.md PART 17 "Configurable Admin
+	// Path"). This is a distinct literal prefix, so it does not conflict
+	// with the "/*" dispatch below, and chi's radix tree matches it ahead
+	// of the "/*" wildcard regardless. The admin path is resolved once at
+	// startup; changing it at runtime requires a restart until hot
+	// re-mount support lands (PLAN.AI.md P3).
+	r.Mount("/server/"+s.cfg.AdminPath(), s.adminHandler().Routes())
 
 	// WebUI — catch-all fallback; includes its own embedded /static/* handler.
 	webRoutes := s.webHandler().Routes()
