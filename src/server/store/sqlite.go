@@ -70,6 +70,48 @@ CREATE TABLE IF NOT EXISTS internet_radio_stations (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Server Admins (admin WebUI access, AI.md PART 12 "admins" table). A
+-- distinct account type from "users" above (which holds Subsonic/Ampache
+-- accounts, including the unrelated users.is_admin privileged-user role) —
+-- never conflated with it. The Primary Admin is the row with the lowest id,
+-- not a stored flag.
+CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'admin',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    api_token_hash TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'local',
+    external_id TEXT NOT NULL DEFAULT '',
+    groups TEXT NOT NULL DEFAULT '[]',
+    last_sync DATETIME,
+    last_login DATETIME,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_external_id ON admins(source, external_id) WHERE external_id != '';
+
+-- Admin WebUI preferences (AI.md PART 12 "admin_preferences" table): one row
+-- per admin, appearance/display/email-notification settings.
+CREATE TABLE IF NOT EXISTS admin_preferences (
+    admin_id INTEGER PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+    theme TEXT NOT NULL DEFAULT 'dark',
+    font_size TEXT NOT NULL DEFAULT 'medium',
+    reduce_motion INTEGER NOT NULL DEFAULT 0,
+    date_format TEXT NOT NULL DEFAULT 'YYYY-MM-DD',
+    time_format TEXT NOT NULL DEFAULT '24h',
+    email_security INTEGER NOT NULL DEFAULT 1,
+    email_server INTEGER NOT NULL DEFAULT 1,
+    email_backups INTEGER NOT NULL DEFAULT 1,
+    email_users INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 `
 
 // serverSchema contains all DDL statements executed against server.db on startup.
@@ -317,6 +359,42 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+
+-- Admin WebUI login sessions (AI.md PART 12 "admin_sessions" table), kept
+-- entirely separate from the regular-user "sessions" table in users.db (own
+-- cookie name, own table, own store). admin_id is a logical FK to admins.id
+-- in users.db (cross-DB, not enforced).
+CREATE TABLE IF NOT EXISTS admin_sessions (
+    id TEXT PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    ip_address TEXT NOT NULL DEFAULT '',
+    user_agent TEXT NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    last_active DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin ON admin_sessions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions(expires_at);
+
+-- Audit log: admin actions, config changes, security events (AI.md PART 12
+-- "audit_log" table, surfaced at /server/{admin_path}/config/logs/audit).
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    level TEXT NOT NULL DEFAULT 'info',
+    category TEXT NOT NULL,
+    action TEXT NOT NULL,
+    actor_type TEXT NOT NULL DEFAULT 'admin',
+    actor_id TEXT NOT NULL DEFAULT '',
+    actor_ip TEXT NOT NULL DEFAULT '',
+    target_type TEXT NOT NULL DEFAULT '',
+    target_id TEXT NOT NULL DEFAULT '',
+    details TEXT NOT NULL DEFAULT '{}',
+    success INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_category ON audit_log(category);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_type, actor_id);
 `
 
 // applyPragmas sets WAL mode and foreign key enforcement on a database connection.
@@ -371,6 +449,7 @@ func Open(dataDir string) (*DB, error) {
 	}
 
 	userStore := &sqliteUserStore{db: usersDB}
+	adminStore := &sqliteAdminStore{usersDB: usersDB, serverDB: serverDB}
 	chatStore := &sqliteChatStore{db: usersDB}
 	musicStore := &sqliteMusicStore{db: serverDB}
 	activityStore := &sqliteActivityStore{db: serverDB}
@@ -400,6 +479,7 @@ func Open(dataDir string) (*DB, error) {
 
 	return &DB{
 		Users:     userStore,
+		Admin:     adminStore,
 		Music:     musicStore,
 		Activity:  activityStore,
 		Playlists: playlistStore,

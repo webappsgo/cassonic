@@ -89,6 +89,68 @@ func (s *Session) IsExpired() bool {
 	return time.Now().After(s.ExpiresAt)
 }
 
+// AdminStore manages server admin accounts (users.db), admin sessions and the
+// audit log (server.db) — AI.md PART 17 / PART 12. Deliberately separate
+// from UserStore: server admins are a distinct account type, never conflated
+// with the Subsonic/Ampache-facing users.is_admin privileged-user role.
+type AdminStore interface {
+	// CreateAdmin inserts a new admin (with a default preferences row) and
+	// returns the assigned ID.
+	CreateAdmin(ctx context.Context, a *model.Admin) (int64, error)
+	// GetAdmin fetches an admin by primary key.
+	GetAdmin(ctx context.Context, id int64) (*model.Admin, error)
+	// GetAdminByUsername fetches an admin by their unique username.
+	GetAdminByUsername(ctx context.Context, username string) (*model.Admin, error)
+	// GetAdminByExternalID fetches an externally synced admin by their stable
+	// (source, external_id) identity key. Never match on username/email for
+	// externally synced admins — those are mutable at the provider.
+	GetAdminByExternalID(ctx context.Context, source, externalID string) (*model.Admin, error)
+	// UpdateAdmin writes all mutable fields back to the database.
+	UpdateAdmin(ctx context.Context, a *model.Admin) error
+	// DeleteAdmin permanently removes an admin and its preferences row.
+	DeleteAdmin(ctx context.Context, id int64) error
+	// ListAdmins returns all admins ordered by id (the first row is the
+	// Primary Admin).
+	ListAdmins(ctx context.Context) ([]*model.Admin, error)
+	// CountAdmins returns the total number of admin accounts, used to detect
+	// first-run (zero admins => setup wizard required).
+	CountAdmins(ctx context.Context) (int, error)
+
+	// IncrementAdminLoginAttempts adds 1 to the failed login counter.
+	IncrementAdminLoginAttempts(ctx context.Context, id int64) error
+	// ResetAdminLoginAttempts clears the failed login counter and any lock.
+	ResetAdminLoginAttempts(ctx context.Context, id int64) error
+	// SetAdminLockedUntil sets the account lockout expiry.
+	SetAdminLockedUntil(ctx context.Context, id int64, until time.Time) error
+	// UpdateAdminLastLogin stamps the current time as the most recent
+	// successful login.
+	UpdateAdminLastLogin(ctx context.Context, id int64) error
+
+	// GetAdminPreferences returns the admin's WebUI preferences.
+	GetAdminPreferences(ctx context.Context, adminID int64) (*model.AdminPreferences, error)
+	// UpdateAdminPreferences writes all mutable preference fields back.
+	UpdateAdminPreferences(ctx context.Context, p *model.AdminPreferences) error
+
+	// CreateAdminSession persists a new opaque admin session token (stored as
+	// its hash).
+	CreateAdminSession(ctx context.Context, sess *model.AdminSession) error
+	// GetAdminSessionByHash returns the session for the given token hash, or
+	// nil, nil when no matching session exists.
+	GetAdminSessionByHash(ctx context.Context, tokenHash string) (*model.AdminSession, error)
+	// DeleteAdminSession removes a single session by token hash.
+	DeleteAdminSession(ctx context.Context, tokenHash string) error
+	// DeleteAdminSessions removes all sessions belonging to an admin.
+	DeleteAdminSessions(ctx context.Context, adminID int64) error
+	// PurgeExpiredAdminSessions deletes all rows whose expires_at is in the past.
+	PurgeExpiredAdminSessions(ctx context.Context) error
+
+	// AppendAuditEntry records a single admin action or security event.
+	AppendAuditEntry(ctx context.Context, e *model.AuditEntry) error
+	// ListAuditEntries returns the most recent audit entries, newest first,
+	// up to limit rows.
+	ListAuditEntries(ctx context.Context, limit int) ([]*model.AuditEntry, error)
+}
+
 // MusicStore manages the music library including artists, albums, songs, and scan state.
 type MusicStore interface {
 	// CreateLibrary inserts a new library root and returns the assigned ID.
@@ -299,6 +361,7 @@ type ChatStore interface {
 // DB is the aggregate store that holds all domain-specific store implementations.
 type DB struct {
 	Users     UserStore
+	Admin     AdminStore
 	Music     MusicStore
 	Activity  ActivityStore
 	Playlists PlaylistStore
