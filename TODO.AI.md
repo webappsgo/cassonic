@@ -11,12 +11,6 @@
   exposed in the admin panel at all. Needs a real form-parse-and-persist
   implementation (write via `config.Save`, live-reload in-memory `cfg`)
   covering every section, per PART 12/PART 17.
-- config: `(*Config).Validate()` (`src/config/config.go`) is dead code — no
-  caller invokes it anywhere outside tests (`src/main.go` loads/saves config
-  but never validates it). A malformed `server.yml` (e.g. bad CIDR in
-  `trusted_proxies`, invalid `mode`) is silently accepted at startup. Wire
-  `cfg.Validate()` into `src/main.go` after config load/defaults/env/flag
-  overrides, exit(1) with a clear message on failure.
 - docs: `docs/configuration.md`'s "Full server.yml Reference" block has
   drifted from `src/config/config.go` — it documents `baseurl` (actual key:
   `base_url`), `timezone` (no such field exists), `library.paths`/

@@ -269,6 +269,15 @@ func main() {
 		cfg.Database.Path = filepath.Join(detectedPaths.Data, "server.db")
 	}
 
+	// Validate the fully-resolved config (file + env + CLI overrides + path
+	// defaults) before it drives any startup behavior. A malformed value
+	// (e.g. invalid trusted_proxies CIDR, unrecognized mode) must not be
+	// silently accepted — fail fast with a clear message.
+	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "cassonic: invalid configuration: %v\n", err)
+		os.Exit(1)
+	}
+
 	// First-run SMTP autodetect: if smtp host is empty, try to find a working server.
 	if cfg.Email.Host == "" {
 		if host, port, ok := email.AutoDetectSMTP(); ok {
