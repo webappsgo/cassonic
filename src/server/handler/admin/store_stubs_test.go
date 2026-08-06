@@ -195,10 +195,26 @@ type testAdminStore struct {
 	getAdminPreferencesErr    error
 	updateAdminPreferencesErr error
 	lastUpdatedPreferences    *model.AdminPreferences
+
+	countAdminsResult int
+	countAdminsErr    error
+
+	createAdminResult int64
+	createAdminErr    error
+	lastCreatedAdmin  *model.Admin
+
+	createAdminSessionErr error
+	lastCreatedSession    *model.AdminSession
+
+	getSetupTokenResult  *model.SetupToken
+	getSetupTokenErr     error
+	createSetupTokenErr  error
+	consumeSetupTokenErr error
 }
 
 func (s *testAdminStore) CreateAdmin(ctx context.Context, a *model.Admin) (int64, error) {
-	return 0, nil
+	s.lastCreatedAdmin = a
+	return s.createAdminResult, s.createAdminErr
 }
 func (s *testAdminStore) GetAdmin(ctx context.Context, id int64) (*model.Admin, error) {
 	return s.getAdminResult, s.getAdminErr
@@ -216,7 +232,9 @@ func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error { retu
 func (s *testAdminStore) ListAdmins(ctx context.Context) ([]*model.Admin, error) {
 	return nil, nil
 }
-func (s *testAdminStore) CountAdmins(ctx context.Context) (int, error) { return 0, nil }
+func (s *testAdminStore) CountAdmins(ctx context.Context) (int, error) {
+	return s.countAdminsResult, s.countAdminsErr
+}
 func (s *testAdminStore) IncrementAdminLoginAttempts(ctx context.Context, id int64) error {
 	return nil
 }
@@ -236,7 +254,8 @@ func (s *testAdminStore) UpdateAdminPreferences(ctx context.Context, p *model.Ad
 	return s.updateAdminPreferencesErr
 }
 func (s *testAdminStore) CreateAdminSession(ctx context.Context, sess *model.AdminSession) error {
-	return nil
+	s.lastCreatedSession = sess
+	return s.createAdminSessionErr
 }
 func (s *testAdminStore) GetAdminSessionByHash(ctx context.Context, tokenHash string) (*model.AdminSession, error) {
 	return s.getAdminSessionByHashResult, s.getAdminSessionByHashErr
@@ -249,6 +268,15 @@ func (s *testAdminStore) AppendAuditEntry(ctx context.Context, e *model.AuditEnt
 }
 func (s *testAdminStore) ListAuditEntries(ctx context.Context, limit int) ([]*model.AuditEntry, error) {
 	return nil, nil
+}
+func (s *testAdminStore) CreateSetupToken(ctx context.Context, tokenHash string) error {
+	return s.createSetupTokenErr
+}
+func (s *testAdminStore) GetSetupToken(ctx context.Context) (*model.SetupToken, error) {
+	return s.getSetupTokenResult, s.getSetupTokenErr
+}
+func (s *testAdminStore) ConsumeSetupToken(ctx context.Context) error {
+	return s.consumeSetupTokenErr
 }
 
 // testDB builds a *store.DB with stub Music, User, and Admin stores; other stores are unused by admin.go.

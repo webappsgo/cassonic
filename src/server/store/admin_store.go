@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -22,7 +25,7 @@ type sqliteAdminStore struct {
 const adminSelectCols = `
     id, username, password_hash, email, role, enabled, api_token_hash,
     source, external_id, groups, last_sync, last_login, failed_attempts,
-    locked_until, created_at, updated_at `
+    locked_until, totp_enabled, created_at, updated_at `
 
 // scanAdmin reads a full admins row into a model.Admin.
 func scanAdmin(row interface {
@@ -35,7 +38,7 @@ func scanAdmin(row interface {
 		&a.ID, &a.Username, &a.PasswordHash, &a.Email, &a.Role, &a.Enabled,
 		&a.APITokenHash, &a.Source, &a.ExternalID, &a.Groups,
 		&lastSync, &lastLogin, &a.FailedAttempts, &lockedUntil,
-		&createdAt, &updatedAt,
+		&a.TOTPEnabled, &createdAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -72,12 +75,12 @@ func (s *sqliteAdminStore) CreateAdmin(ctx context.Context, a *model.Admin) (int
 	const q = `
     INSERT INTO admins (
         username, password_hash, email, role, enabled, api_token_hash,
-        source, external_id, groups
-    ) VALUES (?,?,?,?,?,?,?,?,?)`
+        source, external_id, groups, totp_enabled
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`
 
 	res, err := tx.ExecContext(ctx, q,
 		a.Username, a.PasswordHash, a.Email, a.Role, a.Enabled, a.APITokenHash,
-		a.Source, a.ExternalID, a.Groups,
+		a.Source, a.ExternalID, a.Groups, a.TOTPEnabled,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create admin: %w", err)
@@ -144,12 +147,12 @@ func (s *sqliteAdminStore) UpdateAdmin(ctx context.Context, a *model.Admin) erro
     UPDATE admins SET
         username = ?, password_hash = ?, email = ?, role = ?, enabled = ?,
         api_token_hash = ?, source = ?, external_id = ?, groups = ?,
-        updated_at = CURRENT_TIMESTAMP
+        totp_enabled = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?`
 
 	_, err := s.usersDB.ExecContext(ctx, q,
 		a.Username, a.PasswordHash, a.Email, a.Role, a.Enabled, a.APITokenHash,
-		a.Source, a.ExternalID, a.Groups,
+		a.Source, a.ExternalID, a.Groups, a.TOTPEnabled,
 		a.ID,
 	)
 	if err != nil {
@@ -421,4 +424,77 @@ func (s *sqliteAdminStore) ListAuditEntries(ctx context.Context, limit int) ([]*
 		entries = append(entries, &e)
 	}
 	return entries, rows.Err()
+}
+
+// GenerateSetupToken creates the one-time, 128-bit (32 hex character) setup
+// token (AI.md PART 17 "Setup Token Rules") and its SHA-256 hash for
+// storage. The raw token is shown to the operator exactly once in the
+// startup console banner and is never persisted in plaintext.
+func GenerateSetupToken() (raw, hash string, err error) {
+	b := make([]byte, 16)
+	if _, err = rand.Read(b); err != nil {
+		return "", "", fmt.Errorf("setup token: rand: %w", err)
+	}
+	raw = hex.EncodeToString(b)
+	hash = HashSetupToken(raw)
+	return raw, hash, nil
+}
+
+// HashSetupToken returns the SHA-256 hash of a raw setup token, for
+// comparing an operator-submitted token against the stored hash.
+func HashSetupToken(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+// CreateSetupToken persists the one-time first-run setup token's hash.
+func (s *sqliteAdminStore) CreateSetupToken(ctx context.Context, tokenHash string) error {
+	const q = `INSERT INTO setup_token (id, token_hash) VALUES (1, ?)`
+	if _, err := s.serverDB.ExecContext(ctx, q, tokenHash); err != nil {
+		return fmt.Errorf("create setup token: %w", err)
+	}
+	return nil
+}
+
+// GetSetupToken returns the current setup token row, or nil, nil if one has
+// never been generated.
+func (s *sqliteAdminStore) GetSetupToken(ctx context.Context) (*model.SetupToken, error) {
+	const q = `SELECT token_hash, created_at, used, used_at FROM setup_token WHERE id = 1`
+
+	var t model.SetupToken
+	var createdAt, usedAt sql.NullString
+
+	err := s.serverDB.QueryRowContext(ctx, q).Scan(&t.TokenHash, &createdAt, &t.Used, &usedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get setup token: %w", err)
+	}
+	if t.CreatedAt, err = parseNullTime(createdAt); err != nil {
+		return nil, fmt.Errorf("parse setup token created_at: %w", err)
+	}
+	if t.UsedAt, err = parseNullTime(usedAt); err != nil {
+		return nil, fmt.Errorf("parse setup token used_at: %w", err)
+	}
+	return &t, nil
+}
+
+// ConsumeSetupToken marks the setup token used (single-use), permanently
+// invalidating it for any future setup attempt.
+func (s *sqliteAdminStore) ConsumeSetupToken(ctx context.Context) error {
+	const q = `UPDATE setup_token SET used = 1, used_at = CURRENT_TIMESTAMP WHERE id = 1`
+
+	res, err := s.serverDB.ExecContext(ctx, q)
+	if err != nil {
+		return fmt.Errorf("consume setup token: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("consume setup token: rows affected: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("consume setup token: no setup token has been generated")
+	}
+	return nil
 }

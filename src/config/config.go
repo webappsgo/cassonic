@@ -41,6 +41,16 @@ type Config struct {
 	Features FeaturesConfig `yaml:"features"`
 	// Web section controls WebUI-specific protections such as CSRF.
 	Web WebConfig `yaml:"web"`
+	// Backup section controls backup archive encryption.
+	Backup BackupConfig `yaml:"backup"`
+}
+
+// BackupConfig holds backup-archive encryption settings (AI.md PART 17 setup
+// wizard "Security Settings" step / PART 22 backup encryption).
+type BackupConfig struct {
+	// encryption_password, when set, encrypts backup archives with AES-256-GCM.
+	// Storage-only placeholder here; enforcement lives in the backup service.
+	EncryptionPassword string `yaml:"encryption_password"`
 }
 
 // ServerConfig holds network listener and runtime mode settings.
@@ -69,6 +79,12 @@ type ServerConfig struct {
 	AdminPath string `yaml:"admin_path"`
 	// api_version is the prefix used in /api/{api_version}/ routes
 	APIVersion string `yaml:"api_version"`
+	// app_name is the display name shown in the WebUI and console banner;
+	// customizable by the setup wizard (AI.md PART 17 "Server Configuration").
+	AppName string `yaml:"app_name"`
+	// timezone is the IANA timezone used for displaying server-local times
+	// in the WebUI; empty means use the host system timezone.
+	Timezone string `yaml:"timezone"`
 }
 
 // URLDetectionConfig controls the smart FQDN detection/live-reload subsystem
@@ -228,6 +244,8 @@ func Defaults() *Config {
 			},
 			AdminPath:  "admin",
 			APIVersion: "v1",
+			AppName:    "cassonic",
+			Timezone:   "",
 		},
 		Database: DatabaseConfig{
 			Path: "",
@@ -286,6 +304,9 @@ func Defaults() *Config {
 				Enabled:     true,
 				ExemptPaths: []string{},
 			},
+		},
+		Backup: BackupConfig{
+			EncryptionPassword: "",
 		},
 	}
 }

@@ -149,6 +149,17 @@ type AdminStore interface {
 	// ListAuditEntries returns the most recent audit entries, newest first,
 	// up to limit rows.
 	ListAuditEntries(ctx context.Context, limit int) ([]*model.AuditEntry, error)
+
+	// CreateSetupToken persists the one-time first-run setup token's hash
+	// (AI.md PART 17 "Setup Token Rules"). Called at most once per
+	// server.db lifetime.
+	CreateSetupToken(ctx context.Context, tokenHash string) error
+	// GetSetupToken returns the current setup token row, or nil, nil if one
+	// has never been generated.
+	GetSetupToken(ctx context.Context) (*model.SetupToken, error)
+	// ConsumeSetupToken marks the setup token used (single-use), permanently
+	// invalidating it for any future setup attempt.
+	ConsumeSetupToken(ctx context.Context) error
 }
 
 // MusicStore manages the music library including artists, albums, songs, and scan state.

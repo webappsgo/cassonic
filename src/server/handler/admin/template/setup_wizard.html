@@ -1,0 +1,148 @@
+{{define "setup_wizard.html"}}{{template "base_setup" .}}{{end}}
+{{define "content"}}
+<div class="steps">
+  <span{{if ge .Data.Step 1}} class="done"{{end}}></span>
+  <span{{if ge .Data.Step 2}} class="done"{{end}}></span>
+  <span{{if ge .Data.Step 3}} class="done"{{end}}></span>
+  <span{{if ge .Data.Step 4}} class="done"{{end}}></span>
+  <span{{if ge .Data.Step 5}} class="done"{{end}}></span>
+  <span{{if ge .Data.Step 6}} class="active"{{end}}></span>
+</div>
+
+{{if .Data.Error}}<div class="alert">{{.Data.Error}}</div>{{end}}
+
+{{if eq .Data.Step 1}}
+<h1>{{call .T "setup.step1.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step1.subtitle"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="1">
+  <div class="form-field">
+    <label for="username">{{call .T "setup.step1.username"}}</label>
+    <input type="text" id="username" name="username" value="{{.Data.Username}}" autocomplete="off" required>
+  </div>
+  <div class="form-field">
+    <label for="password">{{call .T "setup.step1.password"}}</label>
+    <input type="password" id="password" name="password" autocomplete="new-password">
+    <small>{{call .T "setup.step1.password_hint"}}</small>
+  </div>
+  <div class="form-field">
+    <label for="password_confirm">{{call .T "setup.step1.password_confirm"}}</label>
+    <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password">
+  </div>
+  <button type="submit" class="btn btn-primary">{{call .T "setup.next"}}</button>
+</form>
+
+{{else if eq .Data.Step 2}}
+<h1>{{call .T "setup.step2.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step2.subtitle"}}</p>
+<div class="token-box">{{.Data.APITokenRaw}}</div>
+<p class="token-warning">{{call .T "setup.step2.warning"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="2">
+  <input type="hidden" name="username" value="{{.Data.Username}}">
+  <input type="hidden" name="password_hash" value="{{.Data.PasswordHash}}">
+  <input type="hidden" name="api_token_hash" value="{{.Data.APITokenHash}}">
+  <button type="submit" class="btn btn-primary">{{call .T "setup.next"}}</button>
+</form>
+
+{{else if eq .Data.Step 3}}
+<h1>{{call .T "setup.step3.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step3.subtitle"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="3">
+  <input type="hidden" name="username" value="{{.Data.Username}}">
+  <input type="hidden" name="password_hash" value="{{.Data.PasswordHash}}">
+  <input type="hidden" name="api_token_hash" value="{{.Data.APITokenHash}}">
+  <div class="form-field">
+    <label for="app_name">{{call .T "setup.step3.app_name"}}</label>
+    <input type="text" id="app_name" name="app_name" value="{{.Data.AppName}}" required>
+  </div>
+  <div class="form-field">
+    <label for="domain">{{call .T "setup.step3.domain"}}</label>
+    <input type="text" id="domain" name="domain" value="{{.Data.Domain}}">
+  </div>
+  <div class="form-field">
+    <label for="mode">{{call .T "setup.step3.mode"}}</label>
+    <select id="mode" name="mode">
+      <option value="production"{{if eq .Data.Mode "production"}} selected{{end}}>{{call .T "setup.step3.mode_production"}}</option>
+      <option value="development"{{if eq .Data.Mode "development"}} selected{{end}}>{{call .T "setup.step3.mode_development"}}</option>
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="timezone">{{call .T "setup.step3.timezone"}}</label>
+    <input type="text" id="timezone" name="timezone" value="{{.Data.Timezone}}" placeholder="UTC">
+  </div>
+  <button type="submit" class="btn btn-primary">{{call .T "setup.next"}}</button>
+</form>
+
+{{else if eq .Data.Step 4}}
+<h1>{{call .T "setup.step4.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step4.subtitle"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="4">
+  <input type="hidden" name="username" value="{{.Data.Username}}">
+  <input type="hidden" name="password_hash" value="{{.Data.PasswordHash}}">
+  <input type="hidden" name="api_token_hash" value="{{.Data.APITokenHash}}">
+  <input type="hidden" name="app_name" value="{{.Data.AppName}}">
+  <input type="hidden" name="domain" value="{{.Data.Domain}}">
+  <input type="hidden" name="mode" value="{{.Data.Mode}}">
+  <input type="hidden" name="timezone" value="{{.Data.Timezone}}">
+  <div class="form-field">
+    <label for="backup_encryption_password">{{call .T "setup.step4.backup_password"}}</label>
+    <input type="password" id="backup_encryption_password" name="backup_encryption_password" autocomplete="new-password">
+    <small>{{call .T "setup.step4.backup_password_hint"}}</small>
+  </div>
+  <div class="checkbox-field">
+    <input type="checkbox" id="enable_2fa" name="enable_2fa">
+    <label for="enable_2fa" style="margin-bottom:0">{{call .T "setup.step4.enable_2fa"}}</label>
+  </div>
+  <button type="submit" class="btn btn-primary">{{call .T "setup.next"}}</button>
+</form>
+
+{{else if eq .Data.Step 5}}
+<h1>{{call .T "setup.step5.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step5.subtitle"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="5">
+  <input type="hidden" name="username" value="{{.Data.Username}}">
+  <input type="hidden" name="password_hash" value="{{.Data.PasswordHash}}">
+  <input type="hidden" name="api_token_hash" value="{{.Data.APITokenHash}}">
+  <input type="hidden" name="app_name" value="{{.Data.AppName}}">
+  <input type="hidden" name="domain" value="{{.Data.Domain}}">
+  <input type="hidden" name="mode" value="{{.Data.Mode}}">
+  <input type="hidden" name="timezone" value="{{.Data.Timezone}}">
+  <input type="hidden" name="backup_encryption_password" value="{{.Data.BackupEncryptionPassword}}">
+  {{if .Data.Enable2FA}}<input type="hidden" name="enable_2fa" value="on">{{end}}
+  <div class="checkbox-field">
+    <input type="checkbox" id="https_reviewed" name="https_reviewed">
+    <label for="https_reviewed" style="margin-bottom:0">{{call .T "setup.step5.https_reviewed"}}</label>
+  </div>
+  <small>{{call .T "setup.step5.hint"}}</small><br><br>
+  <button type="submit" class="btn btn-primary">{{call .T "setup.next"}}</button>
+</form>
+
+{{else if eq .Data.Step 6}}
+<h1>{{call .T "setup.step6.title"}}</h1>
+<p class="subtitle">{{call .T "setup.step6.subtitle"}}</p>
+<form method="POST" action="{{.BasePath}}/config/setup">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <input type="hidden" name="step" value="6">
+  <input type="hidden" name="username" value="{{.Data.Username}}">
+  <input type="hidden" name="password_hash" value="{{.Data.PasswordHash}}">
+  <input type="hidden" name="api_token_hash" value="{{.Data.APITokenHash}}">
+  <input type="hidden" name="app_name" value="{{.Data.AppName}}">
+  <input type="hidden" name="domain" value="{{.Data.Domain}}">
+  <input type="hidden" name="mode" value="{{.Data.Mode}}">
+  <input type="hidden" name="timezone" value="{{.Data.Timezone}}">
+  <input type="hidden" name="backup_encryption_password" value="{{.Data.BackupEncryptionPassword}}">
+  {{if .Data.Enable2FA}}<input type="hidden" name="enable_2fa" value="on">{{end}}
+  {{if .Data.HTTPSReviewed}}<input type="hidden" name="https_reviewed" value="on">{{end}}
+  <button type="submit" class="btn btn-primary">{{call .T "setup.step6.complete"}}</button>
+</form>
+{{end}}
+{{end}}

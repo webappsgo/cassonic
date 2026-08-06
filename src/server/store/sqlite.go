@@ -91,6 +91,11 @@ CREATE TABLE IF NOT EXISTS admins (
     last_login DATETIME,
     failed_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until DATETIME,
+    -- totp_enabled is the "enable 2FA for this admin" preference captured by
+    -- setup wizard step 4 (AI.md PART 17 "Security Settings"); a
+    -- storage-only placeholder until TOTP enrollment/verification ships in
+    -- a future phase.
+    totp_enabled INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -395,6 +400,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_category ON audit_log(category);
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_type, actor_id);
+
+-- The one-time first-run setup token (AI.md PART 12 "setup_token" table /
+-- PART 17 "Setup Token Rules"). Single row (id always 1); only its SHA-256
+-- hash is ever stored. Created once when the server starts with zero admin
+-- accounts; used flips to 1 when the setup wizard completes and is never
+-- reset — a lost or already-used token requires resetting server.db.
+CREATE TABLE IF NOT EXISTS setup_token (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    token_hash TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    used INTEGER NOT NULL DEFAULT 0,
+    used_at DATETIME
+);
 `
 
 // applyPragmas sets WAL mode and foreign key enforcement on a database connection.

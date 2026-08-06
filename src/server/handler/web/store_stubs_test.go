@@ -278,7 +278,7 @@ func (s *testAdminStore) GetAdminByExternalID(ctx context.Context, source, exter
 	return nil, nil
 }
 func (s *testAdminStore) UpdateAdmin(ctx context.Context, a *model.Admin) error { return nil }
-func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error      { return nil }
+func (s *testAdminStore) DeleteAdmin(ctx context.Context, id int64) error       { return nil }
 func (s *testAdminStore) ListAdmins(ctx context.Context) ([]*model.Admin, error) {
 	return nil, nil
 }
@@ -318,6 +318,11 @@ func (s *testAdminStore) AppendAuditEntry(ctx context.Context, e *model.AuditEnt
 func (s *testAdminStore) ListAuditEntries(ctx context.Context, limit int) ([]*model.AuditEntry, error) {
 	return nil, nil
 }
+func (s *testAdminStore) CreateSetupToken(ctx context.Context, tokenHash string) error { return nil }
+func (s *testAdminStore) GetSetupToken(ctx context.Context) (*model.SetupToken, error) {
+	return nil, nil
+}
+func (s *testAdminStore) ConsumeSetupToken(ctx context.Context) error { return nil }
 
 // testPlaylistStore is a configurable stub implementing store.PlaylistStore for handler tests.
 type testPlaylistStore struct {

@@ -54,3 +54,17 @@
   normalize both sides before comparing. Apply the same fix to the two
   `user_store.go` call sites above; out of scope for the PART 17 admin
   work since it's pre-existing and unrelated to admin accounts.
+
+- admin: the admin panel's i18n wiring (`Handler.i18n`, `resolveLocale`,
+  `adminPageData.Lang`/`.T`) is currently scoped only to the first-run
+  setup wizard pages (`setup_token.html`, `setup_wizard.html`, added in
+  P4). None of the ~10 pre-existing admin templates (`dashboard.html`,
+  `base.html`, `profile.html`, `preferences.html`, library/scheduler/
+  logs/backup/system-info pages, etc.) call `{{call .T ...}}` — all of
+  their user-facing strings are still hardcoded English. AI.md PART 31
+  requires every user-facing string to be translated; discovered while
+  implementing PART 17 (P4) but out of scope for the setup-wizard feature
+  since retrofitting i18n across the entire existing admin panel is a
+  separate, large pass. Needs a dedicated implementation pass adding
+  `{{call .T ...}}` calls (and matching keys in all 7 locale files) to
+  every existing admin template.

@@ -1,0 +1,15 @@
+{{define "setup_token.html"}}{{template "base_setup" .}}{{end}}
+{{define "content"}}
+<h1>{{call .T "setup.token.title"}}</h1>
+<p class="subtitle">{{call .T "setup.token.subtitle"}}</p>
+{{if .Data.Error}}<div class="alert">{{.Data.Error}}</div>{{end}}
+<form method="POST" action="{{.BasePath}}/">
+  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <div class="form-field">
+    <label for="token">{{call .T "setup.token.label"}}</label>
+    <input type="text" id="token" name="token" autocomplete="off" autofocus required pattern="[0-9a-fA-F]{32}" maxlength="32">
+    <small>{{call .T "setup.token.hint"}}</small>
+  </div>
+  <button type="submit" class="btn btn-primary">{{call .T "setup.token.submit"}}</button>
+</form>
+{{end}}

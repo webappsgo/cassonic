@@ -4,20 +4,29 @@ The cassonic admin panel is at `/server/admin/`. It provides full control over e
 
 ## First-Time Setup
 
-On first run, cassonic prints a one-time **setup token** in the startup banner:
+On first run, cassonic prints a one-time, 32-character hexadecimal **setup token** in the startup banner:
 
 ```
 ╔══════════════════════════════════════════════╗
 ║  cassonic — setup required                   ║
-║  Visit http://localhost:4040 to continue     ║
-║  Setup token: aBc123-XyZ789-...              ║
+║  Visit http://localhost:64xxx to continue     ║
+║  Setup token: 3f9a1c2b7d8e405fa1b2c3d4e5f60718 ║
 ╚══════════════════════════════════════════════╝
 ```
 
-Open the URL in a browser, enter the setup token, and create the **Primary Admin** account. The setup token is invalidated immediately after the first admin is created and cannot be re-used.
+Open the URL in a browser and enter the setup token. On success you're taken through a 6-step setup wizard at `/config/setup`:
+
+1. **Create Admin Account** — username (defaults to `administrator`) and password (leave blank to generate a random password)
+2. **API Token** — an admin API token is generated and shown once; copy it now, it cannot be retrieved again
+3. **Server Configuration** — app name, domain/FQDN, mode (production/development), timezone
+4. **Security Settings** — optional backup-archive encryption password (AES-256-GCM) and a 2FA-enabled toggle for this admin
+5. **Optional Services** — confirms the HTTPS/certificate configuration has been reviewed
+6. **Complete** — saves `server.yml`, creates the admin account, marks the setup token consumed, logs the new admin in, and redirects to the admin panel
+
+The wizard is stateless: each step's form carries every previously entered value forward as hidden fields, so there is no server-side "in-progress setup" record beyond the setup token itself. The setup token is invalidated the moment step 6 completes and cannot be re-used; if it's lost before setup finishes, resetting `server.db` is required to generate a new one.
 
 !!! note "Primary Admin"
-    The Primary Admin account cannot be deleted. All other admin accounts can be removed.
+    The admin account created by the setup wizard is the Primary Admin — the admin with the lowest ID. It cannot be deleted except via `--maintenance setup`. All other admin accounts can be removed normally.
 
 ## Accessing the Admin Panel
 

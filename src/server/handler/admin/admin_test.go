@@ -577,7 +577,13 @@ func TestListBackupFiles_FiltersByPrefixAndDetectsEncryption(t *testing.T) {
 // --- Routes wiring smoke test ---
 
 func TestRoutes_UnauthenticatedRedirectsToLogin(t *testing.T) {
-	h := newTestHandler(testDB(), testConfig(t.TempDir()))
+	// An existing admin must already exist for "/" to redirect to /login —
+	// with zero admins, "/" instead shows the first-run setup token entry
+	// page (AI.md PART 17 "Setup Flow" step 2), covered by
+	// TestRoot_NoAdmins_ShowsSetupTokenEntry in setup_test.go.
+	db := testDB()
+	db.Admin.(*testAdminStore).countAdminsResult = 1
+	h := newTestHandler(db, testConfig(t.TempDir()))
 	srv := httptest.NewServer(h.Routes())
 	defer srv.Close()
 	client := &http.Client{

@@ -4,11 +4,13 @@ package main
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -326,6 +328,43 @@ func main() {
 	}
 	defer store.Close(db)
 
+	// First-run detection (AI.md PART 17 "First Run & Setup Wizard"): zero
+	// admin accounts means the setup wizard has never completed. On the
+	// very first boot only, select a random port in the 64xxx range (unless
+	// the operator explicitly set one via --port/PORT) and generate the
+	// one-time setup token, shown exactly once in the startup banner below.
+	firstRun := false
+	var setupToken string
+	if count, cntErr := db.Admin.CountAdmins(context.Background()); cntErr == nil && count == 0 {
+		firstRun = true
+
+		portExplicit := *flagPort != 0 || os.Getenv("PORT") != ""
+		if !portExplicit && cfg.Server.Port == config.Defaults().Server.Port {
+			if randPort, randErr := randomSetupPort(); randErr == nil {
+				cfg.Server.Port = randPort
+				urlvars.Init(cfg)
+			}
+		}
+
+		existing, tokErr := db.Admin.GetSetupToken(context.Background())
+		if tokErr == nil && existing == nil {
+			raw, hash, genErr := store.GenerateSetupToken()
+			if genErr != nil {
+				fmt.Fprintf(os.Stderr, "cassonic: failed to generate setup token: %v\n", genErr)
+				os.Exit(1)
+			}
+			if createErr := db.Admin.CreateSetupToken(context.Background(), hash); createErr != nil {
+				fmt.Fprintf(os.Stderr, "cassonic: failed to store setup token: %v\n", createErr)
+				os.Exit(1)
+			}
+			setupToken = raw
+		}
+
+		if saveErr := config.Save(cfg, cfgPath); saveErr != nil {
+			fmt.Fprintf(os.Stderr, "cassonic: warning: could not persist first-run config: %v\n", saveErr)
+		}
+	}
+
 	ff, ffErr := ffmpeg.New(cfg.FFmpeg.Path, detectedPaths.Data, cfg.FFmpeg.DownloadAuto)
 	if ffErr != nil {
 		log.Printf("cassonic: warning: ffmpeg not available: %v", ffErr)
@@ -449,6 +488,15 @@ func main() {
 		fmt.Printf("cassonic: language: %s\n", activeLang)
 	}
 
+	proto := "http"
+	if *flagTLS {
+		proto = "https"
+	}
+	printStartupBanner(cfg, proto)
+	if firstRun {
+		printSetupBanner(cfg, proto, setupToken)
+	}
+
 	if err := srv.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "cassonic: server error: %v\n", err)
 		os.Exit(1)
@@ -467,6 +515,77 @@ func setLang(lang string) {
 		fmt.Fprintf(os.Stderr, "cassonic: unsupported language %q; using en\n", lang)
 		activeLang = "en"
 	}
+}
+
+// randomSetupPort picks a random port in the 64xxx range (AI.md PART 17
+// "First Run Experience" step 4), used only on the very first boot when the
+// operator has not explicitly configured a port.
+func randomSetupPort() (int, error) {
+	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(1000))
+	if err != nil {
+		return 0, fmt.Errorf("random setup port: %w", err)
+	}
+	return 64000 + int(n.Int64()), nil
+}
+
+// printStartupBanner prints the standard startup information box (AI.md
+// PART 17 "Console Output (First Run)").
+func printStartupBanner(cfg *config.Config, proto string) {
+	appName := cfg.Server.AppName
+	if appName == "" {
+		appName = "cassonic"
+	}
+	fqdn := urlvars.ResolvedFQDN()
+	addr := cfg.Server.Address
+	if addr == "" {
+		addr = "0.0.0.0"
+	}
+	rocket := "🚀"
+	package_ := "📦"
+	gear := "🔧"
+	globe := "🌐"
+	satellite := "📡"
+	check := "✅"
+	if !ansiEnabled {
+		rocket, package_, gear, globe, satellite, check = "", "", "", "", "", ""
+	}
+	fmt.Printf("╭%s╮\n", strings.Repeat("─", 63))
+	fmt.Printf("│  %s %-58s│\n", rocket, fmt.Sprintf("%s · %s %s", appName, package_, Version))
+	fmt.Printf("├%s┤\n", strings.Repeat("─", 63))
+	fmt.Printf("│  %s %-58s│\n", gear, fmt.Sprintf("Running in mode: %s", cfg.Server.Mode))
+	fmt.Printf("├%s┤\n", strings.Repeat("─", 63))
+	fmt.Printf("│  %s %-58s│\n", globe, fmt.Sprintf("HTTP:  %s://%s:%d", proto, fqdn, cfg.Server.Port))
+	fmt.Printf("├%s┤\n", strings.Repeat("─", 63))
+	fmt.Printf("│  %s %-58s│\n", satellite, fmt.Sprintf("Listening on %s://%s:%d", proto, addr, cfg.Server.Port))
+	fmt.Printf("│  %s %-58s│\n", check, fmt.Sprintf("Server started on %s", time.Now().Format("2006-01-02 15:04:05")))
+	fmt.Printf("╰%s╯\n", strings.Repeat("─", 63))
+}
+
+// printSetupBanner prints the "SETUP REQUIRED" box showing the one-time
+// setup token (AI.md PART 17 "Setup Token Rules"). token is empty when a
+// setup token already exists from a previous boot (it is only ever shown
+// once, on the run that generated it).
+func printSetupBanner(cfg *config.Config, proto, token string) {
+	key := "🔑"
+	if !ansiEnabled {
+		key = ""
+	}
+	fmt.Printf("\n┌%s┐\n", strings.Repeat("─", 63))
+	fmt.Printf("│  %s %-58s│\n", key, "SETUP REQUIRED")
+	fmt.Printf("├%s┤\n", strings.Repeat("─", 63))
+	if token == "" {
+		fmt.Printf("│  %-61s│\n", "Setup token was already issued on a previous run.")
+		fmt.Printf("│  %-61s│\n", "It cannot be displayed again; if lost, reset server.db.")
+	} else {
+		fmt.Printf("│  %-61s│\n", fmt.Sprintf("Setup Token: %s", token))
+		fmt.Printf("│%s│\n", strings.Repeat(" ", 63))
+		setupURL := fmt.Sprintf("%s://%s/server/%s/config/setup", proto, urlvars.ResolvedFQDN(), cfg.AdminPath())
+		fmt.Printf("│  %-61s│\n", fmt.Sprintf("Go to %s", setupURL))
+		fmt.Printf("│  %-61s│\n", "and enter this token to complete setup.")
+		fmt.Printf("│%s│\n", strings.Repeat(" ", 63))
+		fmt.Printf("│  %-61s│\n", "This token will only be shown ONCE.")
+	}
+	fmt.Printf("└%s┘\n\n", strings.Repeat("─", 63))
 }
 
 // resolveColor applies the --color flag and the NO_COLOR environment variable

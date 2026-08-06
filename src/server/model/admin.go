@@ -35,8 +35,14 @@ type Admin struct {
 	LastLogin      time.Time `db:"last_login"`
 	FailedAttempts int       `db:"failed_attempts"`
 	LockedUntil    time.Time `db:"locked_until"`
-	CreatedAt      time.Time `db:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at"`
+	// TOTPEnabled is the "enable 2FA for this admin" preference captured by
+	// setup wizard step 4 (AI.md PART 17 "Security Settings"). It is a
+	// storage-only placeholder for now: no TOTP/WebAuthn enrollment or
+	// verification exists yet (that is a future P5 phase), so this flag is
+	// not read or enforced anywhere.
+	TOTPEnabled bool      `db:"totp_enabled"`
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
 }
 
 // IsLocked returns true if the admin account is currently locked out.
@@ -72,16 +78,16 @@ func (s *AdminSession) IsExpired() bool {
 // notification toggles. EmailSecurity cannot be disabled by policy — that
 // rule is enforced by the handler layer, not the store.
 type AdminPreferences struct {
-	AdminID       int64  `db:"admin_id"`
-	Theme         string `db:"theme"`
-	FontSize      string `db:"font_size"`
-	ReduceMotion  bool   `db:"reduce_motion"`
-	DateFormat    string `db:"date_format"`
-	TimeFormat    string `db:"time_format"`
-	EmailSecurity bool   `db:"email_security"`
-	EmailServer   bool   `db:"email_server"`
-	EmailBackups  bool   `db:"email_backups"`
-	EmailUsers    bool   `db:"email_users"`
+	AdminID       int64     `db:"admin_id"`
+	Theme         string    `db:"theme"`
+	FontSize      string    `db:"font_size"`
+	ReduceMotion  bool      `db:"reduce_motion"`
+	DateFormat    string    `db:"date_format"`
+	TimeFormat    string    `db:"time_format"`
+	EmailSecurity bool      `db:"email_security"`
+	EmailServer   bool      `db:"email_server"`
+	EmailBackups  bool      `db:"email_backups"`
+	EmailUsers    bool      `db:"email_users"`
 	CreatedAt     time.Time `db:"created_at"`
 	UpdatedAt     time.Time `db:"updated_at"`
 }
@@ -109,4 +115,17 @@ type AuditEntry struct {
 	Detail    string    `db:"details"`
 	Success   bool      `db:"success"`
 	CreatedAt time.Time `db:"timestamp"`
+}
+
+// SetupToken represents the one-time first-run setup token (AI.md PART 17
+// "Setup Token Rules" / PART 12 "setup_token" table). It is a single row in
+// server.db; the raw token is never stored, only its SHA-256 hash. The row
+// is created once, on first run with zero admins, and is marked Used when
+// the setup wizard completes (never regenerated — a lost token requires
+// resetting server.db).
+type SetupToken struct {
+	TokenHash string    `db:"token_hash"`
+	CreatedAt time.Time `db:"created_at"`
+	Used      bool      `db:"used"`
+	UsedAt    time.Time `db:"used_at"`
 }

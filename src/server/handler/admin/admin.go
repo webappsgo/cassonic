@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/local/cassonic/src/common/i18n"
 	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/service/scheduler"
@@ -39,6 +40,10 @@ type Handler struct {
 	sched     *scheduler.Scheduler
 	tmpls     map[string]*template.Template
 	startTime time.Time
+	// i18n serves translated strings for the unauthenticated first-run setup
+	// wizard (AI.md PART 17 / .claude/rules/testing-rules.md PART 31). The
+	// rest of the admin panel has no i18n wiring yet — see TODO.AI.md.
+	i18n *i18n.Bundle
 }
 
 // New creates a fully configured admin Handler. cfgPath is the absolute path
@@ -51,9 +56,53 @@ func New(db *store.DB, cfg *config.Config, cfgPath, version string, sched *sched
 		version:   version,
 		sched:     sched,
 		startTime: time.Now(),
+		i18n:      i18n.Default(),
 	}
 	h.tmpls = h.parseTemplates()
 	return h
+}
+
+// supportedLocales lists the locale codes with a translation file
+// (.claude/rules/testing-rules.md: "Every language file needs matching keys").
+var supportedLocales = map[string]bool{
+	"en": true, "es": true, "fr": true,
+	"de": true, "zh": true, "ar": true, "ja": true,
+}
+
+// resolveLocale selects the best locale for the request: ?lang= query param
+// (writes a cookie) → lang cookie → Accept-Language → "en". Mirrors
+// web.Handler.resolveLocale so both apps' language cookies stay compatible.
+func (h *Handler) resolveLocale(w http.ResponseWriter, r *http.Request) string {
+	if q := r.URL.Query().Get("lang"); q != "" {
+		code := strings.ToLower(strings.SplitN(q, "-", 2)[0])
+		if supportedLocales[code] {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "lang",
+				Value:    code,
+				Path:     "/",
+				MaxAge:   365 * 24 * 3600,
+				HttpOnly: false,
+				SameSite: http.SameSiteLaxMode,
+			})
+			return code
+		}
+	}
+	if c, err := r.Cookie("lang"); err == nil && c.Value != "" {
+		code := strings.ToLower(strings.SplitN(c.Value, "-", 2)[0])
+		if supportedLocales[code] {
+			return code
+		}
+	}
+	if al := r.Header.Get("Accept-Language"); al != "" {
+		for _, tag := range strings.Split(al, ",") {
+			tag = strings.TrimSpace(strings.SplitN(tag, ";", 2)[0])
+			code := strings.ToLower(strings.SplitN(tag, "-", 2)[0])
+			if supportedLocales[code] {
+				return code
+			}
+		}
+	}
+	return "en"
 }
 
 // parseTemplates loads all HTML templates from the embedded filesystem.
@@ -106,10 +155,14 @@ func (h *Handler) parseTemplates() map[string]*template.Template {
 
 	out := make(map[string]*template.Template, len(names))
 	for _, name := range names {
-		if name == "base.html" {
+		if name == "base.html" || name == "base_setup.html" {
 			continue
 		}
-		files := []string{"base.html", name}
+		// base_setup.html is the standalone (no sidebar) layout used by the
+		// unauthenticated first-run setup wizard pages (AI.md PART 17); it
+		// coexists harmlessly with base.html since html/template only uses
+		// whichever {{template "..."}} a given page actually references.
+		files := []string{"base.html", "base_setup.html", name}
 		tmpl, err := template.New("").Funcs(funcMap).ParseFS(sub, files...)
 		if err != nil {
 			panic(fmt.Sprintf("admin: parse template %s: %v", name, err))
@@ -172,29 +225,41 @@ func (h *Handler) enforceAdminRouteHierarchy(next http.Handler) http.Handler {
 
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(h.requireAdmin, h.enforceAdminRouteHierarchy)
 
-	r.Get("/", h.Dashboard)
+	// Root ("/") and the setup wizard ("/config/setup") are reachable
+	// pre-authentication: a fresh install has zero admins, so requireAdmin
+	// would permanently lock operators out before they could ever create
+	// one (AI.md PART 17 "First Run & Setup Wizard" / "Setup Flow"). Each
+	// handler performs its own internal admin-session/setup-state check
+	// instead of relying on the requireAdmin middleware.
+	r.Get("/", h.Root)
+	r.Post("/", h.RootPost)
+	r.Get("/config/setup", h.SetupWizard)
+	r.Post("/config/setup", h.SetupWizardPost)
 
-	r.Route("/config", func(cr chi.Router) {
-		cr.Get("/info", h.System)
-		cr.Get("/library", h.Library)
-		cr.Post("/library/scan", h.TriggerScan)
-		cr.Get("/scheduler", h.SchedulerPanel)
-		cr.Post("/scheduler/{job}/run", h.RunJob)
-		cr.Get("/settings", h.Config)
-		cr.Post("/settings", h.SaveConfig)
-		cr.Get("/logs", h.Logs)
-		cr.Get("/backup", h.Backup)
-		cr.Post("/backup/now", h.BackupNow)
-	})
+	r.Group(func(gr chi.Router) {
+		gr.Use(h.requireAdmin, h.enforceAdminRouteHierarchy)
 
-	r.Route("/{admin_username}", func(ur chi.Router) {
-		ur.Get("/", h.SelfRoot)
-		ur.Get("/profile", h.Profile)
-		ur.Post("/profile", h.SaveProfile)
-		ur.Get("/preferences", h.Preferences)
-		ur.Post("/preferences", h.SavePreferences)
+		gr.Route("/config", func(cr chi.Router) {
+			cr.Get("/info", h.System)
+			cr.Get("/library", h.Library)
+			cr.Post("/library/scan", h.TriggerScan)
+			cr.Get("/scheduler", h.SchedulerPanel)
+			cr.Post("/scheduler/{job}/run", h.RunJob)
+			cr.Get("/settings", h.Config)
+			cr.Post("/settings", h.SaveConfig)
+			cr.Get("/logs", h.Logs)
+			cr.Get("/backup", h.Backup)
+			cr.Post("/backup/now", h.BackupNow)
+		})
+
+		gr.Route("/{admin_username}", func(ur chi.Router) {
+			ur.Get("/", h.SelfRoot)
+			ur.Get("/profile", h.Profile)
+			ur.Post("/profile", h.SaveProfile)
+			ur.Get("/preferences", h.Preferences)
+			ur.Post("/preferences", h.SavePreferences)
+		})
 	})
 
 	return r
@@ -246,6 +311,38 @@ func (h *Handler) requireAdmin(next http.Handler) http.Handler {
 	})
 }
 
+// sessionAdmin looks up the admin_session cookie against AdminStore and
+// returns the authenticated admin, or nil if the request carries no valid,
+// non-expired session for an enabled admin. Used by Root, which — unlike
+// requireAdmin — must fall through to the setup-token-entry/redirect logic
+// on any failure rather than responding directly.
+func (h *Handler) sessionAdmin(r *http.Request) *mw.AdminUser {
+	cookie, err := r.Cookie(mw.AdminSessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return nil
+	}
+
+	raw := sha256.Sum256([]byte(cookie.Value))
+	hashHex := hex.EncodeToString(raw[:])
+
+	ctx := r.Context()
+	session, err := h.db.Admin.GetAdminSessionByHash(ctx, hashHex)
+	if err != nil || session == nil || session.IsExpired() {
+		return nil
+	}
+
+	admin, err := h.db.Admin.GetAdmin(ctx, session.AdminID)
+	if err != nil || admin == nil || !admin.Enabled {
+		return nil
+	}
+
+	return &mw.AdminUser{
+		ID:       admin.ID,
+		Username: admin.Username,
+		Role:     admin.Role,
+	}
+}
+
 // adminPageData carries data common to every admin template.
 type adminPageData struct {
 	Title    string
@@ -256,7 +353,14 @@ type adminPageData struct {
 	// base.html to link to the /{admin_username}/* self-account routes
 	// (AI.md PART 17 "Admin Route Hierarchy").
 	AdminUsername string
-	Data          any
+	// CSRFToken is the double-submit CSRF token issued by mw.CSRF for this
+	// request, embedded as a hidden csrf_token form field.
+	CSRFToken string
+	// Lang and T serve translated strings to the setup wizard templates
+	// (AI.md PART 31); unused by the rest of the admin panel today.
+	Lang string
+	T    func(string) string
+	Data any
 }
 
 // render executes the named template with the provided page data. r supplies
@@ -267,12 +371,17 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, name, title, ac
 	if a := mw.AdminFromContext(r.Context()); a != nil {
 		username = a.Username
 	}
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
 	pd := adminPageData{
 		Title:         title,
 		Version:       h.version,
 		Active:        active,
 		BasePath:      h.basePath(),
 		AdminUsername: username,
+		CSRFToken:     mw.CSRFTokenFromContext(r.Context()),
+		Lang:          lang,
+		T:             func(key string) string { return bundle.T(lang, key) },
 		Data:          data,
 	}
 	tmpl, ok := h.tmpls[name]
