@@ -68,3 +68,22 @@
   separate, large pass. Needs a dedicated implementation pass adding
   `{{call .T ...}}` calls (and matching keys in all 7 locale files) to
   every existing admin template.
+
+- testing: `tests/e2e.sh` (Read: AI.md PART 3, 29) is missing. AI.md's
+  directory structure (PART 3, "Directory Structure") lists it as REQUIRED
+  alongside `run_tests.sh`/`docker.sh`/`incus.sh`, and PART 29 specifies it
+  Docker-wraps `go test -tags e2e ./tests/e2e/...` against a chromedp
+  headless-Chromium harness (no `tests/e2e/` Go test package exists yet
+  either). Discovered during the PART 0-6 bootstrap re-check; not created
+  because designing the actual browser E2E scenarios (which pages/flows to
+  cover, JS-off vs JS-on tiers) is feature-sized work requiring product
+  decisions, not a scaffolding fill-in.
+
+- cicd: root `Jenkinsfile` (Read: AI.md PART 3, 28) is missing.
+  AI.md's directory structure (PART 3) and `cicd_conventions.md` both list
+  it as required on every project alongside the GitHub/GitLab/Gitea/Forgejo
+  workflow files (which already exist). Discovered during the PART 0-6
+  bootstrap re-check; not created because authoring a correct declarative
+  Jenkins pipeline that mirrors the existing `ci.yml`/`.gitlab-ci.yml`
+  lint/test/security/release job matrix (PART 28) is CI/CD implementation
+  work outside this pass's PART 0-6 scaffolding scope.
