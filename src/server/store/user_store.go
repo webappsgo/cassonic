@@ -314,11 +314,14 @@ func (s *sqliteUserStore) CreateAPIToken(ctx context.Context, t *model.APIToken)
 // GetAPITokenByHash returns the token matching the given SHA-256 hash.
 // Returns nil, nil when no matching unexpired token is found.
 func (s *sqliteUserStore) GetAPITokenByHash(ctx context.Context, hash string) (*model.APIToken, error) {
+	// expires_at is wrapped in datetime() because rows can be written either
+	// as an RFC3339 value ("...T...Z") or in SQLite's own datetime('now')
+	// format; datetime() normalizes both sides before comparing.
 	const q = `
     SELECT id, user_id, token_hash, name, last_used_at, expires_at, created_at
     FROM api_tokens
     WHERE token_hash = ?
-      AND (expires_at IS NULL OR expires_at > datetime('now'))`
+      AND (expires_at IS NULL OR datetime(expires_at) > datetime('now'))`
 
 	row := s.db.QueryRowContext(ctx, q, hash)
 	t, err := scanAPIToken(row)
@@ -443,8 +446,11 @@ func (s *sqliteUserStore) DeleteUserSessions(ctx context.Context, userID int64) 
 
 // PurgeExpiredSessions deletes all session rows whose expires_at is in the past.
 func (s *sqliteUserStore) PurgeExpiredSessions(ctx context.Context) error {
+	// expires_at is wrapped in datetime() because rows can be written either
+	// as an RFC3339 value ("...T...Z") or in SQLite's own datetime('now')
+	// format; datetime() normalizes both sides before comparing.
 	_, err := s.db.ExecContext(ctx,
-		`DELETE FROM sessions WHERE expires_at < datetime('now')`,
+		`DELETE FROM sessions WHERE datetime(expires_at) < datetime('now')`,
 	)
 	if err != nil {
 		return fmt.Errorf("purge expired sessions: %w", err)
