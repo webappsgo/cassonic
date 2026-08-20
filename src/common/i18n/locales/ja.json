@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPSはデフォルトで安全に設定されています。カスタマイズした場合のみチェックしてください。",
   "setup.step6.title": "完了",
   "setup.step6.subtitle": "ステップ 6/6 — 確認が完了しました。以下でセットアップを完了してください。",
-  "setup.step6.complete": "セットアップを完了"
+  "setup.step6.complete": "セットアップを完了",
+  "login.mfa_title": "二段階認証",
+  "login.mfa_subtitle": "認証アプリに表示された6桁のコードを入力してください。",
+  "login.mfa_code": "認証コード",
+  "login.mfa_submit": "確認",
+  "login.mfa_backup_hint": "デバイスを紛失しましたか？バックアップコードも使用できます。"
 }

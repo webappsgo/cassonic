@@ -4,6 +4,7 @@ package config
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -43,6 +44,22 @@ type Config struct {
 	Web WebConfig `yaml:"web"`
 	// Backup section controls backup archive encryption.
 	Backup BackupConfig `yaml:"backup"`
+	// Security section controls the at-rest encryption key used for 2FA
+	// secrets and other sensitive server data.
+	Security SecurityConfig `yaml:"security"`
+}
+
+// SecurityConfig holds the canonical at-rest AES-256-GCM encryption key (AI.md
+// PART 11 "server.security.encryption_key") used for all encrypted-at-rest
+// data: TOTP secrets, security report bodies, and any future at-rest
+// encrypted data. This is the ONE canonical key — not duplicated elsewhere.
+type SecurityConfig struct {
+	// encryption_key is a base64-encoded 32-byte (AES-256) key,
+	// auto-generated on first run if empty.
+	EncryptionKey string `yaml:"encryption_key"`
+	// encryption_key_version increments each time the key is rotated via the
+	// admin panel; starts at 1.
+	EncryptionKeyVersion int `yaml:"encryption_key_version"`
 }
 
 // BackupConfig holds backup-archive encryption settings (AI.md PART 17 setup
@@ -308,6 +325,10 @@ func Defaults() *Config {
 		Backup: BackupConfig{
 			EncryptionPassword: "",
 		},
+		Security: SecurityConfig{
+			EncryptionKey:        "",
+			EncryptionKeyVersion: 1,
+		},
 	}
 }
 
@@ -377,6 +398,9 @@ func applyDefaults(cfg *Config) {
 	if cfg.Email.Port == 0 {
 		cfg.Email.Port = d.Email.Port
 	}
+	if cfg.Security.EncryptionKeyVersion == 0 {
+		cfg.Security.EncryptionKeyVersion = d.Security.EncryptionKeyVersion
+	}
 }
 
 // EnsureSecrets fills in any auto-generated secret that is currently empty and
@@ -391,6 +415,17 @@ func EnsureSecrets(cfg *Config) (changed bool, err error) {
 			return false, fmt.Errorf("generate auth secret: %w", err)
 		}
 		cfg.Auth.JWTSecret = hex.EncodeToString(buf)
+		changed = true
+	}
+	if cfg.Security.EncryptionKey == "" {
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			return false, fmt.Errorf("generate encryption key: %w", err)
+		}
+		cfg.Security.EncryptionKey = base64.StdEncoding.EncodeToString(buf)
+		if cfg.Security.EncryptionKeyVersion == 0 {
+			cfg.Security.EncryptionKeyVersion = 1
+		}
 		changed = true
 	}
 	return changed, nil

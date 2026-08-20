@@ -98,5 +98,10 @@
   "setup.step5.hint": "يستخدم HTTPS إعدادًا آمنًا افتراضيًا؛ حدد هذا فقط إذا قمت بتخصيصه.",
   "setup.step6.title": "اكتمل",
   "setup.step6.subtitle": "الخطوة 6 من 6 — اكتملت المراجعة، أنهِ الإعداد أدناه.",
-  "setup.step6.complete": "إنهاء الإعداد"
+  "setup.step6.complete": "إنهاء الإعداد",
+  "login.mfa_title": "المصادقة الثنائية",
+  "login.mfa_subtitle": "أدخل الرمز المكوَّن من 6 أرقام من تطبيق المصادقة.",
+  "login.mfa_code": "رمز المصادقة",
+  "login.mfa_submit": "تحقق",
+  "login.mfa_backup_hint": "فقدت جهازك؟ يمكنك أيضًا إدخال أحد رموز النسخ الاحتياطي."
 }

@@ -41,20 +41,6 @@
   and redirects, or a written decision that the root-level paths are an
   intentional, documented deviation.
 
-- store: `sqliteUserStore.GetAPITokenByHash` (`expires_at > datetime('now')`,
-  `user_store.go:321`) and `PurgeExpiredSessions`
-  (`expires_at < datetime('now')`, `user_store.go:447`) compare a
-  RFC3339-formatted (`...T...Z`) `expires_at` column value against
-  `datetime('now')`, which SQLite renders as `YYYY-MM-DD HH:MM:SS` (space,
-  no `T`/`Z`) — the two formats never compare equal/ordered correctly as
-  strings, so token-expiry and session-purge checks can silently
-  pass/fail incorrectly. Discovered while implementing the PART 17 admin
-  store (`admin_store.go`), which hit and fixed the identical bug in
-  `PurgeExpiredAdminSessions` by wrapping the column in `datetime(...)` to
-  normalize both sides before comparing. Apply the same fix to the two
-  `user_store.go` call sites above; out of scope for the PART 17 admin
-  work since it's pre-existing and unrelated to admin accounts.
-
 - admin: the admin panel's i18n wiring (`Handler.i18n`, `resolveLocale`,
   `adminPageData.Lang`/`.T`) is currently scoped only to the first-run
   setup wizard pages (`setup_token.html`, `setup_wizard.html`, added in
@@ -87,3 +73,20 @@
   Jenkins pipeline that mirrors the existing `ci.yml`/`.gitlab-ci.yml`
   lint/test/security/release job matrix (PART 28) is CI/CD implementation
   work outside this pass's PART 0-6 scaffolding scope.
+
+- security: the CSRF double-submit-cookie middleware
+  (`src/server/middleware/csrf.go`) only triggers validation on
+  `cfg.SessionCookieName` (the regular-user session cookie) — it never
+  validates the `admin_session` cookie set by the Server Admin login flow,
+  so state-changing admin panel POST requests (profile, settings, TOTP
+  enroll/confirm/disable/backup-code-regeneration, etc.) are not actually
+  CSRF-protected even though every admin form already includes a
+  `csrf_token` hidden field. Discovered while implementing PART 17 TOTP
+  2FA (P5a); out of scope for that feature since fixing it requires
+  auditing/extending the shared CSRF middleware's cookie-detection logic
+  (a cross-cutting security-middleware change), not a change local to the
+  new TOTP handlers — the new TOTP forms were defensively given
+  `csrf_token` fields anyway so they'll be protected automatically once
+  this gap is closed. Needs the CSRF middleware updated to also validate
+  against `mw.AdminSessionCookieName` for any request under `/server/*`
+  admin routes.

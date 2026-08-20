@@ -160,6 +160,35 @@ type AdminStore interface {
 	// ConsumeSetupToken marks the setup token used (single-use), permanently
 	// invalidating it for any future setup attempt.
 	ConsumeSetupToken(ctx context.Context) error
+
+	// GetTOTPSecret returns the TOTP row for the given user, or nil, nil if
+	// none exists. Enrollment is stateless until confirmed: the freshly
+	// generated secret is threaded through the confirmation form and never
+	// persisted until the admin proves possession with a valid code.
+	GetTOTPSecret(ctx context.Context, userType string, userID int64) (*model.TOTPSecret, error)
+	// EnableTOTP creates or replaces the enabled TOTP secret and backup codes
+	// for a user (AI.md PART 17 "TOTP Two-Factor Authentication" setup).
+	EnableTOTP(ctx context.Context, t *model.TOTPSecret) error
+	// DisableTOTP permanently removes a user's TOTP secret row.
+	DisableTOTP(ctx context.Context, userType string, userID int64) error
+	// UpdateTOTPBackupCodes replaces the stored (hashed) backup codes,
+	// invalidating all previously issued codes.
+	UpdateTOTPBackupCodes(ctx context.Context, userType string, userID int64, backupCodesJSON string) error
+	// TouchTOTPLastUsed stamps the current time as the most recent
+	// successful TOTP or backup-code verification.
+	TouchTOTPLastUsed(ctx context.Context, userType string, userID int64) error
+
+	// CreateAdminMFAChallenge persists a new "password verified, awaiting
+	// 2FA" login challenge (stored as its token hash).
+	CreateAdminMFAChallenge(ctx context.Context, c *model.AdminMFAChallenge) error
+	// GetAdminMFAChallengeByHash returns the challenge for the given token
+	// hash, or nil, nil when no matching challenge exists.
+	GetAdminMFAChallengeByHash(ctx context.Context, tokenHash string) (*model.AdminMFAChallenge, error)
+	// DeleteAdminMFAChallenge removes a single challenge by token hash.
+	DeleteAdminMFAChallenge(ctx context.Context, tokenHash string) error
+	// PurgeExpiredAdminMFAChallenges deletes all rows whose expires_at is in
+	// the past.
+	PurgeExpiredAdminMFAChallenges(ctx context.Context) error
 }
 
 // MusicStore manages the music library including artists, albums, songs, and scan state.

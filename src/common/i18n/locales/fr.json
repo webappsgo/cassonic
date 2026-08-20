@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPS utilise une configuration sécurisée par défaut ; cochez seulement si vous l'avez personnalisée.",
   "setup.step6.title": "Terminé",
   "setup.step6.subtitle": "Étape 6 sur 6 — vérification terminée, finalisez la configuration ci-dessous.",
-  "setup.step6.complete": "Terminer la Configuration"
+  "setup.step6.complete": "Terminer la Configuration",
+  "login.mfa_title": "Authentification à deux facteurs",
+  "login.mfa_subtitle": "Saisissez le code à 6 chiffres de votre application d'authentification.",
+  "login.mfa_code": "Code d'authentification",
+  "login.mfa_submit": "Vérifier",
+  "login.mfa_backup_hint": "Appareil perdu ? Vous pouvez aussi saisir un de vos codes de secours."
 }

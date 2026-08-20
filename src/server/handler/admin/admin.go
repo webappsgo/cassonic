@@ -259,6 +259,11 @@ func (h *Handler) Routes() http.Handler {
 			ur.Post("/profile", h.SaveProfile)
 			ur.Get("/preferences", h.Preferences)
 			ur.Post("/preferences", h.SavePreferences)
+			ur.Get("/profile/security", h.Security)
+			ur.Post("/profile/security/totp/enroll", h.EnrollTOTPStart)
+			ur.Post("/profile/security/totp/confirm", h.EnrollTOTPConfirm)
+			ur.Post("/profile/security/totp/disable", h.DisableTOTP)
+			ur.Post("/profile/security/totp/backup-codes/regenerate", h.RegenerateBackupCodes)
 		})
 	})
 

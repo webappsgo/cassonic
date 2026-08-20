@@ -413,6 +413,38 @@ CREATE TABLE IF NOT EXISTS setup_token (
     used INTEGER NOT NULL DEFAULT 0,
     used_at DATETIME
 );
+
+-- TOTP secrets (AI.md PART 17 "TOTP Two-Factor Authentication" / PART 12
+-- "totp_secrets" table). Stored in server.db, consistent with admin_sessions
+-- and audit_log; user_id is a logical FK to admins.id in users.db (cross-DB,
+-- not enforced). user_type is "admin" for this phase (users can be added per
+-- project). secret is AES-256-GCM encrypted with server.security.encryption_key.
+CREATE TABLE IF NOT EXISTS totp_secrets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_type   TEXT NOT NULL,
+    user_id     INTEGER NOT NULL UNIQUE,
+    secret      TEXT NOT NULL,
+    enabled     INTEGER NOT NULL DEFAULT 0,
+    backup_codes TEXT,
+    created_at  INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    last_used   INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_totp_user ON totp_secrets(user_type, user_id);
+
+-- Short-lived "password verified, awaiting 2FA" login challenge (AI.md PART
+-- 17 "/server/{admin_path} Authentication Flow"), mirroring the admin_sessions
+-- token-hash pattern. admin_id is a logical FK to admins.id in users.db.
+CREATE TABLE IF NOT EXISTS admin_mfa_challenges (
+    id TEXT PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    ip_address TEXT NOT NULL DEFAULT '',
+    user_agent TEXT NOT NULL DEFAULT '',
+    remember INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_admin_mfa_challenges_admin ON admin_mfa_challenges(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_mfa_challenges_expires ON admin_mfa_challenges(expires_at);
 `
 
 // applyPragmas sets WAL mode and foreign key enforcement on a database connection.

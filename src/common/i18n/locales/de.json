@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPS ist standardmäßig sicher konfiguriert; nur ankreuzen, wenn Sie es angepasst haben.",
   "setup.step6.title": "Abgeschlossen",
   "setup.step6.subtitle": "Schritt 6 von 6 — Überprüfung abgeschlossen, Einrichtung unten abschließen.",
-  "setup.step6.complete": "Einrichtung Abschließen"
+  "setup.step6.complete": "Einrichtung Abschließen",
+  "login.mfa_title": "Zwei-Faktor-Authentifizierung",
+  "login.mfa_subtitle": "Gib den 6-stelligen Code aus deiner Authenticator-App ein.",
+  "login.mfa_code": "Authentifizierungscode",
+  "login.mfa_submit": "Bestätigen",
+  "login.mfa_backup_hint": "Gerät verloren? Du kannst auch einen deiner Backup-Codes verwenden."
 }

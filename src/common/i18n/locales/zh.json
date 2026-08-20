@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPS 默认使用安全配置；仅在自定义后勾选此项。",
   "setup.step6.title": "完成",
   "setup.step6.subtitle": "第 6 步，共 6 步 — 检查完毕，请在下方完成设置。",
-  "setup.step6.complete": "完成设置"
+  "setup.step6.complete": "完成设置",
+  "login.mfa_title": "双重验证",
+  "login.mfa_subtitle": "请输入验证器应用中的 6 位数字代码。",
+  "login.mfa_code": "验证码",
+  "login.mfa_submit": "验证",
+  "login.mfa_backup_hint": "丢失设备了？您也可以输入一个备用代码。"
 }

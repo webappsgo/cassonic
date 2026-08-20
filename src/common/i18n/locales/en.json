@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPS defaults to a secure configuration; only check this if you customized it.",
   "setup.step6.title": "Complete",
   "setup.step6.subtitle": "Step 6 of 6 — review complete, finish setup below.",
-  "setup.step6.complete": "Finish Setup"
+  "setup.step6.complete": "Finish Setup",
+  "login.mfa_title": "Two-Factor Authentication",
+  "login.mfa_subtitle": "Enter the 6-digit code from your authenticator app.",
+  "login.mfa_code": "Authentication code",
+  "login.mfa_submit": "Verify",
+  "login.mfa_backup_hint": "Lost your device? You can also enter one of your backup codes."
 }

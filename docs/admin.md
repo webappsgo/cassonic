@@ -83,6 +83,21 @@ Navigate to **Admin → Admins**:
 !!! warning "Admins cannot set passwords for other admins"
     Only the account holder can set their own password via the invite/reset link. Admins see no password fields for other accounts.
 
+### Two-Factor Authentication (TOTP)
+
+Every Server Admin can enable TOTP two-factor authentication for their own account at **{admin_username} → Profile → Security**.
+
+- **Setup** — scan the displayed QR code with any TOTP app (Google Authenticator, Authy, 1Password, etc.), or enter the manual key by hand, then confirm with a 6-digit code
+- **Backup codes** — 10 one-time recovery codes are shown once when 2FA is enabled; store them somewhere safe, they cannot be viewed again
+- **Regenerate backup codes** — invalidates the old codes and issues a fresh set; requires a valid current TOTP code
+- **Disable** — requires a valid current TOTP code or an unused backup code
+- **Login** — once enabled, signing in prompts for a TOTP or backup code after the password is verified, before a session is created
+
+TOTP secrets are encrypted at rest (AES-256-GCM) using the server's `security.encryption_key`, and backup codes are stored only as salted hashes — never in plain text.
+
+!!! note "Passkeys/WebAuthn"
+    Passkey (WebAuthn) support for Server Admins is planned as a follow-up to TOTP and is not yet available.
+
 ### Regular Users
 
 Navigate to **Admin → Users** (requires multi-user mode to be enabled in settings):

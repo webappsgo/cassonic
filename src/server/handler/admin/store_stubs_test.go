@@ -210,6 +210,19 @@ type testAdminStore struct {
 	getSetupTokenErr     error
 	createSetupTokenErr  error
 	consumeSetupTokenErr error
+
+	getTOTPSecretResult  *model.TOTPSecret
+	getTOTPSecretErr     error
+	enableTOTPErr        error
+	lastEnabledTOTP      *model.TOTPSecret
+	disableTOTPErr       error
+	updateBackupCodesErr error
+	lastBackupCodesJSON  string
+
+	getAdminMFAChallengeResult *model.AdminMFAChallenge
+	getAdminMFAChallengeErr    error
+	createAdminMFAChallengeErr error
+	lastCreatedMFAChallenge    *model.AdminMFAChallenge
 }
 
 func (s *testAdminStore) CreateAdmin(ctx context.Context, a *model.Admin) (int64, error) {
@@ -277,6 +290,36 @@ func (s *testAdminStore) GetSetupToken(ctx context.Context) (*model.SetupToken, 
 }
 func (s *testAdminStore) ConsumeSetupToken(ctx context.Context) error {
 	return s.consumeSetupTokenErr
+}
+func (s *testAdminStore) GetTOTPSecret(ctx context.Context, userType string, userID int64) (*model.TOTPSecret, error) {
+	return s.getTOTPSecretResult, s.getTOTPSecretErr
+}
+func (s *testAdminStore) EnableTOTP(ctx context.Context, t *model.TOTPSecret) error {
+	s.lastEnabledTOTP = t
+	return s.enableTOTPErr
+}
+func (s *testAdminStore) DisableTOTP(ctx context.Context, userType string, userID int64) error {
+	return s.disableTOTPErr
+}
+func (s *testAdminStore) UpdateTOTPBackupCodes(ctx context.Context, userType string, userID int64, backupCodesJSON string) error {
+	s.lastBackupCodesJSON = backupCodesJSON
+	return s.updateBackupCodesErr
+}
+func (s *testAdminStore) TouchTOTPLastUsed(ctx context.Context, userType string, userID int64) error {
+	return nil
+}
+func (s *testAdminStore) CreateAdminMFAChallenge(ctx context.Context, c *model.AdminMFAChallenge) error {
+	s.lastCreatedMFAChallenge = c
+	return s.createAdminMFAChallengeErr
+}
+func (s *testAdminStore) GetAdminMFAChallengeByHash(ctx context.Context, tokenHash string) (*model.AdminMFAChallenge, error) {
+	return s.getAdminMFAChallengeResult, s.getAdminMFAChallengeErr
+}
+func (s *testAdminStore) DeleteAdminMFAChallenge(ctx context.Context, tokenHash string) error {
+	return nil
+}
+func (s *testAdminStore) PurgeExpiredAdminMFAChallenges(ctx context.Context) error {
+	return nil
 }
 
 // testDB builds a *store.DB with stub Music, User, and Admin stores; other stores are unused by admin.go.

@@ -36,10 +36,11 @@ type Admin struct {
 	FailedAttempts int       `db:"failed_attempts"`
 	LockedUntil    time.Time `db:"locked_until"`
 	// TOTPEnabled is the "enable 2FA for this admin" preference captured by
-	// setup wizard step 4 (AI.md PART 17 "Security Settings"). It is a
-	// storage-only placeholder for now: no TOTP/WebAuthn enrollment or
-	// verification exists yet (that is a future P5 phase), so this flag is
-	// not read or enforced anywhere.
+	// setup wizard step 4 (AI.md PART 17 "Security Settings") and by the
+	// TOTP enrollment flow at
+	// /server/{admin_path}/{admin_username}/profile/security. When true,
+	// login requires a valid TOTP code (or backup code) after password
+	// verification. WebAuthn/Passkey support is a separate future phase.
 	TOTPEnabled bool      `db:"totp_enabled"`
 	CreatedAt   time.Time `db:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at"`
@@ -128,4 +129,43 @@ type SetupToken struct {
 	CreatedAt time.Time `db:"created_at"`
 	Used      bool      `db:"used"`
 	UsedAt    time.Time `db:"used_at"`
+}
+
+// TOTPSecret represents one admin's TOTP enrollment (AI.md PART 17 "TOTP
+// Two-Factor Authentication" / PART 12 "totp_secrets" table). Stored in
+// server.db; UserID is a logical FK to admins.id in users.db (cross-DB, not
+// enforced). Secret is AES-256-GCM encrypted with
+// server.security.encryption_key before it is ever persisted. BackupCodes is
+// a JSON array of SHA-256 hashes of the unused one-time recovery codes; raw
+// codes are shown to the admin exactly once and never stored.
+type TOTPSecret struct {
+	ID          int64     `db:"id"`
+	UserType    string    `db:"user_type"`
+	UserID      int64     `db:"user_id"`
+	Secret      string    `db:"secret"`
+	Enabled     bool      `db:"enabled"`
+	BackupCodes string    `db:"backup_codes"`
+	CreatedAt   time.Time `db:"created_at"`
+	LastUsed    time.Time `db:"last_used"`
+}
+
+// AdminMFAChallenge represents a short-lived "password verified, awaiting
+// 2FA" login state (AI.md PART 17 "/server/{admin_path} Authentication
+// Flow"), mirroring AdminSession's token-hash pattern. Stored in server.db;
+// AdminID is a logical FK to admins.id in users.db. Remember preserves the
+// "remember me" choice across the two-step login so the eventual real
+// session gets the correct duration.
+type AdminMFAChallenge struct {
+	TokenHash string    `db:"id"`
+	AdminID   int64     `db:"admin_id"`
+	IP        string    `db:"ip_address"`
+	UserAgent string    `db:"user_agent"`
+	Remember  bool      `db:"remember"`
+	CreatedAt time.Time `db:"created_at"`
+	ExpiresAt time.Time `db:"expires_at"`
+}
+
+// IsExpired returns true if the MFA challenge has passed its expiry time.
+func (c *AdminMFAChallenge) IsExpired() bool {
+	return time.Now().After(c.ExpiresAt)
 }

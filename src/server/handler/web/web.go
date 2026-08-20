@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -22,6 +23,8 @@ import (
 	"github.com/local/cassonic/src/config"
 	mw "github.com/local/cassonic/src/server/middleware"
 	"github.com/local/cassonic/src/server/model"
+	"github.com/local/cassonic/src/server/service/crypto"
+	totpsvc "github.com/local/cassonic/src/server/service/totp"
 	"github.com/local/cassonic/src/server/store"
 	"github.com/local/cassonic/src/server/urlvars"
 )
@@ -33,6 +36,11 @@ type Handler struct {
 	version string
 	tmpls   map[string]*template.Template
 	i18n    *i18n.Bundle
+	// mfaRL rate-limits admin TOTP/backup-code verification attempts by IP
+	// (AI.md PART 11 "Credential stuffing — Rate limit per IP + per username
+	// + global") since a wrong code only redirects back to the challenge
+	// page rather than locking the admin account.
+	mfaRL *mw.RateLimiter
 }
 
 // PageData is the base data passed to every template.
@@ -61,6 +69,10 @@ func NewHandlerWithConfig(db *store.DB, cfg *config.Config, version string) *Han
 		cfg:     cfg,
 		version: version,
 		i18n:    i18n.Default(),
+		// Same throttle as server.go's loginRL, applied to the admin MFA
+		// code-verification step for consistency with the rest of the auth
+		// surface (AI.md PART 11 "Rate limiting applies to all login attempts").
+		mfaRL: mw.NewRateLimiter(5, 5),
 	}
 	h.tmpls = h.parseTemplates()
 	return h
@@ -125,6 +137,8 @@ func (h *Handler) Routes() http.Handler {
 	r.Get("/server/help", h.Help)
 	r.Get("/login", h.Login)
 	r.Post("/login", h.LoginPost)
+	r.Get("/login/mfa", h.MFAChallenge)
+	r.With(h.mfaRL.Middleware("admin-mfa")).Post("/login/mfa", h.MFAChallengePost)
 	r.Get("/share/{token}", h.Share)
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
@@ -488,10 +502,29 @@ func (h *Handler) tryAdminLogin(w http.ResponseWriter, r *http.Request, username
 		return true
 	}
 
+	// AI.md PART 17 "/server/{admin_path} Authentication Flow": once the
+	// password is verified, an admin with TOTP enabled does not get a real
+	// session yet — they are sent to the 2FA challenge step instead.
+	if admin.TOTPEnabled {
+		h.beginAdminMFAChallenge(w, r, admin, remember)
+		return true
+	}
+
+	h.finishAdminLogin(w, r, admin, remember)
+	return true
+}
+
+// finishAdminLogin creates the real admin session (AdminSession row +
+// admin_session cookie), records the login, and redirects to the admin
+// panel. Called directly from tryAdminLogin when TOTP is disabled, or from
+// MFAChallengePost once a valid TOTP/backup code has been presented.
+func (h *Handler) finishAdminLogin(w http.ResponseWriter, r *http.Request, admin *model.Admin, remember bool) {
+	ctx := r.Context()
+
 	raw, tokenHash, err := generateSessionToken()
 	if err != nil {
 		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
-		return true
+		return
 	}
 
 	duration := time.Duration(h.cfg.Auth.SessionDuration) * time.Hour
@@ -509,7 +542,7 @@ func (h *Handler) tryAdminLogin(w http.ResponseWriter, r *http.Request, username
 	}
 	if err := h.db.Admin.CreateAdminSession(ctx, sess); err != nil {
 		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
-		return true
+		return
 	}
 
 	_ = h.db.Admin.ResetAdminLoginAttempts(ctx, admin.ID)
@@ -542,7 +575,202 @@ func (h *Handler) tryAdminLogin(w http.ResponseWriter, r *http.Request, username
 	// "CSRF Protection" -> "Implementation Rules").
 	mw.ResetCSRFCookie(w, r.TLS != nil)
 	http.Redirect(w, r, "/server/"+h.cfg.AdminPath(), http.StatusFound)
-	return true
+}
+
+// AdminMFACookieName is the short-lived cookie tracking "password verified,
+// awaiting 2FA" state (AI.md PART 17 "/server/{admin_path} Authentication
+// Flow"), mirroring the admin panel's cassonic_setup cookie pattern: the raw
+// token lives only in the cookie, and every request re-derives its SHA-256
+// hash to look up the matching admin_mfa_challenges row.
+const AdminMFACookieName = "cassonic_admin_mfa"
+
+// adminMFAChallengeTTL bounds how long an admin has to complete the 2FA
+// challenge after a successful password check before it expires.
+const adminMFAChallengeTTL = 5 * time.Minute
+
+// beginAdminMFAChallenge persists a short-lived MFA challenge row and cookie,
+// then redirects to the 2FA entry page. remember preserves the "remember me"
+// choice across the two-step login.
+func (h *Handler) beginAdminMFAChallenge(w http.ResponseWriter, r *http.Request, admin *model.Admin, remember bool) {
+	raw, tokenHash, err := generateSessionToken()
+	if err != nil {
+		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
+		return
+	}
+
+	challenge := &model.AdminMFAChallenge{
+		TokenHash: tokenHash,
+		AdminID:   admin.ID,
+		IP:        r.RemoteAddr,
+		UserAgent: r.UserAgent(),
+		Remember:  remember,
+		ExpiresAt: time.Now().UTC().Add(adminMFAChallengeTTL),
+	}
+	if err := h.db.Admin.CreateAdminMFAChallenge(r.Context(), challenge); err != nil {
+		http.Redirect(w, r, "/login?error=server+error", http.StatusFound)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     AdminMFACookieName,
+		Value:    raw,
+		Path:     "/",
+		MaxAge:   int(adminMFAChallengeTTL.Seconds()),
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+	http.Redirect(w, r, "/login/mfa", http.StatusFound)
+}
+
+// currentAdminMFAChallenge resolves the AdminMFACookieName cookie to its
+// backing row, or nil if missing, invalid, or expired.
+func (h *Handler) currentAdminMFAChallenge(r *http.Request) *model.AdminMFAChallenge {
+	cookie, err := r.Cookie(AdminMFACookieName)
+	if err != nil || cookie.Value == "" {
+		return nil
+	}
+	sum := sha256.Sum256([]byte(cookie.Value))
+	tokenHash := hex.EncodeToString(sum[:])
+
+	challenge, err := h.db.Admin.GetAdminMFAChallengeByHash(r.Context(), tokenHash)
+	if err != nil || challenge == nil || challenge.IsExpired() {
+		return nil
+	}
+	return challenge
+}
+
+// clearAdminMFAChallenge deletes the challenge row (if any) and expires the cookie.
+func (h *Handler) clearAdminMFAChallenge(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie(AdminMFACookieName); err == nil && cookie.Value != "" {
+		sum := sha256.Sum256([]byte(cookie.Value))
+		tokenHash := hex.EncodeToString(sum[:])
+		_ = h.db.Admin.DeleteAdminMFAChallenge(r.Context(), tokenHash)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     AdminMFACookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// MFAChallenge renders the TOTP/backup-code entry page. Redirects to /login
+// if there is no pending, non-expired challenge.
+func (h *Handler) MFAChallenge(w http.ResponseWriter, r *http.Request) {
+	if h.currentAdminMFAChallenge(r) == nil {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	type mfaData struct {
+		PageData
+		Error string
+	}
+	lang := h.resolveLocale(w, r)
+	bundle := h.i18n
+	data := mfaData{
+		PageData: PageData{
+			Title:     "Two-Factor Authentication — cassonic",
+			Version:   h.version,
+			Lang:      lang,
+			T:         func(key string) string { return bundle.T(lang, key) },
+			CSRFToken: mw.CSRFTokenFromContext(r.Context()),
+		},
+		Error: r.URL.Query().Get("error"),
+	}
+	h.render(w, "mfa_challenge.html", data)
+}
+
+// verifyAdminTOTPOrBackupCode reports whether code is either a currently
+// valid TOTP code, or an unused backup code, for admin. A matched backup
+// code is consumed so it cannot be reused (mirrors
+// admin.Handler.verifyTOTPOrBackupCode; kept separate since the two handlers
+// live in different packages with no shared base to hang a helper off).
+func (h *Handler) verifyAdminTOTPOrBackupCode(r *http.Request, admin *model.Admin, code string) (bool, error) {
+	secretRow, err := h.db.Admin.GetTOTPSecret(r.Context(), "admin", admin.ID)
+	if err != nil || secretRow == nil || !secretRow.Enabled {
+		return false, err
+	}
+
+	key := crypto.DeriveKey([]byte(h.cfg.Security.EncryptionKey))
+	decrypted, err := crypto.Decrypt(key, secretRow.Secret)
+	if err == nil && totpsvc.Validate(decrypted, code) {
+		_ = h.db.Admin.TouchTOTPLastUsed(r.Context(), "admin", admin.ID)
+		return true, nil
+	}
+
+	var hashes []string
+	if secretRow.BackupCodes != "" {
+		if err := json.Unmarshal([]byte(secretRow.BackupCodes), &hashes); err != nil {
+			return false, nil
+		}
+	}
+	target := totpsvc.HashBackupCode(strings.TrimSpace(code))
+	for i, hash := range hashes {
+		if hash == target {
+			remaining := append(hashes[:i], hashes[i+1:]...)
+			remainingJSON, err := json.Marshal(remaining)
+			if err != nil {
+				return false, err
+			}
+			if err := h.db.Admin.UpdateTOTPBackupCodes(r.Context(), "admin", admin.ID, string(remainingJSON)); err != nil {
+				return false, err
+			}
+			_ = h.db.Admin.TouchTOTPLastUsed(r.Context(), "admin", admin.ID)
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// MFAChallengePost validates the submitted TOTP or backup code against the
+// pending challenge. On success it consumes the challenge and creates the
+// real admin session; on failure it redirects back to the challenge page,
+// allowing retry until the challenge itself expires.
+func (h *Handler) MFAChallengePost(w http.ResponseWriter, r *http.Request) {
+	challenge := h.currentAdminMFAChallenge(r)
+	if challenge == nil {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Redirect(w, r, "/login/mfa?error=bad+request", http.StatusFound)
+		return
+	}
+
+	admin, err := h.db.Admin.GetAdmin(r.Context(), challenge.AdminID)
+	if err != nil || admin == nil || !admin.Enabled || admin.IsLocked() {
+		h.clearAdminMFAChallenge(w, r)
+		http.Redirect(w, r, "/login?error=invalid+credentials", http.StatusFound)
+		return
+	}
+
+	// Per-identifier throttle (AI.md PART 11 "Credential stuffing — Rate
+	// limit per IP + per username + global") on top of the per-IP route
+	// middleware, so a wide botnet can't spread guesses across many IPs
+	// against one admin account's TOTP/backup code.
+	if !h.mfaRL.Allow(fmt.Sprintf("admin-mfa-id:%d", admin.ID)) {
+		http.Redirect(w, r, "/login/mfa?error=rate+limited", http.StatusFound)
+		return
+	}
+
+	code := strings.TrimSpace(r.PostForm.Get("code"))
+	ok, err := h.verifyAdminTOTPOrBackupCode(r, admin, code)
+	if err != nil {
+		http.Redirect(w, r, "/login/mfa?error=server+error", http.StatusFound)
+		return
+	}
+	if !ok {
+		http.Redirect(w, r, "/login/mfa?error=invalid+code", http.StatusFound)
+		return
+	}
+
+	remember := challenge.Remember
+	h.clearAdminMFAChallenge(w, r)
+	h.finishAdminLogin(w, r, admin, remember)
 }
 
 // Logout clears the session cookie(s) and destroys the server-side session.

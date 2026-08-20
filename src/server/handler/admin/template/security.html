@@ -1,0 +1,64 @@
+{{define "security.html"}}{{template "base" .}}{{end}}
+{{define "content"}}
+{{if .Data.Flash}}<div class="flash {{if .Data.FlashError}}flash-error{{end}}" role="status">{{.Data.Flash}}</div>{{end}}
+
+{{if .Data.BackupCodes}}
+<div class="card">
+  <h3>Backup Codes</h3>
+  <p><strong>Save these codes now — they will not be shown again.</strong> Each code can be used once to sign in if you lose access to your authenticator app.</p>
+  <ul>
+    {{range .Data.BackupCodes}}<li><code>{{.}}</code></li>{{end}}
+  </ul>
+</div>
+{{end}}
+
+{{if .Data.Enrolling}}
+<div class="card">
+  <h3>Set Up Two-Factor Authentication</h3>
+  <p>Scan this QR code with any TOTP app (Google Authenticator, Authy, 1Password, etc.), or enter the manual key below.</p>
+  <img src="data:image/png;base64,{{.Data.QRCodePNG}}" alt="TOTP QR code" width="256" height="256">
+  <div class="form-field">
+    <label for="security-manual-key">Manual entry key</label>
+    <input id="security-manual-key" type="text" value="{{.Data.Secret}}" readonly title="Triple-click or select-all to copy">
+  </div>
+  <form method="post" action="{{.BasePath}}/{{.AdminUsername}}/profile/security/totp/confirm">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <input type="hidden" name="secret" value="{{.Data.Secret}}">
+    <div class="form-field">
+      <label for="security-confirm-code">Enter the 6-digit code from your app</label>
+      <input id="security-confirm-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Confirm &amp; Enable</button>
+  </form>
+</div>
+{{else}}
+<div class="card">
+  <h3>Two-Factor Authentication (TOTP)</h3>
+  {{if .Data.Enabled}}
+  <p>Two-factor authentication is <strong>enabled</strong> for your account.</p>
+  <form method="post" action="{{.BasePath}}/{{.AdminUsername}}/profile/security/totp/backup-codes/regenerate">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <div class="form-field">
+      <label for="security-regen-code">Current TOTP code</label>
+      <input id="security-regen-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+    </div>
+    <button type="submit" class="btn">Regenerate Backup Codes</button>
+  </form>
+  <form method="post" action="{{.BasePath}}/{{.AdminUsername}}/profile/security/totp/disable">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <div class="form-field">
+      <label for="security-disable-code">Current TOTP code or backup code</label>
+      <input id="security-disable-code" name="code" type="text" autocomplete="one-time-code" required>
+    </div>
+    <button type="submit" class="btn btn-danger">Disable Two-Factor Authentication</button>
+  </form>
+  {{else}}
+  <p>Two-factor authentication is <strong>not enabled</strong>. Enabling it requires a valid code from any TOTP app on every sign-in.</p>
+  <form method="post" action="{{.BasePath}}/{{.AdminUsername}}/profile/security/totp/enroll">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit" class="btn btn-primary">Enable 2FA</button>
+  </form>
+  {{end}}
+</div>
+{{end}}
+{{end}}

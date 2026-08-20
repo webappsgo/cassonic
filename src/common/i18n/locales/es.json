@@ -98,5 +98,10 @@
   "setup.step5.hint": "HTTPS usa una configuración segura por defecto; marca esto solo si la personalizaste.",
   "setup.step6.title": "Completo",
   "setup.step6.subtitle": "Paso 6 de 6 — revisión completa, finaliza la configuración abajo.",
-  "setup.step6.complete": "Finalizar Configuración"
+  "setup.step6.complete": "Finalizar Configuración",
+  "login.mfa_title": "Autenticación de dos factores",
+  "login.mfa_subtitle": "Introduce el código de 6 dígitos de tu aplicación de autenticación.",
+  "login.mfa_code": "Código de autenticación",
+  "login.mfa_submit": "Verificar",
+  "login.mfa_backup_hint": "¿Perdiste tu dispositivo? También puedes usar uno de tus códigos de respaldo."
 }

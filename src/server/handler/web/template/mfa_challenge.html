@@ -1,0 +1,51 @@
+{{define "mfa_challenge.html"}}<!DOCTYPE html>
+<html lang="{{if .Lang}}{{.Lang}}{{else}}en{{end}}" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="cassonic — self-hosted music streaming">
+  <title>{{call .T "login.mfa_title"}}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script>
+    (function(){var t=localStorage.getItem('cassonic_theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" aria-hidden="true">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span>cassonic</span>
+    </div>
+    <h1 class="login-title">{{call .T "login.mfa_title"}}</h1>
+    <p>{{call .T "login.mfa_subtitle"}}</p>
+    {{if .Error}}
+    <div class="alert alert-error" role="alert">{{.Error}}</div>
+    {{end}}
+    <form class="login-form" method="post" action="/login/mfa">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="form-group">
+        <label for="mfa-code">{{call .T "login.mfa_code"}}</label>
+        <input
+          type="text"
+          id="mfa-code"
+          name="code"
+          class="form-input"
+          autocomplete="one-time-code"
+          inputmode="numeric"
+          required
+          autofocus
+        >
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">{{call .T "login.mfa_submit"}}</button>
+    </form>
+    <p><small>{{call .T "login.mfa_backup_hint"}}</small></p>
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>{{end}}
